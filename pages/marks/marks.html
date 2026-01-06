@@ -1,0 +1,115 @@
+<div class="marks-page">
+    <div class="page-header">
+        <h1><i class="fas fa-edit"></i> Enter Marks</h1>
+        <div class="header-info">
+            <span class="level-badge" id="marksLevelBadge"></span>
+            <span class="academic-term" id="academicTerm"></span>
+        </div>
+    </div>
+
+    <!-- Level Selection (if not already selected) -->
+    <div class="level-selection-prompt" id="levelSelectionPrompt" style="display: none;">
+        <div class="selection-card">
+            <h3>Select Academic Level</h3>
+            <p>Choose the academic level to enter marks for:</p>
+            <div class="level-options" id="marksLevelOptions">
+                <!-- Dynamically generated -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Marks Entry Interface -->
+    <div class="marks-interface" id="marksInterface" style="display: none;">
+        <!-- Filters -->
+        <div class="marks-filters">
+            <div class="filter-group">
+                <div class="form-group">
+                    <label for="marksClass">
+                        <i class="fas fa-chalkboard"></i> Class
+                    </label>
+                    <select id="marksClass" class="form-control">
+                        <option value="">Select Class</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="marksTerm">
+                        <i class="fas fa-calendar-alt"></i> Term
+                    </label>
+                    <select id="marksTerm" class="form-control">
+                        <option value="beginning">Beginning of Term</option>
+                        <option value="mid">Mid Term</option>
+                        <option value="end">End of Term</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="subjectFilterGroup">
+                    <label for="marksSubject">
+                        <i class="fas fa-book"></i> Subject
+                    </label>
+                    <select id="marksSubject" class="form-control">
+                        <option value="">All Subjects</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Selection -->
+        <div class="student-selection">
+            <div class="form-group">
+                <label for="studentSearch">
+                    <i class="fas fa-search"></i> Search Student
+                </label>
+                <div class="search-input">
+                    <input type="text" id="studentSearch" placeholder="Type student name...">
+                    <button class="search-clear" id="searchClear">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="search-suggestions" id="searchSuggestions"></div>
+            </div>
+        </div>
+
+        <!-- Selected Student Info -->
+        <div class="selected-student-info" id="selectedStudentInfo" style="display: none;">
+            <div class="student-card">
+                <div class="student-header">
+                    <h3 id="selectedStudentName"></h3>
+                    <span class="student-class" id="selectedStudentClass"></span>
+                </div>
+                <p>Enter marks below. For A-Level subjects, enter marks for each paper separately.</p>
+            </div>
+        </div>
+
+        <!-- Marks Entry Form -->
+        <div class="marks-entry-form" id="marksEntryForm" style="display: none;">
+            <div class="form-header">
+                <h4>Enter Marks</h4>
+                <div class="form-actions">
+                    <button class="btn btn-success" id="saveMarksBtn">
+                        <i class="fas fa-save"></i> Save Marks
+                    </button>
+                    <button class="btn btn-secondary" id="clearFormBtn">
+                        <i class="fas fa-eraser"></i> Clear
+                    </button>
+                </div>
+            </div>
+            
+            <div class="marks-grid" id="marksGrid">
+                <!-- Marks inputs will be generated here -->
+            </div>
+            
+            <div class="marks-summary" id="marksSummary" style="display: none;">
+                <h5>Summary</h5>
+                <div class="summary-stats" id="summaryStats"></div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="marksEmptyState">
+            <i class="fas fa-edit"></i>
+            <h3>Select a class and term to begin</h3>
+            <p>Choose a class and academic term to enter marks for students.</p>
+        </div>
+    </div>
+</div>

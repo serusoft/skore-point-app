@@ -1,0 +1,210 @@
+// Service Worker for Skore Point PWA
+
+const CACHE_NAME = 'skore-point-v1.0.1';
+const urlsToCache = [
+    'index.html',
+    './',
+
+    // Shared resources
+    'shared/css/base.css',
+    'shared/css/variables.css',
+    'shared/css/components.css',
+    'shared/js/app.js',
+    'shared/js/router.js',
+    'shared/js/auth-guard.js',
+    'shared/js/ui.js',
+
+    // Pages
+    'pages/launch/launch.html',
+    'pages/launch/launch.css',
+    'pages/launch/launch.js',
+
+    'pages/auth/login.html',
+    'pages/auth/login.css',
+    'pages/auth/login.js',
+
+    'pages/auth/register.html',
+    'pages/auth/register.css',
+    'pages/auth/register.js',
+
+    'pages/dashboard/dashboard.html',
+    'pages/dashboard/dashboard.css',
+    'pages/dashboard/dashboard.js',
+
+    // Assets
+    'assets/icons/icon-192x192.png',
+    'assets/icons/icon-512x512.png',
+    
+    // External libraries
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2',
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-regular-400.woff2',
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-brands-400.woff2',
+    
+    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js',
+    'https://cdn.jsdelivr.net/npm/chart.js'
+];
+
+// Install event
+self.addEventListener('install', event => {
+    console.log('Service Worker installing...');
+    
+    event.waitUntil(
+        caches.open(CACHE_NAME)
+            .then(cache => {
+                console.log('Cache opened');
+                return cache.addAll(urlsToCache);
+            })
+            .then(() => {
+                console.log('All resources cached');
+                return self.skipWaiting();
+            })
+            .catch(error => {
+                console.error('Cache installation failed:', error);
+            })
+    );
+});
+
+// Activate event
+self.addEventListener('activate', event => {
+    console.log('Service Worker activating...');
+    
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(cacheName => {
+                    if (cacheName !== CACHE_NAME) {
+                        console.log('Deleting old cache:', cacheName);
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        })
+        .then(() => {
+            console.log('Service Worker activated');
+            return self.clients.claim();
+        })
+    );
+});
+
+// Fetch event
+self.addEventListener('fetch', event => {
+    // Skip non-GET requests
+    if (event.request.method !== 'GET') return;
+    
+    // Skip Chrome extensions
+    if (event.request.url.startsWith('chrome-extension://')) return;
+    
+    // Skip Firebase Storage requests (they need network)
+    if (event.request.url.includes('firebasestorage.googleapis.com')) return;
+    
+    event.respondWith(
+        caches.match(event.request)
+            .then(cachedResponse => {
+                // Return cached response if found
+                if (cachedResponse) {
+                    console.log('Serving from cache:', event.request.url);
+                    return cachedResponse;
+                }
+                
+                // Otherwise fetch from network
+                return fetch(event.request)
+                    .then(response => {
+                        // Check if we received a valid response
+                        if (!response || response.status !== 200 || response.type !== 'basic') {
+                            return response;
+                        }
+                        
+                        // Clone the response
+                        const responseToCache = response.clone();
+                        
+                        // Cache the new resource
+                        caches.open(CACHE_NAME)
+                            .then(cache => {
+                                cache.put(event.request, responseToCache);
+                            });
+                        
+                        return response;
+                    })
+                    .catch(error => {
+                        console.log('Fetch failed; returning offline page:', error);
+                        
+                        // If it's a page request, return the offline page
+                        if (event.request.headers.get('Accept').includes('text/html')) {
+                            return caches.match('pages/offline/offline.html');
+                        }
+                        
+                        // For other requests, return a fallback
+                        return new Response('Network error', {
+                            status: 408,
+                            headers: { 'Content-Type': 'text/plain' }
+                        });
+                    });
+            })
+    );
+});
+
+// Background sync for offline data
+self.addEventListener('sync', event => {
+    console.log('Background sync:', event.tag);
+    
+    if (event.tag === 'sync-marks') {
+        event.waitUntil(syncMarks());
+    }
+});
+
+// Push notification event
+self.addEventListener('push', event => {
+    console.log('Push notification received:', event);
+    
+    const options = {
+        body: event.data ? event.data.text() : 'New notification from Skore Point',
+        icon: 'assets/icons/icon-192x192.png',
+        badge: 'assets/icons/icon-192x192.png',
+        vibrate: [100, 50, 100],
+        data: {
+            dateOfArrival: Date.now(),
+            primaryKey: '1'
+        },
+        actions: [
+            {
+                action: 'open',
+                title: 'Open App'
+            },
+            {
+                action: 'close',
+                title: 'Close'
+            }
+        ]
+    };
+    
+    event.waitUntil(
+        self.registration.showNotification('Skore Point', options)
+    );
+});
+
+// Notification click event
+self.addEventListener('notificationclick', event => {
+    console.log('Notification click:', event);
+    
+    event.notification.close();
+    
+    if (event.action === 'open') {
+        event.waitUntil(
+            clients.openWindow('index.html')
+        );
+    }
+});
+
+// Sync marks function
+async function syncMarks() {
+    // This function would sync offline marks data
+    // Implementation depends on your offline data strategy
+    console.log('Syncing marks data...');
+    
+    // Example: Get offline marks from IndexedDB and sync to Firebase
+    // const offlineMarks = await getOfflineMarks();
+    // await syncMarksToFirebase(offlineMarks);
+}

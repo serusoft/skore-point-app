@@ -1,0 +1,411 @@
+.marks-page {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.page-header {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.page-header h1 {
+    font-size: 28px;
+    color: var(--light);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.header-info {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.level-badge {
+    padding: 6px 15px;
+    background: var(--primary);
+    color: white;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.academic-term {
+    color: var(--gray-light);
+    font-size: 14px;
+}
+
+/* Level Selection */
+.level-selection-prompt {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--border-radius);
+    padding: 40px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 30px;
+}
+
+.selection-card {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.selection-card h3 {
+    font-size: 22px;
+    margin-bottom: 10px;
+    color: var(--light);
+}
+
+.selection-card p {
+    color: var(--gray-lighter);
+    margin-bottom: 30px;
+}
+
+.level-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.level-option {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--border-radius-sm);
+    padding: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+}
+
+.level-option:hover {
+    transform: translateY(-3px);
+    border-color: var(--primary);
+    background: rgba(67, 97, 238, 0.05);
+}
+
+.level-option i {
+    font-size: 32px;
+    color: var(--primary-light);
+    margin-bottom: 15px;
+}
+
+.level-option h4 {
+    font-size: 18px;
+    color: var(--light);
+    margin-bottom: 5px;
+}
+
+.level-option p {
+    font-size: 13px;
+    color: var(--gray-light);
+    margin-bottom: 0;
+}
+
+/* Marks Interface */
+.marks-interface {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--border-radius);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 30px;
+}
+
+.marks-filters {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.filter-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+/* Student Selection */
+.student-selection {
+    margin-bottom: 30px;
+}
+
+.search-input {
+    position: relative;
+}
+
+.search-input input {
+    width: 100%;
+    padding: 12px 45px 12px 15px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius-sm);
+    color: var(--light);
+    font-size: 15px;
+}
+
+.search-input input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.search-clear {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--gray-light);
+    cursor: pointer;
+    padding: 5px;
+}
+
+.search-clear:hover {
+    color: var(--error);
+}
+
+.search-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--darker);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0 0 var(--border-radius-sm) var(--border-radius-sm);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+    display: none;
+}
+
+.suggestion-item {
+    padding: 12px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: var(--transition);
+}
+
+.suggestion-item:hover {
+    background: rgba(67, 97, 238, 0.1);
+}
+
+/* Selected Student Info */
+.selected-student-info {
+    margin-bottom: 30px;
+}
+
+.student-card {
+    background: rgba(67, 97, 238, 0.1);
+    border-radius: var(--border-radius-sm);
+    padding: 20px;
+    border: 1px solid var(--primary);
+}
+
+.student-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.student-header h3 {
+    font-size: 18px;
+    color: var(--light);
+    margin: 0;
+}
+
+.student-class {
+    padding: 4px 12px;
+    background: var(--primary);
+    color: white;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Marks Entry Form */
+.marks-entry-form {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--border-radius-sm);
+    padding: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.form-header h4 {
+    font-size: 18px;
+    color: var(--light);
+    margin: 0;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.marks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.mark-input-group {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--border-radius-sm);
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: var(--transition);
+}
+
+.mark-input-group:hover {
+    border-color: var(--primary);
+}
+
+.mark-input-group label {
+    display: block;
+    font-weight: 600;
+    color: var(--light);
+    margin-bottom: 10px;
+    font-size: 15px;
+}
+
+.mark-input {
+    width: 100%;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--light);
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.mark-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* A-Level Paper Inputs */
+.paper-inputs {
+    display: grid;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.paper-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.paper-label {
+    min-width: 70px;
+    font-size: 13px;
+    color: var(--gray-light);
+}
+
+/* Marks Summary */
+.marks-summary {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--border-radius-sm);
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-top: 25px;
+}
+
+.marks-summary h5 {
+    font-size: 16px;
+    color: var(--light);
+    margin-bottom: 15px;
+}
+
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--border-radius-sm);
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--primary);
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 13px;
+    color: var(--gray-light);
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--gray-light);
+}
+
+.empty-state i {
+    font-size: 64px;
+    margin-bottom: 20px;
+    opacity: 0.3;
+}
+
+.empty-state h3 {
+    font-size: 20px;
+    margin-bottom: 10px;
+    color: var(--gray-lighter);
+}
+
+.empty-state p {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .filter-group {
+        grid-template-columns: 1fr;
+    }
+    
+    .marks-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .form-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+    }
+}

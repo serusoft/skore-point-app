@@ -1,0 +1,67 @@
+<div class="dashboard-page">
+    <div class="dashboard-header">
+        <h1>Dashboard</h1>
+        <div class="user-profile-card" id="userProfileCard">
+            <!-- User profile will be loaded here -->
+        </div>
+    </div>
+    
+    <div class="dashboard-grid">
+        <!-- School Portal Card -->
+        <div class="dashboard-card" id="schoolPortalCard" style="display: none;">
+            <div class="card-icon">
+                <i class="fas fa-school"></i>
+            </div>
+            <h3>School Portal</h3>
+            <p>Access your school management portal</p>
+            <div class="school-info" id="schoolInfo" style="display: none;">
+                <h4 id="schoolName"></h4>
+                <p>Code: <strong id="schoolCode"></strong></p>
+                <div class="card-actions">
+                    <button class="btn btn-success btn-block" id="enterPortalBtn">
+                        <i class="fas fa-door-open"></i> Enter Portal
+                    </button>
+                    <button class="btn btn-secondary btn-block mt-10" id="switchSchoolBtn">
+                        <i class="fas fa-exchange-alt"></i> Switch School
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Join School Card -->
+        <div class="dashboard-card" id="joinSchoolCard">
+            <div class="card-icon">
+                <i class="fas fa-user-plus"></i>
+            </div>
+            <h3>Join School</h3>
+            <p>Join an existing school using the school code</p>
+            <button class="btn btn-secondary btn-block mt-20" id="joinSchoolBtn">
+                <i class="fas fa-sign-in-alt"></i> Join School
+            </button>
+        </div>
+        
+        <!-- Register School Card -->
+        <div class="dashboard-card" id="registerSchoolCard">
+            <div class="card-icon">
+                <i class="fas fa-plus-circle"></i>
+            </div>
+            <h3>Register School</h3>
+            <p>Create a new school and become administrator</p>
+            <button class="btn btn-primary btn-block mt-20" id="registerSchoolBtn">
+                <i class="fas fa-school"></i> Register School
+            </button>
+        </div>
+        
+        <!-- My Schools Card -->
+        <div class="dashboard-card" id="mySchoolsCard" style="display: none;">
+            <div class="card-icon">
+                <i class="fas fa-list"></i>
+            </div>
+            <h3>My Schools</h3>
+            <p>View and switch between your schools</p>
+            <div class="schools-list" id="schoolsList">
+                <!-- Schools will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,108 @@
+.register-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+    padding-top: 90px;
+}
+
+.image-upload {
+    border: 2px dashed rgba(255, 255, 255, 0.14);
+    border-radius: var(--border-radius-sm);
+    padding: 22px;
+    text-align: center;
+    margin-bottom: 18px;
+    cursor: pointer;
+    transition: var(--transition);
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));
+    position: relative;
+}
+
+.image-upload:hover {
+    border-color: var(--primary);
+    background: rgba(67, 97, 238, 0.05);
+}
+
+.image-upload i {
+    font-size: 40px;
+    color: var(--primary-light);
+    margin-bottom: 15px;
+}
+
+.image-upload p {
+    color: var(--gray-lighter);
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.image-upload span {
+    font-size: 13px;
+    color: var(--gray-light);
+}
+
+.image-preview {
+    max-width: 100px;
+    max-height: 100px;
+    margin: 15px auto;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid var(--primary);
+}
+
+.register-page .auth-container {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.05));
+    border-radius: calc(var(--border-radius) * 1.1);
+    padding: 48px 36px;
+    width: 100%;
+    max-width: 560px;
+    box-shadow: 0 12px 30px rgba(8,10,20,0.45);
+    border: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.register-page form { width: 100%; display:flex; flex-direction:column; gap:14px; }
+.form-group { width: 100%; }
+.btn.btn-primary { padding: 12px 18px; border-radius: 10px; font-size:16px; }
+
+/* Constrain form width and center inputs for a professional look */
+.auth-container form {
+    max-width: 540px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.auth-container form .form-group,
+.auth-container form input,
+.auth-container form select,
+.auth-container form textarea {
+    max-width: 540px;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+}
+
+@media (max-width: 640px) {
+    .auth-container { padding: 24px; }
+    .auth-container form { max-width: 100%; }
+}
+
+.image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.file-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}

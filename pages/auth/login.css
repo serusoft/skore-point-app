@@ -1,0 +1,142 @@
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+    padding-top: 90px;
+}
+
+.auth-container {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.05));
+    border-radius: calc(var(--border-radius) * 1.1);
+    padding: 48px 40px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 12px 30px rgba(8,10,20,0.45);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 28px;
+    width: 100%;
+}
+
+.auth-header .logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.auth-header .logo i {
+    font-size: 32px;
+    color: var(--primary);
+}
+
+.auth-header .logo h1 {
+    font-size: 28px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 800;
+}
+
+.auth-header h2 {
+    font-size: 24px;
+    margin-bottom: 6px;
+    color: var(--light);
+}
+
+.auth-header p {
+    color: var(--gray-lighter);
+    font-size: 15px;
+}
+
+.auth-container form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-group { width: 100%; }
+
+.password-input { width: 100%; }
+
+.btn.btn-primary {
+    padding: 12px 18px;
+    font-size: 16px;
+    border-radius: 10px;
+}
+
+.alert { width: 100%; justify-content: center; }
+
+.auth-footer { width: 100%; }
+
+.password-input {
+    position: relative;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--gray-light);
+    cursor: pointer;
+    padding: 5px;
+}
+
+.password-toggle:hover {
+    color: var(--primary);
+}
+
+.auth-footer {
+    margin-top: 30px;
+    text-align: center;
+    color: var(--gray-light);
+    font-size: 14px;
+}
+
+.auth-footer a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}
+
+/* Constrain form width and center inputs for a professional look */
+.auth-container form {
+    max-width: 540px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.auth-container form .form-group,
+.auth-container form input,
+.auth-container form select,
+.auth-container form textarea {
+    max-width: 540px;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+}
+
+@media (max-width: 640px) {
+    .auth-container { padding: 22px; }
+    .auth-container form { max-width: 100%; }
+}

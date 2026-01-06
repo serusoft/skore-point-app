@@ -1,0 +1,795 @@
+// Application Initialization and Core Functions
+
+// Global State Management
+const AppState = {
+    currentUser: null,
+    currentUserData: null,
+    currentSchool: null,
+    currentSchoolLevel: null, // 'primary' or 'secondary'
+    currentAcademicLevel: null, // 'lower-primary', 'upper-primary', 'olevel', 'alevel'
+    userSchools: [],
+    isAuthenticated: false,
+    deferredPrompt: null,
+    isAppInstalled: false
+};
+
+// Firebase Modules (lazy loaded)
+let firebaseApp, firebaseAuth, firestoreDB;
+let authModule, firestoreModule, storageModule;
+
+// DOM Elements Cache
+const DOM = {
+    modals: {},
+    alerts: {},
+    containers: {},
+    // Will be populated on page load
+};
+
+// Initialize application
+async function initializeApp() {
+    console.log('Initializing Skore Point Application...');
+    
+    try {
+        // Initialize Firebase
+        const firebaseInitialized = await initializeFirebase();
+        if (!firebaseInitialized) {
+            throw new Error('Firebase initialization failed');
+        }
+        
+        // Check authentication state
+        await checkAuthState();
+        
+        // Initialize PWA
+        initializePWA();
+        
+        // Initialize offline detection
+        initializeOfflineDetection();
+        
+        // Cache DOM elements
+        cacheDOMElements();
+        
+        console.log('Application initialized successfully');
+        
+        // Dispatch app initialized event
+        document.dispatchEvent(new CustomEvent('app:initialized'));
+
+        // Handle initial navigation
+        if (window.location.pathname.endsWith('index.html') || window.location.pathname === '/') {
+            if (AppState.isAuthenticated) {
+                window.location.href = 'pages/dashboard/dashboard.html';
+            } else {
+                window.location.href = 'pages/launch/launch.html';
+            }
+        }
+        
+    } catch (error) {
+        console.error('App initialization error:', error);
+        showError('Application failed to initialize. Please refresh the page.');
+    }
+}
+
+// Initialize Firebase
+async function initializeFirebase() {
+    try {
+        // Dynamic imports for Firebase modules
+        const appModule = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+        authModule = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+        firestoreModule = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+        storageModule = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js');
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyASIdYdW94ZJQXsc6BN9Bc28eou0yjPE1U",
+            authDomain: "upgrade-16092.firebaseapp.com",
+            projectId: "upgrade-16092",
+            storageBucket: "upgrade-16092.firebasestorage.app",
+            messagingSenderId: "466381827996",
+            appId: "1:466381827996:web:6f030e68c526e734a26259",
+            measurementId: "G-RGCH68RJ8H"
+        };
+
+        // Initialize Firebase
+        firebaseApp = appModule.initializeApp(firebaseConfig);
+        firebaseAuth = authModule.getAuth(firebaseApp);
+        firestoreDB = firestoreModule.getFirestore(firebaseApp);
+        
+        // Expose Firebase global for page scripts
+        window.Firebase = {
+            auth: {
+                signInWithEmailAndPassword: (email, password) => authModule.signInWithEmailAndPassword(firebaseAuth, email, password),
+                createUserWithEmailAndPassword: (email, password) => authModule.createUserWithEmailAndPassword(firebaseAuth, email, password),
+                signOut: () => authModule.signOut(firebaseAuth),
+                updateProfile: (user, profile) => authModule.updateProfile(user, profile),
+                sendPasswordResetEmail: (email) => authModule.sendPasswordResetEmail(firebaseAuth, email),
+                onAuthStateChanged: (callback) => authModule.onAuthStateChanged(firebaseAuth, callback)
+            },
+            db: {
+                collection: (name) => firestoreModule.collection(firestoreDB, name),
+                doc: (col, id) => firestoreModule.doc(firestoreDB, col, id),
+                getDoc: async (col, id) => {
+                    const snap = await firestoreModule.getDoc(firestoreModule.doc(firestoreDB, col, id));
+                    return { exists: () => snap.exists(), data: () => snap.data(), id: snap.id };
+                },
+                setDoc: (col, id, data) => firestoreModule.setDoc(firestoreModule.doc(firestoreDB, col, id), data),
+                addDoc: (col, data) => firestoreModule.addDoc(firestoreModule.collection(firestoreDB, col), data),
+                updateDoc: (col, id, data) => firestoreModule.updateDoc(firestoreModule.doc(firestoreDB, col, id), data),
+                deleteDoc: (col, id) => firestoreModule.deleteDoc(firestoreModule.doc(firestoreDB, col, id)),
+                query: async (col, constraints) => {
+                    if (!constraints) constraints = [];
+                    if (!Array.isArray(constraints)) constraints = [constraints];
+                    
+                    const queryConstraints = constraints.map(c => firestoreModule.where(c.field, c.op, c.value));
+                    const q = firestoreModule.query(firestoreModule.collection(firestoreDB, col), ...queryConstraints);
+                    const snap = await firestoreModule.getDocs(q);
+                    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                },
+                getAll: async (col) => {
+                     const snap = await firestoreModule.getDocs(firestoreModule.collection(firestoreDB, col));
+                     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                },
+                serverTimestamp: () => firestoreModule.serverTimestamp(),
+                arrayUnion: (val) => firestoreModule.arrayUnion(val),
+                arrayRemove: (val) => firestoreModule.arrayRemove(val)
+            }
+        };
+
+        console.log('Firebase initialized successfully');
+        return true;
+        
+    } catch (error) {
+        console.error('Firebase initialization error:', error);
+        return false;
+    }
+}
+
+// Check authentication state
+let initialAuthCheckDone = false;
+async function checkAuthState() {
+    return new Promise((resolve) => {
+        authModule.onAuthStateChanged(firebaseAuth, async (user) => {
+            if (user) {
+                AppState.currentUser = user;
+                AppState.isAuthenticated = true;
+                
+                try {
+                    // Load user data from Firestore
+                    await loadUserData(user.uid);
+                    
+                    // Load user's schools
+                    await loadUserSchools();
+                    
+                    localStorage.setItem('isAuthenticated', 'true');
+                    
+                    console.log('User authenticated:', user.email);
+                    
+                } catch (error) {
+                    console.error('Error loading user data:', error);
+                }
+            } else {
+                AppState.currentUser = null;
+                AppState.currentUserData = null;
+                AppState.currentSchool = null;
+                AppState.isAuthenticated = false;
+                localStorage.removeItem('isAuthenticated');
+                console.log('User not authenticated');
+            }
+            
+            if (!initialAuthCheckDone) {
+                initialAuthCheckDone = true;
+                resolve();
+            }
+        });
+    });
+}
+
+// Load user data from Firestore
+async function loadUserData(userId) {
+    try {
+        const userDocRef = firestoreModule.doc(firestoreDB, 'users', userId);
+        const userDoc = await firestoreModule.getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+            AppState.currentUserData = userDoc.data();
+            console.log('User data loaded:', AppState.currentUserData);
+        } else {
+            // Create minimal user document
+            const userData = {
+                name: AppState.currentUser.displayName || 'User',
+                email: AppState.currentUser.email,
+                createdAt: firestoreModule.serverTimestamp(),
+                profileUrl: '',
+                role: 'teacher' // Default role
+            };
+            
+            await firestoreModule.setDoc(userDocRef, userData);
+            AppState.currentUserData = userData;
+        }
+        
+        // Dispatch event for user data loaded
+        document.dispatchEvent(new CustomEvent('user:loaded', {
+            detail: { userData: AppState.currentUserData }
+        }));
+        
+    } catch (error) {
+        console.error('Error loading user data:', error);
+        throw error;
+    }
+}
+
+// Load user's schools
+async function loadUserSchools() {
+    if (!AppState.currentUser) return;
+    
+    try {
+        AppState.userSchools = [];
+        
+        // Get all schools where user is in teachers array
+        const schoolsQuery = firestoreModule.query(
+            firestoreModule.collection(firestoreDB, 'schools'),
+            firestoreModule.where('teachers', 'array-contains', AppState.currentUser.uid)
+        );
+        
+        const querySnapshot = await firestoreModule.getDocs(schoolsQuery);
+        
+        querySnapshot.forEach(doc => {
+            const schoolData = {
+                id: doc.id,
+                ...doc.data()
+            };
+            
+            // Check if user is admin
+            const isAdmin = schoolData.admins && schoolData.admins.includes(AppState.currentUser.uid);
+            schoolData.userRole = isAdmin ? 'admin' : 'teacher';
+            
+            AppState.userSchools.push(schoolData);
+        });
+        
+        console.log(`Loaded ${AppState.userSchools.length} schools for user`);
+        
+        // Dispatch event
+        document.dispatchEvent(new CustomEvent('schools:loaded', {
+            detail: { schools: AppState.userSchools }
+        }));
+        
+    } catch (error) {
+        console.error('Error loading user schools:', error);
+    }
+}
+
+// Set current school
+async function setCurrentSchool(schoolId) {
+    try {
+        const school = AppState.userSchools.find(s => s.id === schoolId);
+        if (!school) {
+            throw new Error('School not found in user schools');
+        }
+        
+        AppState.currentSchool = school;
+        AppState.currentSchoolLevel = school.level; // 'primary' or 'secondary'
+        
+        // Update user document with current school
+        if (AppState.currentUser) {
+            await firestoreModule.updateDoc(
+                firestoreModule.doc(firestoreDB, 'users', AppState.currentUser.uid),
+                {
+                    currentSchoolId: schoolId,
+                    role: school.userRole
+                }
+            );
+        }
+        
+        // Update current user data
+        if (AppState.currentUserData) {
+            AppState.currentUserData.currentSchoolId = schoolId;
+            AppState.currentUserData.role = school.userRole;
+        }
+        
+        console.log('Current school set:', school.name);
+        
+        // Dispatch event
+        document.dispatchEvent(new CustomEvent('school:changed', {
+            detail: { school: AppState.currentSchool }
+        }));
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Error setting current school:', error);
+        throw error;
+    }
+}
+
+// Set academic level
+function setAcademicLevel(level) {
+    if (!AppState.currentSchool) {
+        throw new Error('No current school selected');
+    }
+    
+    const validLevels = AppState.currentSchoolLevel === 'primary' 
+        ? ['lower-primary', 'upper-primary']
+        : ['olevel', 'alevel'];
+    
+    if (!validLevels.includes(level)) {
+        throw new Error(`Invalid academic level for ${AppState.currentSchoolLevel} school`);
+    }
+    
+    AppState.currentAcademicLevel = level;
+    
+    console.log('Academic level set:', level);
+    
+    // Dispatch event
+    document.dispatchEvent(new CustomEvent('academic-level:changed', {
+        detail: { level: AppState.currentAcademicLevel }
+    }));
+    
+    return true;
+}
+
+// Initialize PWA
+function initializePWA() {
+    // Check if app is installed
+    checkIfAppInstalled();
+    
+    // Listen for beforeinstallprompt event
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        AppState.deferredPrompt = e;
+        
+        if (!AppState.isAppInstalled) {
+            showInstallPrompts();
+        }
+        
+        console.log('PWA install prompt available');
+    });
+    
+    // Listen for app installed event
+    window.addEventListener('appinstalled', () => {
+        console.log('PWA was installed');
+        AppState.isAppInstalled = true;
+        hideInstallPrompts();
+        localStorage.setItem('pwaInstalled', 'true');
+        showToast('App installed successfully!', 'success');
+    });
+    
+    // Check standalone mode
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        console.log('Running in standalone mode');
+        AppState.isAppInstalled = true;
+    }
+    
+    // Register service worker (compute relative path to root)
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            const segments = window.location.pathname.split('/').filter(Boolean);
+            const up = segments.length > 1 ? segments.length - 1 : 0;
+            const prefix = up === 0 ? '' : Array(up).fill('..').join('/');
+            const swUrl = prefix ? `${prefix}/sw.js` : 'sw.js';
+
+            navigator.serviceWorker.register(swUrl)
+                .then(registration => {
+                    console.log('ServiceWorker registered:', registration.scope);
+                })
+                .catch(error => {
+                    console.log('ServiceWorker registration failed:', error);
+                });
+        });
+    }
+}
+
+// Check if app is installed
+function checkIfAppInstalled() {
+    if (localStorage.getItem('pwaInstalled') === 'true') {
+        AppState.isAppInstalled = true;
+        return true;
+    }
+    
+    if (window.navigator.standalone === true) {
+        AppState.isAppInstalled = true;
+        localStorage.setItem('pwaInstalled', 'true');
+        return true;
+    }
+    
+    return false;
+}
+
+// Show install prompts
+function showInstallPrompts() {
+    if (AppState.isAppInstalled || !AppState.deferredPrompt) {
+        return;
+    }
+    
+    const lastDismissed = localStorage.getItem('pwaPromptDismissedDate');
+    if (lastDismissed) {
+        const lastDismissedDate = new Date(lastDismissed);
+        const hoursSinceDismissal = (new Date() - lastDismissedDate) / (1000 * 60 * 60);
+        if (hoursSinceDismissal < 24) {
+            return;
+        }
+    }
+    
+    // Show install button
+    const installBtn = document.getElementById('installAppBtn');
+    if (installBtn) {
+        installBtn.style.display = 'flex';
+    }
+}
+
+// Hide install prompts
+function hideInstallPrompts() {
+    const installBtn = document.getElementById('installAppBtn');
+    if (installBtn) {
+        installBtn.style.display = 'none';
+    }
+}
+
+// Install PWA
+async function installPWA() {
+    if (!AppState.deferredPrompt) {
+        alert('Your browser does not support PWA installation. Please try using Chrome, Edge, or Safari on iOS.');
+        return;
+    }
+    
+    try {
+        AppState.deferredPrompt.prompt();
+        const choiceResult = await AppState.deferredPrompt.userChoice;
+        
+        if (choiceResult.outcome === 'accepted') {
+            console.log('User accepted the install prompt');
+            AppState.isAppInstalled = true;
+            localStorage.setItem('pwaInstalled', 'true');
+            hideInstallPrompts();
+            showToast('App installed successfully!', 'success');
+        } else {
+            console.log('User dismissed the install prompt');
+            localStorage.setItem('pwaPromptDismissed', 'true');
+            localStorage.setItem('pwaPromptDismissedDate', new Date().toISOString());
+            hideInstallPrompts();
+        }
+        
+        AppState.deferredPrompt = null;
+        
+    } catch (error) {
+        console.error('Error installing PWA:', error);
+        showError('Error installing app. Please try again.');
+    }
+}
+
+// Initialize offline detection
+function initializeOfflineDetection() {
+    const offlineIndicator = document.getElementById('offlineIndicator');
+    
+    window.addEventListener('online', () => {
+        if (offlineIndicator) offlineIndicator.classList.remove('active');
+        showToast('You are back online', 'success');
+    });
+    
+    window.addEventListener('offline', () => {
+        if (offlineIndicator) offlineIndicator.classList.add('active');
+        showToast('You are offline. Some features may not work.', 'warning');
+    });
+}
+
+// Cache DOM elements
+function cacheDOMElements() {
+    // Cache modals
+    DOM.modals = {
+        loading: document.getElementById('loadingModal'),
+        error: document.getElementById('errorModal'),
+        confirm: document.getElementById('confirmModal'),
+        levelSelect: document.getElementById('levelSelectModal')
+    };
+    
+    // Cache alerts container
+    DOM.alerts = {
+        container: document.getElementById('alertsContainer')
+    };
+    
+    // Cache main containers
+    DOM.containers = {
+        main: document.getElementById('mainContainer'),
+        auth: document.getElementById('authContainer'),
+        dashboard: document.getElementById('dashboardContainer'),
+        school: document.getElementById('schoolContainer')
+    };
+}
+
+// Navigation helper
+function navigateTo(page, params = {}) {
+    const pages = {
+        'login': '../auth/login.html',
+        'register': '../auth/register.html',
+        'dashboard': '../dashboard/dashboard.html',
+        'school': '../school/school.html',
+        'marks': '../marks/marks.html',
+        'reports': '../reports/reports.html',
+        'analytics': '../analytics/analytics.html'
+    };
+    
+    if (pages[page]) {
+        let url = pages[page];
+        if (Object.keys(params).length > 0) {
+            const queryParams = new URLSearchParams(params).toString();
+            url += '?' + queryParams;
+        }
+        window.location.href = url;
+    } else {
+        console.error('Unknown page:', page);
+    }
+}
+
+// Handle anchors using `data-page="..."` to navigate via `navigateTo` helper
+document.addEventListener('click', (e) => {
+    const link = e.target.closest('a[data-page]');
+    if (!link) return;
+    e.preventDefault();
+    const page = link.dataset.page;
+    if (page) {
+        navigateTo(page);
+    }
+});
+
+// Show loading overlay
+function showLoading(message = 'Loading...') {
+    if (DOM.modals.loading) {
+        const messageEl = DOM.modals.loading.querySelector('.loading-message');
+        if (messageEl) messageEl.textContent = message;
+        DOM.modals.loading.classList.add('active');
+    }
+}
+
+// Hide loading overlay
+function hideLoading() {
+    if (DOM.modals.loading) {
+        DOM.modals.loading.classList.remove('active');
+    }
+}
+
+// Show toast notification
+function showToast(message, type = 'info', duration = 3000) {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: var(--z-modal);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 400px;
+        `;
+        document.body.appendChild(toastContainer);
+    }
+    
+    // Create toast
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `
+        <div class="toast-content">
+            <i class="fas fa-${getToastIcon(type)}"></i>
+            <span>${message}</span>
+        </div>
+        <button class="toast-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    // Auto remove after duration
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, duration);
+}
+
+// Get toast icon based on type
+function getToastIcon(type) {
+    const icons = {
+        'success': 'check-circle',
+        'error': 'exclamation-circle',
+        'warning': 'exclamation-triangle',
+        'info': 'info-circle'
+    };
+    return icons[type] || 'info-circle';
+}
+
+// Show error modal
+function showError(message, title = 'Error') {
+    if (DOM.modals.error) {
+        const titleEl = DOM.modals.error.querySelector('.modal-title');
+        const messageEl = DOM.modals.error.querySelector('.error-message');
+        
+        if (titleEl) titleEl.textContent = title;
+        if (messageEl) messageEl.textContent = message;
+        
+        DOM.modals.error.classList.add('active');
+    } else {
+        alert(`${title}: ${message}`);
+    }
+}
+
+// Confirm dialog
+function showConfirm(message, title = 'Confirm', confirmText = 'Yes', cancelText = 'No') {
+    return new Promise((resolve) => {
+        if (DOM.modals.confirm) {
+            const titleEl = DOM.modals.confirm.querySelector('.modal-title');
+            const messageEl = DOM.modals.confirm.querySelector('.confirm-message');
+            const confirmBtn = DOM.modals.confirm.querySelector('.confirm-btn');
+            const cancelBtn = DOM.modals.confirm.querySelector('.cancel-btn');
+            
+            if (titleEl) titleEl.textContent = title;
+            if (messageEl) messageEl.textContent = message;
+            if (confirmBtn) confirmBtn.textContent = confirmText;
+            if (cancelBtn) cancelBtn.textContent = cancelText;
+            
+            DOM.modals.confirm.classList.add('active');
+            
+            const handleConfirm = () => {
+                cleanup();
+                resolve(true);
+            };
+            
+            const handleCancel = () => {
+                cleanup();
+                resolve(false);
+            };
+            
+            const cleanup = () => {
+                DOM.modals.confirm.classList.remove('active');
+                confirmBtn?.removeEventListener('click', handleConfirm);
+                cancelBtn?.removeEventListener('click', handleCancel);
+            };
+            
+            confirmBtn?.addEventListener('click', handleConfirm);
+            cancelBtn?.addEventListener('click', handleCancel);
+        } else {
+            const result = confirm(`${title}: ${message}`);
+            resolve(result);
+        }
+    });
+}
+
+// Show level selection modal (for primary/secondary schools)
+function showLevelSelection(schoolLevel) {
+    return new Promise((resolve) => {
+        if (DOM.modals.levelSelect && schoolLevel) {
+            const modal = DOM.modals.levelSelect;
+            const title = modal.querySelector('.modal-title');
+            const levelsContainer = modal.querySelector('.levels-container');
+            
+            if (title) {
+                title.textContent = schoolLevel === 'primary' 
+                    ? 'Select Primary Level'
+                    : 'Select Secondary Level';
+            }
+            
+            if (levelsContainer) {
+                const levels = schoolLevel === 'primary'
+                    ? [
+                        { id: 'lower-primary', name: 'Lower Primary', description: 'P1 - P3' },
+                        { id: 'upper-primary', name: 'Upper Primary', description: 'P4 - P7' }
+                    ]
+                    : [
+                        { id: 'olevel', name: 'O-Level', description: 'S1 - S4' },
+                        { id: 'alevel', name: 'A-Level', description: 'S5 - S6' }
+                    ];
+                
+                levelsContainer.innerHTML = levels.map(level => `
+                    <div class="level-option" data-level="${level.id}">
+                        <h4>${level.name}</h4>
+                        <p>${level.description}</p>
+                    </div>
+                `).join('');
+                
+                // Add event listeners
+                const levelOptions = levelsContainer.querySelectorAll('.level-option');
+                levelOptions.forEach(option => {
+                    option.addEventListener('click', () => {
+                        const selectedLevel = option.dataset.level;
+                        modal.classList.remove('active');
+                        resolve(selectedLevel);
+                    });
+                });
+            }
+            
+            modal.classList.add('active');
+        } else {
+            // Fallback to default level
+            const defaultLevel = schoolLevel === 'primary' ? 'lower-primary' : 'olevel';
+            resolve(defaultLevel);
+        }
+    });
+}
+
+// Format date
+function formatDate(date, format = 'short') {
+    const d = new Date(date);
+    if (format === 'short') {
+        return d.toLocaleDateString();
+    } else if (format === 'long') {
+        return d.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    }
+    return d.toISOString().split('T')[0];
+}
+
+// Get initials from name
+function getInitials(name) {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+}
+
+// Generate unique ID
+function generateId(prefix = '') {
+    return prefix + Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+// Validate email
+function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+}
+
+// Validate password strength
+function validatePassword(password) {
+    const minLength = 6;
+    if (password.length < minLength) {
+        return `Password must be at least ${minLength} characters`;
+    }
+    return null;
+}
+
+// Debounce function
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Throttle function
+function throttle(func, limit) {
+    let inThrottle;
+    return function() {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+}
+
+// Export to window
+window.AppState = AppState;
+window.showLoading = showLoading;
+window.hideLoading = hideLoading;
+window.showToast = showToast;
+window.showError = showError;
+window.showConfirm = showConfirm;
+window.navigateTo = navigateTo;
+window.installPWA = installPWA;
+window.showLevelSelection = showLevelSelection;
+window.formatDate = formatDate;
+window.getInitials = getInitials;
+window.generateId = generateId;
+window.validateEmail = validateEmail;
+window.validatePassword = validatePassword;
+
+// Initialize app when DOM is loaded
+document.addEventListener('DOMContentLoaded', initializeApp);

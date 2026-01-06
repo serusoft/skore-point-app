@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports & Analytics | Skore Point</title>
+    
+    <!-- Shared CSS -->
+    <link rel="stylesheet" href="../../shared/css/base.css">
+    <link rel="stylesheet" href="../../shared/css/variables.css">
+    <link rel="stylesheet" href="../../shared/css/components.css">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Page-specific CSS -->
+    <link rel="stylesheet" href="reports.css">
+    
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <!-- Navigation will be injected by shared/js/ui.js -->
+    <div id="navbar-container"></div>
+    <div id="sidebar-container"></div>
+    
+    <main class="main-content">
+        <div class="page-header">
+            <h1><i class="fas fa-chart-bar"></i> Reports & Analytics</h1>
+            <div class="header-controls">
+                <div class="level-badge" id="currentLevelBadge">No Level Selected</div>
+                <button class="btn btn-secondary btn-sm" id="levelSelectBtn">
+                    <i class="fas fa-exchange-alt"></i> Change Level
+                </button>
+            </div>
+        </div>
+
+        <!-- Level Selection Modal -->
+        <div class="modal" id="levelSelectionModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Select Academic Level</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="level-options-grid" id="levelOptions">
+                        <!-- Levels will be populated based on school type -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Interface (visible after level selection) -->
+        <div class="reports-interface" id="reportsInterface" style="display: none;">
+            <!-- Report Type Tabs -->
+            <div class="report-type-tabs">
+                <button class="report-tab active" data-type="student">
+                    <i class="fas fa-user-graduate"></i>
+                    <span>Student Report</span>
+                </button>
+                <button class="report-tab" data-type="class">
+                    <i class="fas fa-chalkboard"></i>
+                    <span>Class Report</span>
+                </button>
+                <button class="report-tab" data-type="subject">
+                    <i class="fas fa-book"></i>
+                    <span>Subject Analysis</span>
+                </button>
+                <button class="report-tab" data-type="school">
+                    <i class="fas fa-school"></i>
+                    <span>School Summary</span>
+                </button>
+            </div>
+
+            <!-- Filters Section -->
+            <div class="filters-section">
+                <div class="filters-container" id="studentFilters">
+                    <div class="filter-row">
+                        <div class="form-group">
+                            <label for="reportClass"><i class="fas fa-chalkboard"></i> Class</label>
+                            <select id="reportClass" class="form-control">
+                                <option value="">Select Class</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="reportStudent"><i class="fas fa-user-graduate"></i> Student</label>
+                            <select id="reportStudent" class="form-control" disabled>
+                                <option value="">Select Student</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="reportTerm"><i class="fas fa-calendar-alt"></i> Term</label>
+                            <select id="reportTerm" class="form-control">
+                                <option value="beginning">Beginning of Term</option>
+                                <option value="mid">Mid Term</option>
+                                <option value="end" selected>End of Term</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filters-container" id="classFilters" style="display: none;">
+                    <div class="filter-row">
+                        <div class="form-group">
+                            <label for="classReportClass"><i class="fas fa-chalkboard"></i> Class</label>
+                            <select id="classReportClass" class="form-control">
+                                <option value="">Select Class</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="classReportTerm"><i class="fas fa-calendar-alt"></i> Term</label>
+                            <select id="classReportTerm" class="form-control">
+                                <option value="beginning">Beginning of Term</option>
+                                <option value="mid">Mid Term</option>
+                                <option value="end" selected>End of Term</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filters-container" id="subjectFilters" style="display: none;">
+                    <div class="filter-row">
+                        <div class="form-group">
+                            <label for="subjectReportClass"><i class="fas fa-chalkboard"></i> Class</label>
+                            <select id="subjectReportClass" class="form-control">
+                                <option value="">Select Class</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="subjectReportSubject"><i class="fas fa-book"></i> Subject</label>
+                            <select id="subjectReportSubject" class="form-control">
+                                <option value="">Select Subject</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="subjectReportTerm"><i class="fas fa-calendar-alt"></i> Term</label>
+                            <select id="subjectReportTerm" class="form-control">
+                                <option value="beginning">Beginning of Term</option>
+                                <option value="mid">Mid Term</option>
+                                <option value="end" selected>End of Term</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filters-container" id="schoolFilters" style="display: none;">
+                    <div class="filter-row">
+                        <div class="form-group">
+                            <label for="schoolReportTerm"><i class="fas fa-calendar-alt"></i> Term</label>
+                            <select id="schoolReportTerm" class="form-control">
+                                <option value="beginning">Beginning of Term</option>
+                                <option value="mid">Mid Term</option>
+                                <option value="end" selected>End of Term</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="generateReportBtn">
+                    <i class="fas fa-play"></i> Generate Report
+                </button>
+                
+                <div class="export-buttons">
+                    <button class="btn btn-success" id="exportPDFBtn" disabled>
+                        <i class="fas fa-file-pdf"></i> Export PDF
+                    </button>
+                    <button class="btn btn-warning" id="exportExcelBtn" disabled>
+                        <i class="fas fa-file-excel"></i> Export Excel
+                    </button>
+                    <button class="btn btn-info" id="printReportBtn" disabled>
+                        <i class="fas fa-print"></i> Print
+                    </button>
+                </div>
+            </div>
+
+            <!-- Report Preview Area -->
+            <div class="report-preview-container">
+                <div class="preview-header">
+                    <h3>Report Preview</h3>
+                    <div class="preview-controls">
+                        <button class="btn btn-sm btn-secondary" id="refreshPreviewBtn">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button class="btn btn-sm btn-light" id="fullscreenPreviewBtn">
+                            <i class="fas fa-expand"></i> Fullscreen
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="report-preview" id="reportPreview">
+                    <div class="empty-preview">
+                        <i class="fas fa-chart-line"></i>
+                        <h4>No Report Generated</h4>
+                        <p>Select filters and click "Generate Report" to see preview</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Summary -->
+            <div class="statistics-summary" id="statisticsSummary" style="display: none;">
+                <h3>Performance Summary</h3>
+                <div class="stats-grid" id="statsGrid">
+                    <!-- Stats will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Level Selection Prompt -->
+        <div class="level-selection-prompt" id="levelSelectionPrompt">
+            <div class="prompt-content">
+                <i class="fas fa-graduation-cap"></i>
+                <h2>Select Academic Level</h2>
+                <p>Please select the academic level to generate reports for:</p>
+                
+                <div class="level-options-container" id="levelOptionsPrompt">
+                    <!-- Options will be populated by JavaScript -->
+                </div>
+                
+                <p class="prompt-note">
+                    <i class="fas fa-info-circle"></i>
+                    You can change the level anytime using the level selector
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p id="loadingText">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Shared JavaScript -->
+    <script type="module" src="../../shared/js/app.js"></script>
+    <script type="module" src="../../shared/js/router.js"></script>
+    <script type="module" src="../../shared/js/auth-guard.js"></script>
+    <script src="../../shared/js/ui.js"></script>
+
+    <!-- Services -->
+    <script type="module" src="../../services/report.service.js"></script>
+    <script type="module" src="../../services/school.service.js"></script>
+
+    <!-- Utils -->
+    <script src="../../utils/grading.js"></script>
+    <script src="../../utils/helpers.js"></script>
+
+    <!-- Page-specific JavaScript -->
+    <script type="module" src="reports.js"></script>
+</body>
+</html>
