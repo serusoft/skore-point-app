@@ -101,8 +101,7 @@
 .navbar {
     background: rgba(15, 23, 42, 0.95);
     backdrop-filter: blur(10px);
-    height: var(--navbar-height);
-    padding: 0;
+    padding: 15px 30px; /* Changed from 0 */
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     justify-content: space-between;
@@ -121,7 +120,6 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 100%;
 }
 
 /* When navbar is present add top offset to main containers to avoid overlap */
@@ -147,6 +145,7 @@
 
 .navbar-brand i {
     font-size: 22px;
+    line-height: 1;
 }
 
 /* Ensure the brand stays left and nav items align right */
@@ -159,8 +158,7 @@
 .navbar-brand { display: flex; align-items: center; gap: 10px; }
 .navbar-brand .brand-title { line-height: 1; }
 
-/* Make nav links vertically centered and limit their height to prevent overflow */
-.navbar-nav .nav-link { height: calc(var(--navbar-height) - 18px); align-items: center; }
+.navbar-nav .nav-link { align-items: center; }
 
 .nav-link { color: var(--light); text-decoration:none; padding:8px 16px; border-radius: var(--border-radius-sm); transition: var(--transition); font-weight:500; display:flex; align-items:center; gap:8px; }
 
@@ -230,6 +228,13 @@
     .desktop-hidden { display: inline-flex !important; }
     .mobile-only { display: block !important; }
     .navbar .container { padding-right: 12px; padding-left: 12px; }
+    .navbar-nav .nav-link {
+        padding: 8px 10px;
+        font-size: 14px;
+    }
+    .navbar-nav {
+        gap: 5px;
+    }
 }
 
     /* Cards */

@@ -178,6 +178,16 @@ async function checkAuthState() {
                 initialAuthCheckDone = true;
                 resolve();
             }
+
+            // Handle navigation after auth state change
+            const currentPage = window.location.pathname;
+            const isAuthPage = currentPage.includes('login.html') || currentPage.includes('register.html');
+
+            if (user && isAuthPage) {
+                window.location.href = '../dashboard/dashboard.html';
+            } else if (!user && !isAuthPage && !currentPage.includes('launch.html')) {
+                window.location.href = '../auth/login.html';
+            }
         });
     });
 }
