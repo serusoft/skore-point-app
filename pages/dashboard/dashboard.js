@@ -1,7 +1,13 @@
 // Dashboard page functionality
-document.addEventListener('DOMContentLoaded', () => {
+function onAppReady() {
     initDashboard();
-});
+}
+
+if (window.appInitialized) {
+    onAppReady();
+} else {
+    document.addEventListener('app:initialized', onAppReady);
+}
 
 async function initDashboard() {
     await loadUserProfile();
@@ -12,10 +18,10 @@ async function initDashboard() {
 async function loadUserProfile() {
     const userProfileCard = document.getElementById('userProfileCard');
     if (!userProfileCard) return;
-    
+
     const user = AppState.currentUser;
     const userData = AppState.currentUserData;
-    
+
     if (!user || !userData) {
         userProfileCard.innerHTML = `
             <div class="alert info">
@@ -25,44 +31,33 @@ async function loadUserProfile() {
         `;
         return;
     }
-    
-    const initials = getInitials(userData.name || user.email);
-    const profileUrl = userData.profileUrl;
-    const name = userData.name || user.displayName || 'User';
-    const email = user.email;
-    const role = userData.role || 'teacher';
-    
-    userProfileCard.innerHTML = `
-        <div class="profile-header">
-            <div class="profile-image">
-                ${profileUrl ? 
-                    `<img src="${profileUrl}" alt="${name}" onerror="this.parentElement.innerHTML='${initials}'">` :
-                    `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--primary); color: white; font-weight: bold; font-size: 20px;">${initials}</div>`
+
+    const profilePicture = userProfileCard.querySelector('.profile-picture');
+    const username = userProfileCard.querySelector('.username');
+    const logoutBtn = userProfileCard.querySelector('#logoutBtn');
+
+    if (profilePicture) {
+        profilePicture.src = userData.profileUrl || 'https://via.placeholder.com/150';
+        profilePicture.alt = userData.name || user.email;
+    }
+
+    if (username) {
+        username.textContent = userData.name || user.displayName || 'User';
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            if (confirm('Are you sure you want to logout?')) {
+                try {
+                    await Firebase.auth.signOut();
+                    // Navigation will be handled by the auth state listener in app.js
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    UI.showToast('Error logging out', 'error');
                 }
-            </div>
-            <div class="profile-details">
-                <div class="profile-name">${name}</div>
-                <div class="profile-email">${email}</div>
-                <span class="profile-role ${role}">${role.toUpperCase()}</span>
-            </div>
-        </div>
-        <button class="btn btn-danger logout-btn" id="logoutBtn">
-            <i class="fas fa-sign-out-alt"></i> Logout
-        </button>
-    `;
-    
-    // Add logout handler
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
-        if (confirm('Are you sure you want to logout?')) {
-            try {
-                await Firebase.auth.signOut();
-                // Navigation handled by auth state change
-            } catch (error) {
-                console.error('Logout error:', error);
-                UI.showToast('Error logging out', 'error');
             }
-        }
-    });
+        });
+    }
 }
 
 async function loadUserSchools() {

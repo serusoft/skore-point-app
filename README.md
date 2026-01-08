@@ -1,34 +1,47 @@
-# Skore Point — Run Locally
+# Skore Point - School Management System
 
-Best option: run a local static server so absolute imports, modules, and the service worker resolve correctly.
+Skore Point is a web-based application designed to help schools manage student marks and generate reports. It is a Progressive Web App (PWA) that can be installed on a user's device and has offline capabilities.
 
-Recommended commands
+## Technologies Used
 
-- Using Python 3 (serve parent directory so the app path matches `/skore-point-app/`):
+- **Frontend:** HTML, CSS, JavaScript
+- **Backend:** Firebase (Authentication, Firestore, Storage)
+- **Service Worker:** For offline support and caching
+- **Libraries:** Font Awesome for icons
 
-```powershell
-cd %USERPROFILE%\Desktop
-python -m http.server 8000
-# then open: http://localhost:8000/skore-point-app/
+## Project Structure
+
+The project is organized into the following main directories:
+
+-   `assets`: Contains static assets like icons and screenshots.
+-   `firebase`: Contains Firebase configuration and service modules.
+-   `pages`: Contains the different pages of the application (e.g., dashboard, login, marks).
+-   `services`: Contains modules for interacting with Firebase services.
+-   `shared`: Contains shared CSS, JavaScript, and UI components.
+-   `utils`: Contains utility functions.
+
+## Running the Project Locally
+
+To run the project locally, you can use a simple HTTP server.
+
+**Using Python:**
+
+If you have Python installed, you can run a simple HTTP server from the project's root directory:
+
+```bash
+python -m http.server
 ```
 
-- Using `serve` (Node, no install if using `npx`):
+Then, open your browser and go to `http://localhost:8000`.
 
-```powershell
-cd %USERPROFILE%\Desktop
-npx serve . -l 5000
-# then open: http://localhost:5000/skore-point-app/
+**Using Node.js:**
+
+If you have Node.js installed, you can use the `serve` package:
+
+```bash
+npx serve .
 ```
 
-Notes
-- Many files and the service worker use root-absolute paths like `/shared/js/app.js` or `/skore-point-app/...`. Serving from a static server (above) preserves those paths.
-- If you prefer to open files directly in the browser (file://), that will fail for module imports and service worker registration. Use a server instead.
-- If you must serve the site from a different path, either:
-  - edit `sw.js` and other absolute paths to match your deployment path, or
-  - add a `<base href="/skore-point-app/">` in the `<head>` of `index.html` so relative links resolve (I can add this for you).
+Then, open your browser and go to the URL provided by the `serve` command.
 
-Next steps I can take (choose):
-- Add a `package.json` with a `start` script using `serve` or `http-server`.
-- Insert a `<base>` tag into `index.html` to fix relative resolution when served from `/skore-point-app/`.
-
-If you'd like, I can add one of the optional fixes now.
+You can also simply open the `index.html` file directly in your browser.

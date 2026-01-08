@@ -1,6 +1,6 @@
 // Service Worker for Skore Point PWA
 
-const CACHE_NAME = 'skore-point-v1.0.1';
+const CACHE_NAME = 'skore-point-v1.0.2';
 const urlsToCache = [
     'index.html',
     './',
@@ -34,6 +34,8 @@ const urlsToCache = [
     // Assets
     'assets/icons/icon-192x192.png',
     'assets/icons/icon-512x512.png',
+    'assets/screenshot/skore-dashboard-wide.png',
+    'assets/screenshot/skore-dashboard-mobile.png',
     
     // External libraries
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',

@@ -82,6 +82,16 @@ class AppUI {
     // Inject a global navbar into pages that include #navbar-container
     injectNavbar() {
         try {
+            const isAuthenticated = AppState.isAuthenticated;
+            let navLinks = `
+                <a href="../auth/login.html" class="nav-link" data-page="login"><i class="fas fa-sign-in-alt"></i> Sign In</a>
+                <a href="../auth/register.html" class="nav-link" data-page="register"><i class="fas fa-user-plus"></i> Register</a>
+            `;
+
+            if (isAuthenticated) {
+                navLinks = ''; // No links for authenticated users in the main navbar
+            }
+
             const navHtml = `
                 <nav class="navbar" id="main-navbar">
                     <div class="container">
@@ -95,13 +105,11 @@ class AppUI {
                         </button>
 
                         <div class="navbar-nav desktop-only" id="navbar-desktop-nav">
-                            <a href="../auth/login.html" class="nav-link" data-page="login"><i class="fas fa-sign-in-alt"></i> Sign In</a>
-                            <a href="../auth/register.html" class="nav-link" data-page="register"><i class="fas fa-user-plus"></i> Register</a>
+                            ${navLinks}
                         </div>
 
                         <div class="mobile-nav mobile-only" id="navbar-mobile-nav" aria-hidden="true">
-                            <a href="../auth/login.html" class="nav-link"><i class="fas fa-sign-in-alt"></i> Sign In</a>
-                            <a href="../auth/register.html" class="nav-link"><i class="fas fa-user-plus"></i> Register</a>
+                            ${navLinks}
                         </div>
                     </div>
                 </nav>
@@ -454,52 +462,70 @@ class AppUI {
     }
     
     // Create form dialog
-    async form(fields, title = 'Form') {
+    async form(fields, title = 'Form', buttonText = 'Submit', submitCallback = null) {
         return new Promise((resolve) => {
             const modalId = 'form-modal-' + Date.now();
             const modal = document.createElement('div');
             modal.id = modalId;
             modal.className = 'modal';
             
-            const formHtml = fields.map(field => `
-                <div class="form-group">
-                    <label for="${modalId}-${field.name}">${field.label}</label>
-                    ${field.type === 'select' ? `
-                        <select class="form-control" id="${modalId}-${field.name}">
+            const formHtml = fields.map(field => {
+                const fieldId = `${modalId}-${field.name}`;
+                let inputHtml;
+                
+                if (field.type === 'select') {
+                    inputHtml = `
+                        <select class="form-control" id="${fieldId}" name="${field.name}" ${field.required ? 'required' : ''}>
                             ${field.options.map(opt => `
                                 <option value="${opt.value}" ${opt.value === field.value ? 'selected' : ''}>
                                     ${opt.label}
                                 </option>
                             `).join('')}
                         </select>
-                    ` : field.type === 'textarea' ? `
-                        <textarea class="form-control" id="${modalId}-${field.name}" ${field.required ? 'required' : ''}>${field.value || ''}</textarea>
-                    ` : `
-                        <input type="${field.type || 'text'}" class="form-control" id="${modalId}-${field.name}" 
-                               value="${field.value || ''}" ${field.required ? 'required' : ''}>
-                    `}
-                </div>
-            `).join('');
+                    `;
+                } else if (field.type === 'textarea') {
+                    inputHtml = `
+                        <textarea class="form-control" id="${fieldId}" name="${field.name}" ${field.required ? 'required' : ''}>${field.value || ''}</textarea>
+                    `;
+                } else if (field.type === 'display') {
+                    inputHtml = `
+                        <div class="form-control-static" id="${fieldId}">${field.value || ''}</div>
+                    `;
+                } else {
+                    inputHtml = `
+                        <input type="${field.type || 'text'}" class="form-control" id="${fieldId}" name="${field.name}" 
+                               value="${field.value || ''}" ${field.required ? 'required' : ''}
+                               ${field.placeholder ? `placeholder="${field.placeholder}"` : ''}
+                               ${field.readOnly ? 'readonly' : ''}>
+                    `;
+                }
+                
+                return `
+                    <div class="form-group">
+                        <label for="${fieldId}">${field.label}</label>
+                        ${inputHtml}
+                        ${field.helpText ? `<small class="form-text text-muted">${field.helpText}</small>` : ''}
+                    </div>
+                `;
+            }).join('');
             
             modal.innerHTML = `
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3 class="modal-title">${title}</h3>
-                        <button class="modal-close" onclick="ui.closeModal('${modalId}'); resolve(null)">
+                        <button type="button" class="modal-close" data-dismiss="modal" aria-label="Close">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
-                    <div class="modal-body">
-                        <form id="${modalId}-form">
-                            ${formHtml}
-                        </form>
-                    </div>
+                    <form id="${modalId}-form" class="modal-body">
+                        ${formHtml}
+                    </form>
                     <div class="modal-footer">
-                        <button class="btn btn-secondary" onclick="ui.closeModal('${modalId}'); resolve(null)">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">
                             Cancel
                         </button>
-                        <button class="btn btn-primary" onclick="ui.submitForm('${modalId}', ${JSON.stringify(fields.map(f => f.name))});">
-                            Submit
+                        <button type="submit" form="${modalId}-form" class="btn btn-primary">
+                            ${buttonText}
                         </button>
                     </div>
                 </div>
@@ -507,36 +533,52 @@ class AppUI {
             
             document.body.appendChild(modal);
             this.showModal(modalId);
-            
-            // Store resolver reference
-            window[`${modalId}_resolve`] = resolve;
+
+            // Add event listener for form submission
+            const formElement = modal.querySelector(`#${modalId}-form`);
+            formElement.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                if (!formElement.checkValidity()) {
+                    formElement.reportValidity();
+                    return;
+                }
+                
+                const formData = {};
+                fields.forEach(field => {
+                    const element = modal.querySelector(`#${modalId}-${field.name}`);
+                    if (element && field.type !== 'display') { // Don't include display fields in formData
+                        formData[field.name] = element.value;
+                    }
+                });
+
+                if (submitCallback) {
+                    try {
+                        const result = await submitCallback(formData);
+                        this.closeModal(modalId);
+                        resolve(result); // Resolve with the result of the callback
+                    } catch (error) {
+                        console.error("Form submission callback error:", error);
+                        this.showToast('Error processing form: ' + error.message, 'error');
+                        resolve(null); // Indicate failure
+                    }
+                } else {
+                    this.closeModal(modalId);
+                    resolve(formData); // Resolve with form data if no callback
+                }
+            });
+
+            // Add event listener for modal close button
+            modal.querySelectorAll('[data-dismiss="modal"]').forEach(button => {
+                button.addEventListener('click', () => {
+                    this.closeModal(modalId);
+                    resolve(null); // Resolve with null on cancel/close
+                });
+            });
         });
     }
-    
-    // Submit form (helper method)
-    submitForm(modalId, fieldNames) {
-        const form = document.getElementById(`${modalId}-form`);
-        if (!form) return;
-        
-        if (!form.checkValidity()) {
-            form.reportValidity();
-            return;
-        }
-        
-        const result = {};
-        fieldNames.forEach(name => {
-            const element = document.getElementById(`${modalId}-${name}`);
-            if (element) {
-                result[name] = element.value;
-            }
-        });
-        
-        this.closeModal(modalId);
-        if (window[`${modalId}_resolve`]) {
-            window[`${modalId}_resolve`](result);
-            delete window[`${modalId}_resolve`];
-        }
-    }
+
+
     
     // Create tabs
     createTabs(containerId, tabs) {
@@ -651,22 +693,3 @@ window.UI.hideLoading = ui.hideLoading.bind(ui);
 window.UI.showToast = ui.showToast.bind(ui);
 window.UI.showModal = ui.showModal.bind(ui);
 window.UI.closeModal = ui.closeModal.bind(ui);
-
-// Load firebase shim (placed next to this script) to provide legacy `Firebase.auth` API
-(function() {
-    try {
-        const currentScript = document.currentScript || (function(){
-            const scripts = document.getElementsByTagName('script');
-            return scripts[scripts.length-1];
-        })();
-
-        const base = currentScript && currentScript.src ? currentScript.src.replace(/\/[^\/]*$/, '') : '';
-        const shimUrl = base ? base + '/firebase-shim.js' : 'firebase-shim.js';
-        const s = document.createElement('script');
-        s.src = shimUrl;
-        s.defer = true;
-        document.head.appendChild(s);
-    } catch (e) {
-        console.error('Failed to load firebase shim:', e);
-    }
-})();

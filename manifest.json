@@ -2,8 +2,8 @@
   "name": "Skore Point",
   "short_name": "SkorePoint",
   "description": "Professional School Report Card Generator by SERUSOFT",
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "/skore-point-app/",
+  "scope": "/skore-point-app/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#4361ee",
@@ -61,18 +61,18 @@
   ],
   "screenshots": [
     {
-      "src": "assets/screenshots/screenshot1.png",
+      "src": "assets/screenshot/skore-dashboard-wide.png",
       "sizes": "1280x720",
       "type": "image/png",
       "platform": "wide",
-      "label": "Dashboard View"
+      "label": "Wide Dashboard View"
     },
     {
-      "src": "assets/screenshots/screenshot2.png",
+      "src": "assets/screenshot/skore-dashboard-mobile.png",
       "sizes": "750x1334",
       "type": "image/png",
       "platform": "narrow",
-      "label": "Mobile View"
+      "label": "Mobile Dashboard View"
     }
   ],
   "shortcuts": [

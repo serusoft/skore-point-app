@@ -15,7 +15,9 @@
         <div class="dashboard-header">
             <h1>Dashboard</h1>
             <div class="user-profile-card" id="userProfileCard">
-                <!-- User profile will be loaded here -->
+                <img src="https://via.placeholder.com/150" alt="User Profile" class="profile-picture">
+                <span class="username"></span>
+                <button id="logoutBtn" class="btn btn-secondary"><i class="fas fa-sign-out-alt"></i> Logout</button>
             </div>
         </div>
         
@@ -74,6 +76,25 @@
                 <p>View and switch between your schools</p>
                 <div class="schools-list" id="schoolsList">
                     <!-- Schools will be loaded here -->
+                </div>
+            </div>
+
+            <!-- What's New Card -->
+            <div class="dashboard-card" id="whatsNewCard">
+                <div class="card-icon">
+                    <i class="fas fa-bullhorn"></i>
+                </div>
+                <h3>What's New</h3>
+                <div class="updates-list">
+                    <div class="update-item">
+                        <strong>Improved Dashboard:</strong> Your dashboard has a new look and feel.
+                    </div>
+                    <div class="update-item">
+                        <strong>Offline Access:</strong> You can now access some features offline.
+                    </div>
+                    <div class="update-item">
+                        <strong>Report Generation:</strong> Generate and download student reports in PDF format.
+                    </div>
                 </div>
             </div>
         </div>

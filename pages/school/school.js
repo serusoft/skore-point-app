@@ -561,106 +561,76 @@ async function handleBulkUpload(file) {
     }
 }
 
-function showLevelSelectionModal() {
-    const modal = document.createElement('div');
-    modal.className = 'modal active';
-    
+async function showLevelSelectionModal() {
     const school = AppState.currentSchool;
-    const levels = school.level === 'primary' 
+    const availableLevels = school.level === 'primary' 
         ? ['lower-primary', 'upper-primary']
         : ['olevel', 'alevel'];
     
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Switch Academic Level</h3>
-                <button class="close-modal">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="level-selection">
-                ${levels.map(level => `
-                    <div class="level-option ${Router.getCurrentLevel() === level ? 'active' : ''}" 
-                         data-level="${level}">
-                        <i class="fas ${getLevelIcon(level)}"></i>
-                        <h4>${getLevelDisplayName(level)}</h4>
-                        <p>${getLevelDescription(level)}</p>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `;
+    const levelOptions = availableLevels.map(level => ({ 
+        value: level, 
+        label: `${getLevelDisplayName(level)} (${getLevelDescription(level)})` 
+    }));
+
+    const fields = [
+        {
+            name: 'selectedLevel',
+            label: 'Select Academic Level',
+            type: 'select',
+            options: levelOptions,
+            value: Router.getCurrentLevel(),
+            required: true
+        }
+    ];
+
+    const submitCallback = async (formData) => {
+        const selectedLevel = formData.selectedLevel;
+        if (selectedLevel) {
+            Router.navigateTo('school', selectedLevel);
+            UI.showToast(`Switched to ${getLevelDisplayName(selectedLevel)}`, 'info');
+            return true; // Indicate success
+        }
+        return false; // Indicate cancellation or no selection
+    };
     
-    document.body.appendChild(modal);
-    
-    // Close modal
-    modal.querySelector('.close-modal').addEventListener('click', () => {
-        document.body.removeChild(modal);
-    });
-    
-    // Level selection
-    modal.querySelectorAll('.level-option').forEach(option => {
-        option.addEventListener('click', () => {
-            const level = option.dataset.level;
-            Router.navigateTo('school', level);
-            document.body.removeChild(modal);
-        });
-    });
+    await UI.form(fields, 'Switch Academic Level', 'Switch Level', submitCallback);
 }
 
-function showAddClassModal() {
+async function showAddClassModal() {
     const currentLevel = Router.getCurrentLevel();
-    const modal = document.createElement('div');
-    modal.className = 'modal active';
     
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Add New Class</h3>
-                <button class="close-modal">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <form id="addClassForm">
-                <div class="form-group">
-                    <label for="className">
-                        <i class="fas fa-chalkboard"></i> Class Name
-                    </label>
-                    <input type="text" id="className" placeholder="e.g., P1A, S3B" required>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <i class="fas fa-layer-group"></i> Academic Level
-                    </label>
-                    <div class="level-display">${getLevelDisplayName(currentLevel)}</div>
-                    <input type="hidden" id="classLevel" value="${currentLevel}">
-                </div>
-                <button type="submit" class="btn btn-primary btn-block">
-                    <i class="fas fa-plus"></i> Add Class
-                </button>
-            </form>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Close modal
-    modal.querySelector('.close-modal').addEventListener('click', () => {
-        document.body.removeChild(modal);
-    });
-    
-    // Form submission
-    modal.querySelector('#addClassForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const className = modal.querySelector('#className').value.trim();
-        const classLevel = modal.querySelector('#classLevel').value;
-        
-        if (!className) {
-            UI.showToast('Please enter class name', 'error');
-            return;
+    const fields = [
+        {
+            name: 'className',
+            label: 'Class Name',
+            type: 'text',
+            placeholder: 'e.g., P1A, S3B',
+            required: true,
+            icon: 'fas fa-chalkboard' // Not directly used by UI.form but can be for custom rendering
+        },
+        {
+            name: 'academicLevelDisplay',
+            label: 'Academic Level',
+            type: 'display',
+            value: getLevelDisplayName(currentLevel),
+            icon: 'fas fa-layer-group' // Not directly used by UI.form but can be for custom rendering
+        },
+        {
+            name: 'classLevel',
+            type: 'hidden', // Hidden field for data submission
+            value: currentLevel
         }
-        
+    ];
+
+    const submitCallback = async (formData) => {
+        const className = formData.className.trim();
+        const classLevel = formData.classLevel;
+
+        if (!className) {
+            throw new Error('Please enter class name');
+        }
+
+        UI.showLoading('Adding class...');
         try {
             await Firebase.db.addDoc('classes', {
                 name: className,
@@ -669,81 +639,66 @@ function showAddClassModal() {
                 category: classLevel,
                 createdAt: Firebase.db.serverTimestamp()
             });
-            
-            document.body.removeChild(modal);
+            UI.hideLoading();
             UI.showToast('Class added successfully', 'success');
             await loadClasses(classLevel);
-            
         } catch (error) {
+            UI.hideLoading();
             console.error('Error adding class:', error);
-            UI.showToast('Error adding class', 'error');
+            throw new Error('Error adding class: ' + error.message);
         }
-    });
+    };
+    
+    await UI.form(fields, 'Add New Class', 'Add Class', submitCallback);
 }
 
-function showAddStudentModal() {
+async function showAddStudentModal() {
     const currentLevel = Router.getCurrentLevel();
-    const modal = document.createElement('div');
-    modal.className = 'modal active';
     
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Add New Student</h3>
-                <button class="close-modal">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <form id="addStudentForm">
-                <div class="form-group">
-                    <label for="studentName">
-                        <i class="fas fa-user-graduate"></i> Student Name
-                    </label>
-                    <input type="text" id="studentName" placeholder="Enter full name" required>
-                </div>
-                <div class="form-group">
-                    <label for="studentClass">
-                        <i class="fas fa-chalkboard"></i> Class
-                    </label>
-                    <select id="studentClass" required>
-                        <option value="">Select Class</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>
-                        <i class="fas fa-layer-group"></i> Academic Level
-                    </label>
-                    <div class="level-display">${getLevelDisplayName(currentLevel)}</div>
-                </div>
-                <button type="submit" class="btn btn-primary btn-block">
-                    <i class="fas fa-plus"></i> Add Student
-                </button>
-            </form>
-        </div>
-    `;
+    // Load classes for current level for the select input
+    const classes = await Firebase.db.query('classes', [
+        { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
+        { field: 'category', op: '==', value: currentLevel }
+    ]);
+
+    const classOptions = classes.map(c => ({ value: c.id, label: c.name }));
+    classOptions.unshift({ value: '', label: 'Select Class' }); // Add a default option
     
-    document.body.appendChild(modal);
-    
-    // Load classes for current level
-    loadClassesForSelection(modal.querySelector('#studentClass'), currentLevel);
-    
-    // Close modal
-    modal.querySelector('.close-modal').addEventListener('click', () => {
-        document.body.removeChild(modal);
-    });
-    
-    // Form submission
-    modal.querySelector('#addStudentForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const studentName = modal.querySelector('#studentName').value.trim();
-        const studentClass = modal.querySelector('#studentClass').value;
-        
-        if (!studentName || !studentClass) {
-            UI.showToast('Please fill all fields', 'error');
-            return;
+    const fields = [
+        {
+            name: 'studentName',
+            label: 'Student Name',
+            type: 'text',
+            placeholder: 'Enter full name',
+            required: true,
+            icon: 'fas fa-user-graduate'
+        },
+        {
+            name: 'studentClass',
+            label: 'Class',
+            type: 'select',
+            options: classOptions,
+            required: true,
+            icon: 'fas fa-chalkboard'
+        },
+        {
+            name: 'academicLevelDisplay',
+            label: 'Academic Level',
+            type: 'display',
+            value: getLevelDisplayName(currentLevel),
+            icon: 'fas fa-layer-group'
         }
-        
+    ];
+
+    const submitCallback = async (formData) => {
+        const studentName = formData.studentName.trim();
+        const studentClass = formData.studentClass;
+
+        if (!studentName || !studentClass) {
+            throw new Error('Please fill all fields');
+        }
+
+        UI.showLoading('Adding student...');
         try {
             await Firebase.db.addDoc('students', {
                 name: studentName,
@@ -752,100 +707,87 @@ function showAddStudentModal() {
                 level: currentLevel,
                 createdAt: Firebase.db.serverTimestamp()
             });
-            
-            document.body.removeChild(modal);
+            UI.hideLoading();
             UI.showToast('Student added successfully', 'success');
             await loadStudents(currentLevel);
-            
         } catch (error) {
+            UI.hideLoading();
             console.error('Error adding student:', error);
-            UI.showToast('Error adding student', 'error');
+            throw new Error('Error adding student: ' + error.message);
         }
-    });
+    };
+    
+    await UI.form(fields, 'Add New Student', 'Add Student', submitCallback);
 }
 
-function showAddSubjectModal() {
+async function showAddSubjectModal() {
     const currentLevel = Router.getCurrentLevel();
-    const modal = document.createElement('div');
-    modal.className = 'modal active';
     
     // Get subject type based on level
-    const subjectType = currentLevel === 'alevel' ? 'subjectType' : 'regular';
+    const isALevel = currentLevel === 'alevel';
     
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Add New Subject</h3>
-                <button class="close-modal">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <form id="addSubjectForm">
-                <div class="form-group">
-                    <label for="subjectName">
-                        <i class="fas fa-book"></i> Subject Name
-                    </label>
-                    <input type="text" id="subjectName" placeholder="e.g., Mathematics, Physics" required>
-                </div>
-                
-                ${subjectType === 'subjectType' ? `
-                    <div class="form-group">
-                        <label for="subjectType">
-                            <i class="fas fa-tag"></i> Subject Type
-                        </label>
-                        <select id="subjectType" required>
-                            <option value="principal">Principal Subject</option>
-                            <option value="subsidiary">Subsidiary Subject</option>
-                            <option value="general">General Paper</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group" id="paperCountGroup">
-                        <label for="paperCount">
-                            <i class="fas fa-file-alt"></i> Number of Papers
-                        </label>
-                        <select id="paperCount">
-                            <option value="1">1 Paper</option>
-                            <option value="2">2 Papers</option>
-                            <option value="3">3 Papers</option>
-                            <option value="4">4 Papers</option>
-                            <option value="5">5 Papers</option>
-                        </select>
-                    </div>
-                ` : ''}
-                
-                <div class="form-group">
-                    <label>
-                        <i class="fas fa-layer-group"></i> Academic Level
-                    </label>
-                    <div class="level-display">${getLevelDisplayName(currentLevel)}</div>
-                    <input type="hidden" id="subjectLevel" value="${currentLevel}">
-                </div>
-                
-                <button type="submit" class="btn btn-primary btn-block">
-                    <i class="fas fa-plus"></i> Add Subject
-                </button>
-            </form>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Close modal
-    modal.querySelector('.close-modal').addEventListener('click', () => {
-        document.body.removeChild(modal);
+    let fields = [
+        {
+            name: 'subjectName',
+            label: 'Subject Name',
+            type: 'text',
+            placeholder: 'e.g., Mathematics, Physics',
+            required: true,
+            icon: 'fas fa-book'
+        }
+    ];
+
+    if (isALevel) {
+        fields = fields.concat([
+            {
+                name: 'subjectType',
+                label: 'Subject Type',
+                type: 'select',
+                options: [
+                    { value: 'principal', label: 'Principal Subject' },
+                    { value: 'subsidiary', label: 'Subsidiary Subject' },
+                    { value: 'general', label: 'General Paper' }
+                ],
+                required: true,
+                icon: 'fas fa-tag'
+            },
+            {
+                name: 'paperCount',
+                label: 'Number of Papers',
+                type: 'select',
+                options: [
+                    { value: '1', label: '1 Paper' },
+                    { value: '2', label: '2 Papers' },
+                    { value: '3', label: '3 Papers' },
+                    { value: '4', label: '4 Papers' },
+                    { value: '5', label: '5 Papers' }
+                ],
+                value: '1', // Default to 1 paper
+                icon: 'fas fa-file-alt'
+            }
+        ]);
+    }
+
+    fields.push({
+        name: 'academicLevelDisplay',
+        label: 'Academic Level',
+        type: 'display',
+        value: getLevelDisplayName(currentLevel),
+        icon: 'fas fa-layer-group'
     });
-    
-    // Form submission
-    modal.querySelector('#addSubjectForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const subjectName = modal.querySelector('#subjectName').value.trim();
-        const subjectLevel = modal.querySelector('#subjectLevel').value;
-        
+
+    fields.push({
+        name: 'subjectLevel',
+        type: 'hidden', // Hidden field for data submission
+        value: currentLevel
+    });
+
+    const submitCallback = async (formData) => {
+        const subjectName = formData.subjectName.trim();
+        const subjectLevel = formData.subjectLevel;
+
         if (!subjectName) {
-            UI.showToast('Please enter subject name', 'error');
-            return;
+            throw new Error('Please enter subject name');
         }
         
         const subjectData = {
@@ -857,23 +799,25 @@ function showAddSubjectModal() {
         };
         
         // Add A-Level specific data
-        if (subjectType === 'subjectType') {
-            subjectData.type = modal.querySelector('#subjectType').value;
-            subjectData.paperCount = parseInt(modal.querySelector('#paperCount').value);
+        if (isALevel) {
+            subjectData.type = formData.subjectType;
+            subjectData.paperCount = parseInt(formData.paperCount);
         }
-        
+
+        UI.showLoading('Adding subject...');
         try {
             await Firebase.db.addDoc('subjects', subjectData);
-            
-            document.body.removeChild(modal);
+            UI.hideLoading();
             UI.showToast('Subject added successfully', 'success');
             await loadSubjects(subjectLevel);
-            
         } catch (error) {
+            UI.hideLoading();
             console.error('Error adding subject:', error);
-            UI.showToast('Error adding subject', 'error');
+            throw new Error('Error adding subject: ' + error.message);
         }
-    });
+    };
+    
+    await UI.form(fields, 'Add New Subject', 'Add Subject', submitCallback);
 }
 
 // Helper functions
@@ -948,83 +892,6 @@ function isSubjectInLevel(subjectName, level) {
     return true;
 }
 
-async function loadClassesForSelection(selectElement, level) {
-    try {
-        const classes = await Firebase.db.query('classes', [
-            { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-            { field: 'category', op: '==', value: level }
-        ]);
-        
-        selectElement.innerHTML = '<option value="">Select Class</option>' + 
-            classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-            
-    } catch (error) {
-        console.error('Error loading classes:', error);
-        selectElement.innerHTML = '<option value="">Error loading classes</option>';
-    }
-}
-
-async function readExcelFile(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                resolve(jsonData);
-            } catch (error) {
-                reject(error);
-            }
-        };
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(file);
-    });
-}
-
-async function showClassSelectionModal(classes) {
-    return new Promise((resolve) => {
-        const modal = document.createElement('div');
-        modal.className = 'modal active';
-        
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Select Class for Import</h3>
-                    <button class="close-modal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="class-selection">
-                    ${classes.map(cls => `
-                        <div class="class-option" data-class-id="${cls.id}">
-                            <h4>${cls.name}</h4>
-                            <p>${getLevelDisplayName(cls.category)}</p>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        // Close modal
-        modal.querySelector('.close-modal').addEventListener('click', () => {
-            document.body.removeChild(modal);
-            resolve(null);
-        });
-        
-        // Class selection
-        modal.querySelectorAll('.class-option').forEach(option => {
-            option.addEventListener('click', () => {
-                const classId = option.dataset.classId;
-                document.body.removeChild(modal);
-                resolve(classId);
-            });
-        });
-    });
-}
 
 function filterStudentsByClass(classId) {
     const tableRows = document.querySelectorAll('#studentsTable tbody tr');

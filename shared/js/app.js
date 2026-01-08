@@ -52,9 +52,10 @@ async function initializeApp() {
         
         // Dispatch app initialized event
         document.dispatchEvent(new CustomEvent('app:initialized'));
+        window.appInitialized = true;
 
         // Handle initial navigation
-        if (window.location.pathname.endsWith('index.html') || window.location.pathname === '/') {
+        if (window.location.pathname.endsWith('/') || window.location.pathname.endsWith('/index.html')) {
             if (AppState.isAuthenticated) {
                 window.location.href = 'pages/dashboard/dashboard.html';
             } else {
@@ -335,6 +336,9 @@ function setAcademicLevel(level) {
     return true;
 }
 
+// Define a constant for the base URL of your application
+const BASE_URL = ""; // Adjust this if your app is not hosted in a subfolder
+
 // Initialize PWA
 function initializePWA() {
     // Check if app is installed
@@ -367,15 +371,10 @@ function initializePWA() {
         AppState.isAppInstalled = true;
     }
     
-    // Register service worker (compute relative path to root)
+    // Register service worker
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            const segments = window.location.pathname.split('/').filter(Boolean);
-            const up = segments.length > 1 ? segments.length - 1 : 0;
-            const prefix = up === 0 ? '' : Array(up).fill('..').join('/');
-            const swUrl = prefix ? `${prefix}/sw.js` : 'sw.js';
-
-            navigator.serviceWorker.register(swUrl)
+            navigator.serviceWorker.register('sw.js', { scope: BASE_URL })
                 .then(registration => {
                     console.log('ServiceWorker registered:', registration.scope);
                 })

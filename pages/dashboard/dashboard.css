@@ -7,7 +7,7 @@
 .dashboard-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     margin-bottom: 40px;
     flex-wrap: wrap;
     gap: 20px;
@@ -25,71 +25,32 @@
 .user-profile-card {
     background: rgba(255, 255, 255, 0.05);
     border-radius: var(--border-radius);
-    padding: 20px;
+    padding: 15px;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 15px;
     min-width: 300px;
     max-width: 400px;
 }
 
-.profile-header {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 15px;
-}
-
-.profile-image {
-    width: 60px;
-    height: 60px;
+.profile-picture {
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
-    overflow: hidden;
-    border: 3px solid var(--primary);
-    flex-shrink: 0;
-}
-
-.profile-image img {
-    width: 100%;
-    height: 100%;
     object-fit: cover;
+    border: 2px solid var(--primary);
 }
 
-.profile-details {
+.username {
     flex: 1;
-}
-
-.profile-name {
     font-weight: 600;
-    font-size: 18px;
+    font-size: 16px;
     color: var(--light);
-    margin-bottom: 5px;
 }
 
-.profile-email {
-    color: var(--gray-light);
-    font-size: 14px;
-}
-
-.profile-role {
-    display: inline-block;
-    padding: 4px 12px;
-    background: rgba(67, 97, 238, 0.2);
-    color: var(--primary);
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.profile-role.admin {
-    background: rgba(239, 68, 68, 0.2);
-    color: var(--error);
-}
-
-.logout-btn {
-    width: 100%;
-    margin-top: 15px;
-    padding: 10px;
+#logoutBtn {
+    margin-left: auto;
 }
 
 .dashboard-grid {
@@ -191,5 +152,18 @@
 .school-item p {
     font-size: 13px;
     color: var(--gray-light);
+}
+
+.updates-list {
+    margin-top: 20px;
+}
+
+.update-item {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.update-item:last-child {
+    border-bottom: none;
 }
 
