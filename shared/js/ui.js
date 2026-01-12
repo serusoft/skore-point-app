@@ -129,31 +129,66 @@ class AppUI {
             console.log('Injecting navbar, authenticated:', isAuthenticated);
 
             if (isAuthenticated) {
+                // Check if on school page to clean up nav
+                const isSchoolPage = window.location.pathname.includes('school.html');
+                
+                const desktopLinks = isSchoolPage ? '' : `
+                                <a href="#dashboard" data-page="dashboard" class="nav-link" style="margin-right: 20px; text-decoration: none; color: inherit; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-home"></i> Dashboard
+                                </a>
+                                <a href="#school" data-page="school" class="nav-link" style="text-decoration: none; color: inherit; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-school"></i> School
+                                </a>`;
+                                
+                // Mobile links: Eliminated as requested for a cleaner look
+                const mobileLinks = '';
+
                 navHtml = `
-                    <nav class="navbar" id="main-navbar">
-                        <div class="navbar-brand">
-                            <i class="fas fa-graduation-cap"></i>
-                            <span>Skore Point</span>
-                        </div>
-                        <div class="navbar-menu">
-                            <a href="#dashboard" data-page="dashboard" class="nav-link">
-                                <i class="fas fa-home"></i> Dashboard
-                            </a>
-                            <a href="#school" data-page="school" class="nav-link">
-                                <i class="fas fa-school"></i> School
-                            </a>
-                        </div>
-                        <div class="navbar-user" id="navbarUser">
-                            <!-- User profile will be dynamically loaded here by loadUserProfileInNavbar -->
-                            <div class="user-profile-skeleton">
-                                <div class="profile-image-skeleton"></div>
-                                <div class="user-info-skeleton">
-                                    <div class="skeleton-line"></div>
-                                    <div class="skeleton-line short"></div>
+                    <nav class="navbar" id="main-navbar" style="background: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000; padding: 0.5rem 0;">
+                        <div class="navbar-container" style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+                            <div class="navbar-brand" style="display: flex; align-items: center; gap: 12px; color: var(--text-dark, #333);">
+                                <div style="width: 40px; height: 40px; background: var(--primary, #4361ee); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white;">
+                                    <i class="fas fa-graduation-cap" style="font-size: 1.2rem;"></i>
                                 </div>
-                                <div class="dropdown-skeleton"></div>
+                                <span style="font-weight: 700; font-size: 1.3rem; letter-spacing: -0.5px;">Skore Point</span>
+                            </div>
+                            
+                            <!-- Desktop Menu -->
+                            <div class="navbar-menu desktop-only" style="display: flex; align-items: center;">
+                                ${desktopLinks}
+                            </div>
+
+                            <div class="navbar-right" style="display: flex; align-items: center; gap: 15px;">
+                                <!-- User Profile (Visible on both) -->
+                                <div class="navbar-user" id="navbarUser">
+                                    <div class="user-profile-skeleton">
+                                        <div class="profile-image-skeleton" style="width: 35px; height: 35px; border-radius: 50%; background: #eee;"></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Hamburger Menu (Mobile Only) -->
+                                <button class="navbar-toggle" id="navbar-toggle" style="background: none; border: none; color: var(--text-dark, #333); font-size: 1.2rem; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-bars"></i>
+                                </button>
                             </div>
                         </div>
+                        
+                        <!-- Mobile Dropdown Menu -->
+                        <div class="mobile-nav" id="navbar-mobile-nav" style="display: none; flex-direction: column; background: #ffffff; position: absolute; top: 100%; left: 0; width: 100%; padding: 10px 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); border-top: 1px solid #eee; z-index: 1000;">
+                            ${mobileLinks}
+                            <a href="#" class="nav-link logout-btn-mobile" style="padding: 12px 0; color: var(--danger, #e74c3c); text-decoration: none; display: flex; align-items: center; gap: 10px; font-weight: 500;">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </a>
+                        </div>
+                        <style>
+                            @media (min-width: 769px) {
+                                .navbar-toggle { display: none !important; }
+                                .mobile-nav { display: none !important; }
+                            }
+                            @media (max-width: 768px) {
+                                .desktop-only { display: none !important; }
+                            }
+                        </style>
                     </nav>
                 `;
             } else {
@@ -239,13 +274,48 @@ class AppUI {
         const navbar = document.getElementById('main-navbar');
         if (!navbar) return;
 
-        // Mobile menu toggle (if applicable for unauthenticated nav)
+        // Mobile menu toggle
         const toggleBtn = navbar.querySelector('#navbar-toggle');
-        const mobileNav = navbar.querySelector('#navbar-mobile-nav');
+        const mobileNav = navbar.querySelector('#navbar-mobile-nav') || navbar.querySelector('.mobile-nav');
+        
         if (toggleBtn && mobileNav) {
-            toggleBtn.addEventListener('click', () => {
-                const open = mobileNav.classList.toggle('active');
-                mobileNav.setAttribute('aria-hidden', !open);
+            // Clone to remove old listeners
+            const newToggle = toggleBtn.cloneNode(true);
+            toggleBtn.parentNode.replaceChild(newToggle, toggleBtn);
+            
+            newToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isHidden = mobileNav.style.display === 'none';
+                mobileNav.style.display = isHidden ? 'flex' : 'none';
+                
+                const icon = newToggle.querySelector('i');
+                if (icon) {
+                    icon.className = isHidden ? 'fas fa-times' : 'fas fa-bars';
+                }
+            });
+            
+            // Close when clicking outside
+            document.addEventListener('click', (e) => {
+                if (mobileNav.style.display === 'flex' && 
+                    !mobileNav.contains(e.target) && 
+                    !newToggle.contains(e.target)) {
+                    mobileNav.style.display = 'none';
+                    const icon = newToggle.querySelector('i');
+                    if (icon) icon.className = 'fas fa-bars';
+                }
+            });
+            
+            // Handle mobile logout
+            mobileNav.querySelector('.logout-btn-mobile')?.addEventListener('click', async (e) => {
+                e.preventDefault();
+                try {
+                    await Firebase.auth.signOut();
+                    AppState.clear();
+                    navigateTo('login');
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    this.showToast('Error logging out', 'error');
+                }
             });
         }
 
@@ -269,21 +339,19 @@ class AppUI {
             
             // Create user profile element
             navbarUser.innerHTML = `
-                <div class="user-profile">
-                    <div class="profile-image" id="profileImage">
+                <div class="user-profile" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <div class="profile-image" id="profileImage" style="width: 35px; height: 35px; border-radius: 50%; overflow: hidden; background: #4361ee; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
                         ${userData.profileUrl 
-                            ? `<img src="${userData.profileUrl}" alt="${userData.name || 'User'}" onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML=getInitials('${userData.name || ''}')">`
+                            ? `<img src="${userData.profileUrl}" alt="${userData.name || 'User'}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML=getInitials('${userData.name || ''}')">`
                             : getInitials(userData.name || '')
                         }
                     </div>
-                    <div class="user-info">
-                        <span class="user-name">${userData.name || user.email || 'User'}</span>
-                        <span class="user-role">${userData.role || 'Teacher'}</span>
+                    <div class="user-info desktop-only" style="display: flex; flex-direction: column;">
+                        <span class="user-name" style="font-size: 0.9rem; font-weight: 600;">${userData.name || user.email || 'User'}</span>
                     </div>
-                    <button class="dropdown-toggle" id="userDropdownToggle">
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
-                    <div class="dropdown-menu" id="userDropdownMenu">
+                    
+                    <!-- Desktop Dropdown -->
+                    <div class="dropdown-menu desktop-only" id="userDropdownMenu">
                         <a href="#profile" class="dropdown-item" data-page="profile">
                             <i class="fas fa-user"></i> My Profile
                         </a>
@@ -299,18 +367,18 @@ class AppUI {
             `;
             
             // Add dropdown functionality
-            const dropdownToggle = document.getElementById('userDropdownToggle');
+            const profileImage = document.getElementById('profileImage');
             const dropdownMenu = document.getElementById('userDropdownMenu');
             
-            if (dropdownToggle && dropdownMenu) {
-                dropdownToggle.addEventListener('click', (e) => {
+            if (profileImage && dropdownMenu) {
+                profileImage.addEventListener('click', (e) => {
                     e.stopPropagation();
                     dropdownMenu.classList.toggle('show');
                 });
                 
                 // Close dropdown when clicking outside
                 document.addEventListener('click', (e) => {
-                    if (!dropdownToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                    if (!profileImage.contains(e.target) && !dropdownMenu.contains(e.target)) {
                         dropdownMenu.classList.remove('show');
                     }
                 });
@@ -328,14 +396,6 @@ class AppUI {
                         console.error('Logout error:', error);
                         this.showToast('Error logging out', 'error');
                     }
-                });
-            }
-            
-            // Handle profile click
-            const profileImage = document.getElementById('profileImage');
-            if (profileImage) {
-                profileImage.addEventListener('click', () => {
-                    navigateTo('profile');
                 });
             }
             

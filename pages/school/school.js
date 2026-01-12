@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Track if we've already initialized to prevent duplicate calls
     let pageInitialized = false;
     let schoolDataLoaded = false;
+    let listenersSetup = false;
     
     // Single source of truth for page loading state
     const pageLoadingState = {
@@ -112,8 +113,9 @@ document.addEventListener('DOMContentLoaded', () => {
         showPageLoading('Loading school data...');
         
         try {
-            await initializePage();
+            // Setup listeners first to ensure interactivity even if rendering has partial issues
             setupEventListeners();
+            await initializePage();
             await loadInitialData();
             setupSchoolSettings();
             schoolDataLoaded = true;
@@ -142,8 +144,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Update page title and school info
-        document.getElementById('schoolPortalTitle').textContent = `${school.name} Portal`;
-        document.getElementById('currentSchoolCode').textContent = school.code || 'N/A';
+        const titleEl = document.getElementById('schoolPortalTitle');
+        if (titleEl) {
+            titleEl.textContent = `${school.name} Portal`;
+            
+            // Inject Exit Portal button
+            if (!document.getElementById('exitPortalBtn')) {
+                const headerContainer = titleEl.parentElement;
+                if (headerContainer) {
+                    // Ensure container is flex for proper alignment
+                    headerContainer.style.display = 'flex';
+                    headerContainer.style.justifyContent = 'space-between';
+                    headerContainer.style.alignItems = 'center';
+                    headerContainer.style.flexWrap = 'wrap';
+                    
+                    const exitBtn = document.createElement('button');
+                    exitBtn.id = 'exitPortalBtn';
+                    exitBtn.className = 'btn btn-secondary btn-sm';
+                    exitBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Exit Portal';
+                    exitBtn.style.marginLeft = 'auto';
+                    exitBtn.addEventListener('click', () => {
+                        window.navigateTo('dashboard');
+                    });
+                    
+                    headerContainer.appendChild(exitBtn);
+                }
+            }
+        }
+        
+        const codeEl = document.getElementById('currentSchoolCode');
+        if (codeEl) codeEl.textContent = school.code || 'N/A';
         
         // Update school level badge
         const levelBadge = document.getElementById('schoolLevelBadge');
@@ -242,6 +272,11 @@ document.addEventListener('DOMContentLoaded', () => {
      * Setup all event listeners for the page
      */
     function setupEventListeners() {
+        if (listenersSetup) {
+            console.log('School Page: setupEventListeners() - Listeners already set up.');
+            return;
+        }
+
         console.log('School Page: setupEventListeners() - Setting up event listeners...');
         
         // Use event delegation for reliability
@@ -272,16 +307,32 @@ document.addEventListener('DOMContentLoaded', () => {
             const btn = target.closest('button');
             if (!btn) return;
             
+            console.log('School Page: Button clicked:', btn.id);
+
             switch(btn.id) {
-                case 'addClassBtn': showAddClassModal(); break;
-                case 'addStudentBtn': showAddStudentModal(); break;
-                case 'addSubjectBtn': showAddSubjectModal(); break;
-                case 'addTeacherBtn': showAddTeacherModal(); break;
+                case 'addClassBtn': 
+                    e.preventDefault();
+                    showAddClassModal(); 
+                    break;
+                case 'addStudentBtn': 
+                    e.preventDefault();
+                    showAddStudentModal(); 
+                    break;
+                case 'addSubjectBtn': 
+                    e.preventDefault();
+                    showAddSubjectModal(); 
+                    break;
+                case 'addTeacherBtn': 
+                    e.preventDefault();
+                    showAddTeacherModal(); 
+                    break;
                 case 'refreshSchoolData':
+                    e.preventDefault();
                     if (typeof showToast === 'function') showToast('Refreshing school data...', 'info');
                     await loadInitialData();
                     break;
                 case 'switchLevelBtn':
+                    e.preventDefault();
                     try {
                         const selectedLevel = await showLevelSelection(AppState.currentSchool.level);
                         if (selectedLevel) {
@@ -293,10 +344,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (typeof showToast === 'function') showToast('Failed to switch level', 'error');
                     }
                     break;
-                case 'settingsTabBtn': switchTab('settings'); break;
+                case 'settingsTabBtn': 
+                    e.preventDefault();
+                    switchTab('settings'); 
+                    break;
             }
         });
 
+        listenersSetup = true;
         console.log('School Page: setupEventListeners() - Event listeners set up via delegation.');
     }
     
