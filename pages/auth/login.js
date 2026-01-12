@@ -53,23 +53,29 @@ function initLoginPage() {
             UI.hideLoading();
             console.error('Login error:', error);
             
-            let errorMessage = 'Login failed. ';
+            let errorMessage = 'Login failed. Please try again.';
             switch (error.code) {
                 case 'auth/invalid-email':
-                    errorMessage += 'Invalid email address.';
+                    errorMessage = 'The email address format is invalid. Please check for typos.';
                     break;
                 case 'auth/user-disabled':
-                    errorMessage += 'Account has been disabled.';
+                    errorMessage = 'This account has been disabled. Please contact support for assistance.';
                     break;
                 case 'auth/user-not-found':
+                    errorMessage = 'We couldn\'t find an account with this email. Please check the spelling or register a new account.';
+                    break;
                 case 'auth/wrong-password':
-                    errorMessage += 'Invalid email or password.';
+                case 'auth/invalid-credential':
+                    errorMessage = 'Incorrect email or password. Please try again or use "Forgot Password".';
                     break;
                 case 'auth/network-request-failed':
-                    errorMessage += 'Network error. Please check your connection.';
+                    errorMessage = 'We couldn\'t connect to the server. Please check your internet connection.';
+                    break;
+                case 'auth/too-many-requests':
+                    errorMessage = 'Too many failed login attempts. Please wait a few minutes before trying again.';
                     break;
                 default:
-                    errorMessage += error.message;
+                    if (error.message) errorMessage = `Login error: ${error.message}`;
             }
             
             showLoginError(errorMessage);
@@ -179,16 +185,20 @@ function showForgotPasswordModal() {
             UI.hideLoading();
             console.error('Password reset error:', error);
             
-            let errorMessage = 'Error sending reset email. ';
+            let errorMessage = 'Failed to send reset email. Please try again.';
             switch (error.code) {
                 case 'auth/user-not-found':
-                    errorMessage += 'No account found with this email.';
+                    errorMessage = 'We couldn\'t find an account with this email. Please check the spelling.';
                     break;
                 case 'auth/invalid-email':
-                    errorMessage += 'Invalid email address.';
+                    errorMessage = 'The email address format is invalid. Please check for typos.';
                     break;
-                default:
-                    errorMessage += 'Please try again.';
+                case 'auth/network-request-failed':
+                    errorMessage = 'Network error. Please check your internet connection.';
+                    break;
+                case 'auth/too-many-requests':
+                    errorMessage = 'Too many requests. Please wait a moment before trying again.';
+                    break;
             }
             
             showForgotError(errorMessage);

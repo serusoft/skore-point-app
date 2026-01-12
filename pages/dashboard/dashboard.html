@@ -9,6 +9,21 @@
     <link rel="stylesheet" href="../../shared/css/components.css">
     <link rel="stylesheet" href="./dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .card-icon {
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .card-icon img {
+            width: 85%;
+            height: 85%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+    </style>
 </head>
 <body>
     <!-- Navbar will be injected here by ui.js -->
@@ -21,7 +36,8 @@
             <!-- School Portal Card -->
             <div class="dashboard-card" id="schoolPortalCard" style="display: none;">
                 <div class="card-icon">
-                    <i class="fas fa-school"></i>
+                    <i class="fas fa-school" id="defaultSchoolIcon"></i>
+                    <img id="schoolLogo" src="" alt="School Logo" style="display: none;">
                 </div>
                 <h3>School Portal</h3>
                 <p>Access your school management portal</p>
@@ -95,6 +111,7 @@
             </div>
         </div>
     </div>
+    <script src="../../services/cloudinary.service.js" defer></script>
     <script src="../../shared/js/app.js" defer></script>
     <script src="../../shared/js/ui.js" defer></script>
     <script src="./dashboard.js" defer></script>

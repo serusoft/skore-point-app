@@ -143,21 +143,24 @@ function initRegistrationPage() {
             UI.hideLoading();
             console.error('Registration error:', error);
 
-            let errorMessage = 'Registration failed. ';
+            let errorMessage = 'Registration failed. Please try again.';
             const code = error.code || (error.message.includes('auth/') ? error.message.split(' ')[0] : null);
             
             switch (code) {
                 case 'auth/email-already-in-use':
-                    errorMessage += 'This email is already registered.';
+                    errorMessage = 'An account with this email already exists. Please log in instead.';
                     break;
                 case 'auth/invalid-email':
-                    errorMessage += 'Please enter a valid email address.';
+                    errorMessage = 'The email address format is invalid. Please enter a valid email (e.g., name@example.com).';
                     break;
                 case 'auth/weak-password':
-                    errorMessage += 'Password is too weak.';
+                    errorMessage = 'The password is too weak. Please use at least 6 characters.';
+                    break;
+                case 'auth/network-request-failed':
+                    errorMessage = 'We couldn\'t connect to the server. Please check your internet connection.';
                     break;
                 default:
-                    errorMessage += error.message || 'An unknown error occurred.';
+                    if (error.message) errorMessage = `Registration error: ${error.message}`;
             }
             showRegisterError(errorMessage);
         }

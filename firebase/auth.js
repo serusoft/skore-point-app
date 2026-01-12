@@ -181,25 +181,27 @@ const FirebaseAuth = {
     getErrorMessage(error) {
         switch (error.code) {
             case 'auth/invalid-email':
-                return 'Invalid email address';
+                return 'The email address format is invalid. Please check for typos.';
             case 'auth/user-disabled':
-                return 'This account has been disabled';
+                return 'This account has been disabled. Please contact support.';
             case 'auth/user-not-found':
-                return 'No account found with this email';
+                return 'No account found with this email. Please register first.';
             case 'auth/wrong-password':
-                return 'Incorrect password';
+                return 'Incorrect password. Please try again.';
+            case 'auth/invalid-credential':
+                return 'Incorrect email or password. Please try again.';
             case 'auth/email-already-in-use':
-                return 'Email is already registered';
+                return 'This email is already registered. Please log in instead.';
             case 'auth/weak-password':
-                return 'Password is too weak';
+                return 'Password is too weak. Please use at least 6 characters.';
             case 'auth/operation-not-allowed':
-                return 'Email/password accounts are not enabled';
+                return 'Login method not enabled. Please contact support.';
             case 'auth/network-request-failed':
-                return 'Network error. Please check your connection';
+                return 'Network error. Please check your internet connection.';
             case 'auth/too-many-requests':
-                return 'Too many attempts. Please try again later';
+                return 'Too many failed attempts. Please wait a few minutes.';
             default:
-                return error.message || 'Authentication failed';
+                return error.message || 'Authentication failed. Please try again.';
         }
     },
     

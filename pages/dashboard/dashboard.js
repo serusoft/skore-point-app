@@ -58,6 +58,19 @@ function updateCurrentSchoolInfo(school) {
     const schoolName = document.getElementById('schoolName');
     const schoolCode = document.getElementById('schoolCode');
     const schoolInfo = document.getElementById('schoolInfo');
+    const schoolLogo = document.getElementById('schoolLogo');
+    const defaultSchoolIcon = document.getElementById('defaultSchoolIcon');
+    
+    if (schoolLogo && defaultSchoolIcon) {
+        if (school.logoUrl) {
+            schoolLogo.src = school.logoUrl;
+            schoolLogo.style.display = 'block';
+            defaultSchoolIcon.style.display = 'none';
+        } else {
+            schoolLogo.style.display = 'none';
+            defaultSchoolIcon.style.display = 'block';
+        }
+    }
     
     if (schoolName) schoolName.textContent = school.name;
     if (schoolCode) schoolCode.textContent = `Code: ${school.code}`;
@@ -474,7 +487,7 @@ function showRegisterSchoolModal() {
             let logoUrl = '';
             if (logoFileToUpload) {
                 showLoading('Uploading logo...');
-                logoUrl = await window.uploadToCloudinary(logoFileToUpload);
+                logoUrl = await window.uploadToCloudinary(logoFileToUpload, 'school_logos');
             }
 
             // Create school document

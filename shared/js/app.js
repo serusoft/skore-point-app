@@ -65,6 +65,8 @@ async function initializeApp() {
 
     } catch (error) {
         console.error('App: initializeApp() - App initialization error:', error);
+        hideInitialLoadingScreen();
+        hideLoading();
         showError('Application failed to initialize. Please refresh the page.');
     }
 }
@@ -678,7 +680,10 @@ document.addEventListener('click', (e) => {
 
 // Show loading overlay
 function showLoading(message = 'Loading...') {
-    if (DOM.modals.loading) {
+    // Try UI loader first (dynamic)
+    if (window.UI && typeof window.UI.showLoading === 'function') {
+        window.UI.showLoading('global-loader', message);
+    } else if (DOM.modals.loading) {
         const messageEl = DOM.modals.loading.querySelector('.loading-message');
         if (messageEl) messageEl.textContent = message;
         DOM.modals.loading.classList.add('active');
@@ -687,6 +692,11 @@ function showLoading(message = 'Loading...') {
 
 // Hide loading overlay
 function hideLoading() {
+    // Try UI loader first
+    if (window.UI && typeof window.UI.hideLoading === 'function') {
+        window.UI.hideLoading('global-loader');
+    }
+
     if (DOM.modals.loading) {
         DOM.modals.loading.classList.remove('active');
     }
@@ -969,6 +979,7 @@ window.generateId = generateId;
 window.validateEmail = validateEmail;
 window.validatePassword = validatePassword;
 window.updateNavbarUserInfo = updateNavbarUserInfo;
+window.loadUserSchools = loadUserSchools;
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', initializeApp);

@@ -40,3 +40,6 @@ async function uploadToCloudinary(file, folder) {
         throw error;
     }
 }
+
+// Make available globally
+window.uploadToCloudinary = uploadToCloudinary;
