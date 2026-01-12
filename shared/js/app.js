@@ -1,3 +1,5 @@
+// shared/js/app.js - Complete fixed version
+
 // Application Initialization and Core Functions
 
 // Global State Management
@@ -10,7 +12,8 @@ const AppState = {
     userSchools: [],
     isAuthenticated: false,
     deferredPrompt: null,
-    isAppInstalled: false
+    isAppInstalled: false,
+    authListenerRegistered: false
 };
 
 // Firebase Modules (lazy loaded)
@@ -27,17 +30,22 @@ const DOM = {
 
 // Initialize application
 async function initializeApp() {
-    console.log('Initializing Skore Point Application...');
+    console.log('App: initializeApp() - Start');
     
     try {
         // Initialize Firebase
+        console.log('App: initializeApp() - Initializing Firebase...');
         const firebaseInitialized = await initializeFirebase();
         if (!firebaseInitialized) {
+            console.error('App: initializeApp() - Firebase initialization failed. Aborting app initialization.');
             throw new Error('Firebase initialization failed');
         }
+        console.log('App: initializeApp() - Firebase initialized successfully.');
         
         // Check authentication state
+        console.log('App: initializeApp() - Checking auth state...');
         await checkAuthState();
+        console.log('App: initializeApp() - Auth state check completed.');
         
         // Initialize PWA
         initializePWA();
@@ -48,23 +56,15 @@ async function initializeApp() {
         // Cache DOM elements
         cacheDOMElements();
         
-        console.log('Application initialized successfully');
+        console.log('App: initializeApp() - Application initialized successfully.');
         
         // Dispatch app initialized event
         document.dispatchEvent(new CustomEvent('app:initialized'));
         window.appInitialized = true;
+        console.log('App: initializeApp() - Dispatched app:initialized event.');
 
-        // Handle initial navigation
-        if (window.location.pathname.endsWith('/') || window.location.pathname.endsWith('/index.html')) {
-            if (AppState.isAuthenticated) {
-                window.location.href = 'pages/dashboard/dashboard.html';
-            } else {
-                window.location.href = 'pages/launch/launch.html';
-            }
-        }
-        
     } catch (error) {
-        console.error('App initialization error:', error);
+        console.error('App: initializeApp() - App initialization error:', error);
         showError('Application failed to initialize. Please refresh the page.');
     }
 }
@@ -134,11 +134,11 @@ async function initializeFirebase() {
             }
         };
 
-        console.log('Firebase initialized successfully');
         return true;
         
     } catch (error) {
-        console.error('Firebase initialization error:', error);
+        console.error('App: initializeFirebase() - Firebase initialization error:', error);
+        showError('Failed to load core application services (Firebase). Please check your internet connection and try again.', 'Connection Error');
         return false;
     }
 }
@@ -146,51 +146,188 @@ async function initializeFirebase() {
 // Check authentication state
 let initialAuthCheckDone = false;
 async function checkAuthState() {
+    console.log('App: checkAuthState() - Registering auth state listener.');
     return new Promise((resolve) => {
+        // Only register auth listener once
+        if (AppState.authListenerRegistered) {
+            console.log('App: checkAuthState() - Auth listener already registered, resolving.');
+            return resolve();
+        }
+
         authModule.onAuthStateChanged(firebaseAuth, async (user) => {
+            console.log('App: onAuthStateChanged() - Auth state changed. User:', user ? user.email : 'null (signed out)');
+            
             if (user) {
                 AppState.currentUser = user;
                 AppState.isAuthenticated = true;
+                console.log('App: onAuthStateChanged() - User authenticated. Loading user data and schools...');
                 
                 try {
                     // Load user data from Firestore
+                    console.log('App: onAuthStateChanged() - Loading user data...');
                     await loadUserData(user.uid);
+                    console.log('App: onAuthStateChanged() - User data loaded.');
                     
                     // Load user's schools
+                    console.log('App: onAuthStateChanged() - Loading user schools...');
                     await loadUserSchools();
+                    console.log('App: onAuthStateChanged() - User schools loaded. Count:', AppState.userSchools.length);
+
+                    // Automatically set current school to prevent race conditions
+                    if (AppState.userSchools.length > 0) {
+                        const preferredSchoolId = AppState.currentUserData?.schoolId;
+                        const schoolExists = AppState.userSchools.some(s => s.id === preferredSchoolId);
+
+                        if (preferredSchoolId && schoolExists) {
+                            console.log(`App: onAuthStateChanged() - Setting current school to preferred ID: ${preferredSchoolId}`);
+                            await setCurrentSchool(preferredSchoolId);
+                        } else {
+                            console.log('App: onAuthStateChanged() - No preferred school or invalid. Defaulting to first available school.');
+                            // Default to the first school if no preference is set or is invalid
+                            await setCurrentSchool(AppState.userSchools[0].id);
+                        }
+                    } else {
+                        console.warn('App: onAuthStateChanged() - No schools found for user. AppState.currentSchool will be null.');
+                        // Ensure current school is cleared if no schools found
+                        AppState.currentSchool = null;
+                        AppState.currentSchoolLevel = null;
+                        AppState.currentAcademicLevel = null;
+                        document.dispatchEvent(new CustomEvent('school:changed', {
+                            detail: { school: null }
+                        }));
+                    }
+                    console.log('App: onAuthStateChanged() - Current school status:', AppState.currentSchool ? AppState.currentSchool.name : 'None');
                     
                     localStorage.setItem('isAuthenticated', 'true');
                     
-                    console.log('User authenticated:', user.email);
+                    // Force navbar update with user info
+                    updateNavbarUserInfo();
+                    
+                    document.dispatchEvent(new CustomEvent('auth:state-changed', {
+                        detail: { 
+                            isAuthenticated: true,
+                            user: user,
+                            userData: AppState.currentUserData
+                        }
+                    }));
+                    console.log('App: onAuthStateChanged() - Dispatched auth:state-changed (authenticated).');
+
+                    // Handle initial navigation now that data is loaded
+                    if (window.location.pathname.endsWith('/') || window.location.pathname.endsWith('/index.html')) {
+                        console.log('App: onAuthStateChanged() - Redirecting authenticated user from root to dashboard.');
+                        window.location.href = 'pages/dashboard/dashboard.html';
+                    }
                     
                 } catch (error) {
-                    console.error('Error loading user data:', error);
+                    console.error('App: onAuthStateChanged() - Error during authenticated user setup:', error);
+                    // --- FIX: Redirect on error to prevent getting stuck ---
+                    showError('Failed to load your profile. Please try logging in again.', 'Loading Error');
+                    // Give user time to see the error before redirecting
+                    setTimeout(() => {
+                        window.location.href = 'pages/auth/login.html';
+                    }, 2000);
                 }
             } else {
-                AppState.currentUser = null;
-                AppState.currentUserData = null;
-                AppState.currentSchool = null;
-                AppState.isAuthenticated = false;
-                localStorage.removeItem('isAuthenticated');
-                console.log('User not authenticated');
+                AppState.clear(); // Use the clear method for a clean logout
+                console.log('App: onAuthStateChanged() - User not authenticated.');
+                
+                document.dispatchEvent(new CustomEvent('auth:state-changed', {
+                    detail: { isAuthenticated: false }
+                }));
+                console.log('App: onAuthStateChanged() - Dispatched auth:state-changed (unauthenticated).');
             }
             
+            // This now resolves only AFTER the async logic for a user is complete.
             if (!initialAuthCheckDone) {
                 initialAuthCheckDone = true;
-                resolve();
+                
+                // Handle initial navigation for unauthenticated user from the root page
+                if (!user && (window.location.pathname.endsWith('/') || window.location.pathname.endsWith('/index.html'))) {
+                    console.log('App: onAuthStateChanged() - Redirecting unauthenticated user from root to launch page.');
+                    window.location.href = 'pages/launch/launch.html';
+                }
+                
+                resolve(); // Resolve the promise here, ensuring app initialization waits.
+                console.log('App: onAuthStateChanged() - checkAuthState promise resolved.');
             }
-
-            // Handle navigation after auth state change
-            const currentPage = window.location.pathname;
-            const isAuthPage = currentPage.includes('login.html') || currentPage.includes('register.html');
-
-            if (user && isAuthPage) {
-                window.location.href = '../dashboard/dashboard.html';
-            } else if (!user && !isAuthPage && !currentPage.includes('launch.html')) {
-                window.location.href = '../auth/login.html';
-            }
+            
+            handlePostAuthNavigation(user);
         });
+        
+        AppState.authListenerRegistered = true;
     });
+}
+
+// Handle navigation after auth state change
+function handlePostAuthNavigation(user) {
+    const currentPage = window.location.pathname;
+    const isAuthPage = currentPage.includes('login.html') || currentPage.includes('register.html');
+    const isLaunchPage = currentPage.includes('launch.html');
+
+    if (user && (isAuthPage || isLaunchPage)) {
+        window.location.href = '../dashboard/dashboard.html';
+    } else if (!user && !isAuthPage && !isLaunchPage) {
+        const path = window.location.pathname;
+        const isAtRootOrIndex = path === '/' || path.endsWith('/index.html');
+        const isNotInPages = !path.includes('/pages/');
+
+        if (isAtRootOrIndex || isNotInPages) {
+            window.location.href = 'pages/auth/login.html';
+        } else {
+            window.location.href = '../auth/login.html';
+        }
+    }
+}
+
+// Update navbar with user info
+function updateNavbarUserInfo() {
+    const user = AppState.currentUser;
+    const userData = AppState.currentUserData;
+    
+    if (!user || !userData) {
+        // Clear user info if no user
+        document.dispatchEvent(new CustomEvent('user-info:updated', {
+            detail: { user: null, userData: null }
+        }));
+        return;
+    }
+    
+    // Update user profile elements if they exist
+    const profilePicture = document.getElementById('globalProfilePicture');
+    const username = document.getElementById('globalUsername');
+    const dropdownUsername = document.getElementById('globalDropdownUsername');
+    const dropdownUserEmail = document.getElementById('globalDropdownUserEmail');
+    
+    if (profilePicture) {
+        profilePicture.src = userData.profileUrl || 'https://via.placeholder.com/40';
+        profilePicture.alt = userData.name || user.email;
+    }
+    
+    if (username) {
+        username.textContent = userData.name || user.displayName || user.email.split('@')[0];
+    }
+    
+    if (dropdownUsername) {
+        dropdownUsername.textContent = userData.name || user.displayName || user.email.split('@')[0];
+    }
+    
+    if (dropdownUserEmail) {
+        dropdownUserEmail.textContent = user.email;
+    }
+    
+    // Dispatch event for UI components - CRITICAL for navbar update
+    document.dispatchEvent(new CustomEvent('user-info:updated', {
+        detail: { user, userData }
+    }));
+    
+    // Also dispatch auth state change event for immediate navbar re-render
+    document.dispatchEvent(new CustomEvent('auth:state-changed', {
+        detail: { 
+            isAuthenticated: true,
+            user: user,
+            userData: userData
+        }
+    }));
 }
 
 // Load user data from Firestore
@@ -203,12 +340,12 @@ async function loadUserData(userId) {
             AppState.currentUserData = userDoc.data();
             console.log('User data loaded:', AppState.currentUserData);
         } else {
-            // Create minimal user document
+            // Create minimal user document if it doesn't exist (e.g., from interrupted registration)
             const userData = {
-                name: AppState.currentUser.displayName || 'User',
+                name: AppState.currentUser.displayName || AppState.currentUser.email.split('@')[0],
                 email: AppState.currentUser.email,
                 createdAt: firestoreModule.serverTimestamp(),
-                profileUrl: '',
+                profileUrl: AppState.currentUser.photoURL || '', // Use auth profile photo as fallback
                 role: 'teacher' // Default role
             };
             
@@ -283,7 +420,7 @@ async function setCurrentSchool(schoolId) {
             await firestoreModule.updateDoc(
                 firestoreModule.doc(firestoreDB, 'users', AppState.currentUser.uid),
                 {
-                    currentSchoolId: schoolId,
+                    schoolId: schoolId, // Use schoolId for consistency
                     role: school.userRole
                 }
             );
@@ -291,7 +428,7 @@ async function setCurrentSchool(schoolId) {
         
         // Update current user data
         if (AppState.currentUserData) {
-            AppState.currentUserData.currentSchoolId = schoolId;
+            AppState.currentUserData.schoolId = schoolId;
             AppState.currentUserData.role = school.userRole;
         }
         
@@ -374,7 +511,7 @@ function initializePWA() {
     // Register service worker
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js', { scope: BASE_URL })
+            navigator.serviceWorker.register('/sw.js', { scope: BASE_URL })
                 .then(registration => {
                     console.log('ServiceWorker registered:', registration.scope);
                 })
@@ -511,7 +648,9 @@ function navigateTo(page, params = {}) {
         'school': '../school/school.html',
         'marks': '../marks/marks.html',
         'reports': '../reports/reports.html',
-        'analytics': '../analytics/analytics.html'
+        'analytics': '../analytics/analytics.html',
+        'profile': '../profile/profile.html',
+        'settings': '../settings/settings.html'
     };
     
     if (pages[page]) {
@@ -784,6 +923,36 @@ function throttle(func, limit) {
     };
 }
 
+// Clear AppState (for logout)
+AppState.clear = function() {
+    this.currentUser = null;
+    this.currentUserData = null;
+    this.currentSchool = null;
+    this.currentSchoolLevel = null;
+    this.currentAcademicLevel = null;
+    this.userSchools = [];
+    this.isAuthenticated = false;
+    localStorage.removeItem('isAuthenticated');
+    
+    // Dispatch events for UI cleanup
+    document.dispatchEvent(new CustomEvent('auth:state-changed', {
+        detail: { isAuthenticated: false }
+    }));
+};
+
+// Function to hide the static loading container from index.html
+function hideInitialLoadingScreen() {
+    const initialLoader = document.querySelector('.loading-container');
+    if (initialLoader) {
+        initialLoader.style.opacity = '0';
+        initialLoader.addEventListener('transitionend', () => initialLoader.remove());
+        console.log('Initial loading screen hidden.');
+    }
+}
+
+// Listen for the app to be initialized and hide the initial loading screen
+document.addEventListener('app:initialized', hideInitialLoadingScreen);
+
 // Export to window
 window.AppState = AppState;
 window.showLoading = showLoading;
@@ -799,6 +968,7 @@ window.getInitials = getInitials;
 window.generateId = generateId;
 window.validateEmail = validateEmail;
 window.validatePassword = validatePassword;
+window.updateNavbarUserInfo = updateNavbarUserInfo;
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', initializeApp);

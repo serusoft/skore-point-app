@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skore Point - Settings</title>
+    <link rel="stylesheet" href="../../shared/css/variables.css">
+    <link rel="stylesheet" href="../../shared/css/base.css">
+    <link rel="stylesheet" href="../../shared/css/components.css">
+    <style>
+        .settings-page {
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .profile-picture-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+        .profile-picture-preview {
+            width: 128px;
+            height: 128px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .upload-area .form-group {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar-container"></div>
+
+    <div class="settings-page">
+        <div class="page-header">
+            <h1>Settings</h1>
+            <p>Manage your account and profile settings.</p>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3>Profile Picture</h3>
+            </div>
+            <div class="card-body">
+                <div class="profile-picture-section">
+                    <img src="https://via.placeholder.com/100" alt="Current profile picture" id="profilePicturePreview" class="profile-picture-preview">
+                    <div class="upload-area">
+                        <p>Upload a new profile picture. Square images work best.</p>
+                        <div class="form-group">
+                            <input type="file" id="profilePictureInput" accept="image/png, image/jpeg, image/gif">
+                        </div>
+                        <button class="btn btn-primary" id="uploadProfilePictureBtn" disabled>
+                            <i class="fas fa-upload"></i> Upload Picture
+                        </button>
+                    </div>
+                </div>
+                 <div id="uploadStatus" class="alert" style="display: none; margin-top: 15px;"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="../../shared/js/app.js" defer></script>
+    <script src="../../shared/js/ui.js" defer></script>
+    <script src="../../services/cloudinary.service.js" defer></script>
+    <script src="./settings.js" defer></script>
+</body>
+</html>

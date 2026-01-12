@@ -1,6 +1,6 @@
 // Service Worker for Skore Point PWA
 
-const CACHE_NAME = 'skore-point-v1.0.2';
+const CACHE_NAME = 'skore-point-v1.0.3';
 const urlsToCache = [
     'index.html',
     './',
@@ -96,11 +96,16 @@ self.addEventListener('fetch', event => {
     // Skip non-GET requests
     if (event.request.method !== 'GET') return;
     
-    // Skip Chrome extensions
-    if (event.request.url.startsWith('chrome-extension://')) return;
-    
-    // Skip Firebase Storage requests (they need network)
-    if (event.request.url.includes('firebasestorage.googleapis.com')) return;
+    // Skip Chrome extensions and Firebase/Google API requests
+    const requestUrl = event.request.url;
+    if (requestUrl.startsWith('chrome-extension://') || 
+        requestUrl.includes('firebasestorage.googleapis.com') ||
+        requestUrl.includes('firebaseapp.com') ||
+        requestUrl.includes('googleapis.com') ||
+        requestUrl.includes('res.cloudinary.com') ||
+        requestUrl.includes('api.cloudinary.com')) {
+        return;
+    }
     
     event.respondWith(
         caches.match(event.request)

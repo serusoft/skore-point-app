@@ -1,4 +1,4 @@
-// UI components and utilities
+// shared/js/ui.js - Fixed version with proper loading state management
 
 class AppUI {
     constructor() {
@@ -10,6 +10,13 @@ class AppUI {
         this.initializeModals();
         this.initializeToasts();
         this.initializeTooltips();
+        
+        // Listen for user data updates
+        this.setupUserDataListeners();
+        
+        // Listen for auth state changes
+        this.setupAuthStateListeners();
+        
         // Inject global navbar if page expects it
         this.injectNavbar();
     }
@@ -63,6 +70,39 @@ class AppUI {
         });
     }
     
+    // Setup user data listeners
+    setupUserDataListeners() {
+        // Listen for user data loaded
+        document.addEventListener('user:loaded', () => {
+            this.populateGlobalUserInfo();
+        });
+        
+        // Listen for user info updates
+        document.addEventListener('user-info:updated', (e) => {
+            this.populateGlobalUserInfo();
+        });
+    }
+    
+    // Setup auth state listeners
+    setupAuthStateListeners() {
+        // Listen for authentication state changes
+        document.addEventListener('auth:state-changed', (e) => {
+            console.log('Auth state changed in UI:', e.detail.isAuthenticated);
+            // Re-inject navbar to reflect authentication state change
+            this.injectNavbar();
+            
+            // If authenticated, also populate user info
+            if (e.detail.isAuthenticated && e.detail.userData) {
+                setTimeout(() => this.populateGlobalUserInfo(), 100);
+            }
+        });
+        
+        // Also listen for navigation events
+        document.addEventListener('app:navigated', () => {
+            setTimeout(() => this.injectNavbar(), 50);
+        });
+    }
+    
     // Create tooltip
     createTooltip(element, text) {
         const tooltip = document.createElement('div');
@@ -82,78 +122,246 @@ class AppUI {
     // Inject a global navbar into pages that include #navbar-container
     injectNavbar() {
         try {
-            const isAuthenticated = AppState.isAuthenticated;
-            let navLinks = `
-                <a href="../auth/login.html" class="nav-link" data-page="login"><i class="fas fa-sign-in-alt"></i> Sign In</a>
-                <a href="../auth/register.html" class="nav-link" data-page="register"><i class="fas fa-user-plus"></i> Register</a>
-            `;
+            // Always check current auth state from AppState
+            const isAuthenticated = AppState && AppState.isAuthenticated;
+            let navHtml = '';
+            
+            console.log('Injecting navbar, authenticated:', isAuthenticated);
 
             if (isAuthenticated) {
-                navLinks = ''; // No links for authenticated users in the main navbar
-            }
-
-            const navHtml = `
-                <nav class="navbar" id="main-navbar">
-                    <div class="container">
+                navHtml = `
+                    <nav class="navbar" id="main-navbar">
                         <div class="navbar-brand">
-                            <i class="fas fa-graduation-cap" aria-hidden="true"></i>
-                            <span class="brand-title">SKORE POINT</span>
+                            <i class="fas fa-graduation-cap"></i>
+                            <span>Skore Point</span>
                         </div>
-
-                        <button class="navbar-toggle desktop-hidden" id="navbar-toggle" aria-label="Open menu">
-                            <i class="fas fa-bars"></i>
-                        </button>
-
-                        <div class="navbar-nav desktop-only" id="navbar-desktop-nav">
-                            ${navLinks}
+                        <div class="navbar-menu">
+                            <a href="#dashboard" data-page="dashboard" class="nav-link">
+                                <i class="fas fa-home"></i> Dashboard
+                            </a>
+                            <a href="#school" data-page="school" class="nav-link">
+                                <i class="fas fa-school"></i> School
+                            </a>
                         </div>
-
-                        <div class="mobile-nav mobile-only" id="navbar-mobile-nav" aria-hidden="true">
-                            ${navLinks}
+                        <div class="navbar-user" id="navbarUser">
+                            <!-- User profile will be dynamically loaded here by loadUserProfileInNavbar -->
+                            <div class="user-profile-skeleton">
+                                <div class="profile-image-skeleton"></div>
+                                <div class="user-info-skeleton">
+                                    <div class="skeleton-line"></div>
+                                    <div class="skeleton-line short"></div>
+                                </div>
+                                <div class="dropdown-skeleton"></div>
+                            </div>
                         </div>
-                    </div>
-                </nav>
-            `;
+                    </nav>
+                `;
+            } else {
+                // User is not logged in - show auth links
+                navHtml = `
+                    <nav class="navbar" id="main-navbar">
+                        <div class="container">
+                            <div class="navbar-brand">
+                                <i class="fas fa-graduation-cap" aria-hidden="true"></i>
+                                <span class="brand-title">SKORE POINT</span>
+                            </div>
+
+                            <button class="navbar-toggle desktop-hidden" id="navbar-toggle" aria-label="Open menu">
+                                <i class="fas fa-bars"></i>
+                            </button>
+
+                            <div class="navbar-nav desktop-only" id="navbar-desktop-nav">
+                                <a href="../auth/login.html" class="nav-link" data-page="login">
+                                    <i class="fas fa-sign-in-alt"></i> Sign In
+                                </a>
+                                <a href="../auth/register.html" class="nav-link" data-page="register">
+                                    <i class="fas fa-user-plus"></i> Register
+                                </a>
+                            </div>
+
+                            <div class="mobile-nav mobile-only" id="navbar-mobile-nav" aria-hidden="true">
+                                <a href="../auth/login.html" class="nav-link" data-page="login">
+                                    <i class="fas fa-sign-in-alt"></i> Sign In
+                                </a>
+                                <a href="../auth/register.html" class="nav-link" data-page="register">
+                                    <i class="fas fa-user-plus"></i> Register
+                                </a>
+                            </div>
+                        </div>
+                    </nav>
+                `;
+            }
 
             // If page provides a navbar container, use it
             const container = document.getElementById('navbar-container');
             if (container) {
                 container.innerHTML = navHtml;
                 document.body.classList.add('has-navbar');
-                // Attach mobile toggle behavior when injected into a container
-                const toggleBtn = container.querySelector('#navbar-toggle');
-                const mobileNav = container.querySelector('#navbar-mobile-nav');
-                if (toggleBtn && mobileNav) {
-                    toggleBtn.addEventListener('click', () => {
-                        const open = mobileNav.classList.toggle('active');
-                        mobileNav.setAttribute('aria-hidden', !open);
-                    });
+                // Setup event listeners when injected into a container
+                this.setupGlobalNavbarEvents();
+                
+                // Populate user info if authenticated
+                if (isAuthenticated && AppState.currentUser) {
+                    setTimeout(() => {
+                        this.loadUserProfileInNavbar();
+                    }, 100);
                 }
                 return;
             }
 
             // Otherwise, ensure a single navbar is present at top of body
-            if (!document.querySelector('nav.navbar')) {
+            let existingNavbar = document.querySelector('nav.navbar');
+            if (existingNavbar) {
+                // Replace existing navbar
+                existingNavbar.outerHTML = navHtml;
+            } else {
+                // Insert new navbar at top
                 document.body.insertAdjacentHTML('afterbegin', navHtml);
-                document.body.classList.add('has-navbar');
-
-                // Attach mobile toggle behavior when inserted at top of body
-                setTimeout(() => {
-                    const inserted = document.getElementById('main-navbar');
-                    if (!inserted) return;
-                    const toggleBtn = inserted.querySelector('#navbar-toggle');
-                    const mobileNav = inserted.querySelector('#navbar-mobile-nav');
-                    if (toggleBtn && mobileNav) {
-                        toggleBtn.addEventListener('click', () => {
-                            const open = mobileNav.classList.toggle('active');
-                            mobileNav.setAttribute('aria-hidden', !open);
-                        });
-                    }
-                }, 20);
             }
+            
+            document.body.classList.add('has-navbar');
+
+            // Setup event listeners
+            setTimeout(() => {
+                this.setupGlobalNavbarEvents();
+                // Populate user info if authenticated
+                if (isAuthenticated && AppState.currentUser) {
+                    this.loadUserProfileInNavbar();
+                }
+            }, 50);
+            
         } catch (e) {
             console.error('Failed to inject navbar', e);
         }
+    }
+
+    setupGlobalNavbarEvents() {
+        const navbar = document.getElementById('main-navbar');
+        if (!navbar) return;
+
+        // Mobile menu toggle (if applicable for unauthenticated nav)
+        const toggleBtn = navbar.querySelector('#navbar-toggle');
+        const mobileNav = navbar.querySelector('#navbar-mobile-nav');
+        if (toggleBtn && mobileNav) {
+            toggleBtn.addEventListener('click', () => {
+                const open = mobileNav.classList.toggle('active');
+                mobileNav.setAttribute('aria-hidden', !open);
+            });
+        }
+
+        // The authenticated user profile menu dropdown logic is handled by loadUserProfileInNavbar
+        // No specific event listeners needed here anymore for globalUserProfileMenu
+    }
+
+    // Load user profile in navbar (replaces the global function)
+    async loadUserProfileInNavbar() {
+        const navbarUser = document.getElementById('navbarUser');
+        if (!navbarUser || !AppState.currentUser) {
+            console.log('No navbarUser element or no current user');
+            return;
+        }
+        
+        try {
+            const user = AppState.currentUser;
+            const userData = AppState.currentUserData || {};
+            
+            console.log('Loading user profile for navbar:', user.email);
+            
+            // Create user profile element
+            navbarUser.innerHTML = `
+                <div class="user-profile">
+                    <div class="profile-image" id="profileImage">
+                        ${userData.profileUrl 
+                            ? `<img src="${userData.profileUrl}" alt="${userData.name || 'User'}" onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML=getInitials('${userData.name || ''}')">`
+                            : getInitials(userData.name || '')
+                        }
+                    </div>
+                    <div class="user-info">
+                        <span class="user-name">${userData.name || user.email || 'User'}</span>
+                        <span class="user-role">${userData.role || 'Teacher'}</span>
+                    </div>
+                    <button class="dropdown-toggle" id="userDropdownToggle">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-menu" id="userDropdownMenu">
+                        <a href="#profile" class="dropdown-item" data-page="profile">
+                            <i class="fas fa-user"></i> My Profile
+                        </a>
+                        <a href="#settings" class="dropdown-item" data-page="settings">
+                            <i class="fas fa-cog"></i> Settings
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <button class="dropdown-item logout-btn">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Add dropdown functionality
+            const dropdownToggle = document.getElementById('userDropdownToggle');
+            const dropdownMenu = document.getElementById('userDropdownMenu');
+            
+            if (dropdownToggle && dropdownMenu) {
+                dropdownToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    dropdownMenu.classList.toggle('show');
+                });
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!dropdownToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                        dropdownMenu.classList.remove('show');
+                    }
+                });
+            }
+            
+            // Handle logout
+            const logoutBtn = navbarUser.querySelector('.logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', async () => {
+                    try {
+                        await Firebase.auth.signOut();
+                        AppState.clear();
+                        navigateTo('login');
+                    } catch (error) {
+                        console.error('Logout error:', error);
+                        this.showToast('Error logging out', 'error');
+                    }
+                });
+            }
+            
+            // Handle profile click
+            const profileImage = document.getElementById('profileImage');
+            if (profileImage) {
+                profileImage.addEventListener('click', () => {
+                    navigateTo('profile');
+                });
+            }
+            
+        } catch (error) {
+            console.error('Error loading user profile in navbar:', error);
+            // Fallback to basic user info
+            if (navbarUser) {
+                navbarUser.innerHTML = `
+                    <div class="user-profile">
+                        <div class="profile-image">${getInitials('User')}</div>
+                        <div class="user-info">
+                            <span class="user-name">User</span>
+                            <span class="user-role">Teacher</span>
+                        </div>
+                        <button class="dropdown-toggle">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                `;
+            }
+        }
+    }
+    
+    // populateGlobalUserInfo will now simply call loadUserProfileInNavbar
+    populateGlobalUserInfo() {
+        this.loadUserProfileInNavbar();
     }
     
     // Show modal
@@ -260,46 +468,114 @@ class AppUI {
         return icons[type] || 'info-circle';
     }
     
-    // Show loading indicator
+    // Show loading indicator - FIXED VERSION
     showLoading(loaderId = 'default', message = 'Loading...') {
-        // Support calling showLoading(message) where first arg is a string message
-        if (typeof loaderId === 'string' && typeof message === 'undefined') {
+        // Handle different calling patterns
+        if (typeof loaderId === 'string' && loaderId.includes(' ')) {
+            // Called as showLoading(message) - loaderId is actually a message
             message = loaderId;
             loaderId = 'default';
         }
-
-        // Also support call showLoading(message) when only one string argument provided
-        if (typeof loaderId === 'string' && typeof message !== 'string') {
-            message = 'Loading...';
-        }
-
-        // Create loader if it doesn't exist
+        
+        // Create or get loader
         let loader = this.loaders.get(loaderId);
+        
         if (!loader) {
+            // Create new loader
             loader = document.createElement('div');
+            loader.id = `loader-${loaderId}`;
             loader.className = 'loading-indicator';
             loader.innerHTML = `
                 <div class="loading-spinner"></div>
                 <div class="loading-message">${message}</div>
             `;
+            loader.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.7);
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            // Add styles for spinner and message if not already present
+            if (!document.querySelector('#loader-styles')) {
+                const style = document.createElement('style');
+                style.id = 'loader-styles';
+                style.textContent = `
+                    .loading-spinner {
+                        width: 50px;
+                        height: 50px;
+                        border: 5px solid #f3f3f3;
+                        border-top: 5px solid #3498db;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                        margin-bottom: 15px;
+                    }
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    .loading-message {
+                        color: white;
+                        font-size: 16px;
+                        text-align: center;
+                        max-width: 80%;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
             document.body.appendChild(loader);
             this.loaders.set(loaderId, loader);
+            
+            // Fade in after a brief delay to ensure DOM is ready
+            setTimeout(() => {
+                loader.style.opacity = '1';
+            }, 10);
         } else {
-            // Update existing message
-            const msgEl = loader.querySelector('.loading-message');
-            if (msgEl) msgEl.textContent = message;
+            // Update existing loader
+            const messageEl = loader.querySelector('.loading-message');
+            if (messageEl) {
+                messageEl.textContent = message;
+            }
+            loader.style.display = 'flex';
+            loader.style.opacity = '1';
         }
-
-        loader.classList.add('active');
+        
+        console.log(`UI: Show loading for '${loaderId}': ${message}`);
         return loaderId;
     }
     
-    // Hide loading indicator
+    // Hide loading indicator - FIXED VERSION
     hideLoading(loaderId = 'default') {
         const loader = this.loaders.get(loaderId);
+        
         if (loader) {
-            loader.classList.remove('active');
+            // Fade out and then remove from display
+            loader.style.opacity = '0';
+            
+            setTimeout(() => {
+                loader.style.display = 'none';
+                console.log(`UI: Hide loading for '${loaderId}'`);
+            }, 300);
+        } else {
+            console.warn(`UI: No loader found with ID '${loaderId}' to hide`);
         }
+    }
+    
+    // Hide all loading indicators
+    hideAllLoading() {
+        this.loaders.forEach((loader, loaderId) => {
+            this.hideLoading(loaderId);
+        });
     }
     
     // Update loading message
@@ -307,7 +583,9 @@ class AppUI {
         const loader = this.loaders.get(loaderId);
         if (loader) {
             const messageEl = loader.querySelector('.loading-message');
-            if (messageEl) messageEl.textContent = message;
+            if (messageEl) {
+                messageEl.textContent = message;
+            }
         }
     }
     
@@ -578,7 +856,6 @@ class AppUI {
         });
     }
 
-
     
     // Create tabs
     createTabs(containerId, tabs) {
@@ -686,10 +963,17 @@ const ui = new AppUI();
 window.ui = ui;
 window.UI = ui;
 
-// Bind commonly used methods to the `UI` object to avoid issues when `UI` identifier
-// is also used as a class name in some environments.
-window.UI.showLoading = ui.showLoading.bind(ui);
-window.UI.hideLoading = ui.hideLoading.bind(ui);
-window.UI.showToast = ui.showToast.bind(ui);
-window.UI.showModal = ui.showModal.bind(ui);
-window.UI.closeModal = ui.closeModal.bind(ui);
+// Helper function to get initials
+function getInitials(name) {
+    if (!name || typeof name !== 'string') return 'U';
+    const initials = name.split(' ')
+        .map(word => word[0])
+        .join('')
+        .toUpperCase();
+    return initials.substring(0, 2);
+}
+
+// Global function for backward compatibility
+window.loadUserProfileInNavbar = function() {
+    return ui.loadUserProfileInNavbar();
+};

@@ -1,173 +1,105 @@
 // Dashboard page functionality
-function onAppReady() {
-    initDashboard();
-}
 
-if (window.appInitialized) {
-    onAppReady();
-} else {
-    document.addEventListener('app:initialized', onAppReady);
-}
-
-async function initDashboard() {
-    await loadUserProfile();
-    await loadUserSchools();
-    setupEventListeners();
-}
-
-async function loadUserProfile() {
-    const userProfileCard = document.getElementById('userProfileCard');
-    if (!userProfileCard) return;
-
-    const user = AppState.currentUser;
-    const userData = AppState.currentUserData;
-
-    if (!user || !userData) {
-        userProfileCard.innerHTML = `
-            <div class="alert info">
-                <i class="fas fa-info-circle"></i>
-                <span>User information not available</span>
-            </div>
-        `;
-        return;
-    }
-
-    const profilePicture = userProfileCard.querySelector('.profile-picture');
-    const username = userProfileCard.querySelector('.username');
-    const logoutBtn = userProfileCard.querySelector('#logoutBtn');
-
-    if (profilePicture) {
-        profilePicture.src = userData.profileUrl || 'https://via.placeholder.com/150';
-        profilePicture.alt = userData.name || user.email;
-    }
-
-    if (username) {
-        username.textContent = userData.name || user.displayName || 'User';
-    }
-
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            if (confirm('Are you sure you want to logout?')) {
-                try {
-                    await Firebase.auth.signOut();
-                    // Navigation will be handled by the auth state listener in app.js
-                } catch (error) {
-                    console.error('Logout error:', error);
-                    UI.showToast('Error logging out', 'error');
-                }
-            }
-        });
-    }
-}
-
-async function loadUserSchools() {
+// --- NEW: Centralized UI Rendering ---
+function renderDashboard() {
     const user = AppState.currentUser;
     if (!user) return;
+
+    const schools = AppState.userSchools || [];
+    const currentSchool = AppState.currentSchool;
     
-    try {
-        // Get all schools where user is a teacher or admin
-        const schools = await Firebase.db.query('schools', {
-            field: 'teachers',
-            op: 'array-contains',
-            value: user.uid
-        });
-        
-        const schoolPortalCard = document.getElementById('schoolPortalCard');
-        const mySchoolsCard = document.getElementById('mySchoolsCard');
-        const schoolsList = document.getElementById('schoolsList');
-        
-        if (schools.length === 0) {
-            schoolPortalCard.style.display = 'none';
-            mySchoolsCard.style.display = 'none';
-            return;
-        }
-        
-        // Show cards
-        schoolPortalCard.style.display = 'block';
-        mySchoolsCard.style.display = 'block';
-        
-        // Clear schools list
-        if (schoolsList) {
-            schoolsList.innerHTML = '';
-        }
-        
-        // Check if user has a current school
-        const currentSchoolId = AppState.currentUserData?.schoolId;
-        let currentSchool = null;
-        
-        // Populate schools list
+    const schoolPortalCard = document.getElementById('schoolPortalCard');
+    const mySchoolsCard = document.getElementById('mySchoolsCard');
+    const schoolsList = document.getElementById('schoolsList');
+    const noSchoolsMessage = document.getElementById('noSchoolsMessage'); // Assuming an element for this state
+
+    if (schools.length === 0) {
+        schoolPortalCard.style.display = 'none';
+        mySchoolsCard.style.display = 'none';
+        if (noSchoolsMessage) noSchoolsMessage.style.display = 'block';
+        return;
+    }
+    
+    // Show cards and hide no-school message
+    schoolPortalCard.style.display = 'block';
+    mySchoolsCard.style.display = 'block';
+    if (noSchoolsMessage) noSchoolsMessage.style.display = 'none';
+
+    // Update current school info display
+    if (currentSchool) {
+        updateCurrentSchoolInfo(currentSchool);
+    }
+    
+    // Populate schools list
+    if (schoolsList) {
+        schoolsList.innerHTML = '';
         schools.forEach(school => {
-            const isCurrent = school.id === currentSchoolId;
+            const isCurrent = currentSchool && school.id === currentSchool.id;
             const isAdmin = school.admins && school.admins.includes(user.uid);
             
-            if (isCurrent) {
-                currentSchool = school;
+            const schoolItem = document.createElement('div');
+            schoolItem.className = `school-item ${isCurrent ? 'active' : ''}`;
+            schoolItem.innerHTML = `
+                <h4>${school.name} ${isCurrent ? '<span class="tag-current">(Current)</span>' : ''}</h4>
+                <p>Code: ${school.code} • Role: ${isAdmin ? 'Admin' : 'Teacher'}</p>
+            `;
+            
+            if (!isCurrent) {
+                schoolItem.addEventListener('click', () => switchToSchool(school.id));
             }
             
-            // Add to schools list
-            if (schoolsList) {
-                const schoolItem = document.createElement('div');
-                schoolItem.className = `school-item ${isCurrent ? 'active' : ''}`;
-                schoolItem.innerHTML = `
-                    <h4>${school.name} ${isCurrent ? '(Current)' : ''}</h4>
-                    <p>Code: ${school.code} • ${isAdmin ? 'Admin' : 'Teacher'}</p>
-                `;
-                
-                if (!isCurrent) {
-                    schoolItem.addEventListener('click', () => switchToSchool(school.id));
-                }
-                
-                schoolsList.appendChild(schoolItem);
-            }
+            schoolsList.appendChild(schoolItem);
         });
-        
-        // Update current school info
-        if (currentSchool) {
-            updateCurrentSchoolInfo(currentSchool);
-        } else if (schools.length > 0) {
-            // Set first school as current
-            await switchToSchool(schools[0].id);
-        }
-        
-    } catch (error) {
-        console.error('Error loading user schools:', error);
-        UI.showToast('Error loading schools', 'error');
     }
 }
 
 function updateCurrentSchoolInfo(school) {
+    if (!school) return;
     const schoolName = document.getElementById('schoolName');
     const schoolCode = document.getElementById('schoolCode');
     const schoolInfo = document.getElementById('schoolInfo');
     
     if (schoolName) schoolName.textContent = school.name;
-    if (schoolCode) schoolCode.textContent = school.code;
+    if (schoolCode) schoolCode.textContent = `Code: ${school.code}`;
     if (schoolInfo) schoolInfo.style.display = 'block';
 }
 
 async function switchToSchool(schoolId) {
     try {
-        UI.showLoading('Switching school...');
+        showLoading('Switching school...');
         
-        // Update user document
-        await Firebase.db.updateDoc('users', AppState.currentUser.uid, {
-            schoolId: schoolId
-        });
+        // This will trigger the 'school:changed' event from app.js
+        await setCurrentSchool(schoolId); 
         
-        // Reload school data
-        await App.loadSchoolData(schoolId);
+        // UI will update automatically via the event listener.
         
-        // Update UI
-        await loadUserSchools();
-        
-        UI.hideLoading();
-        UI.showToast('School switched successfully', 'success');
+        hideLoading();
+        showToast('School switched successfully', 'success');
         
     } catch (error) {
-        UI.hideLoading();
+        hideLoading();
         console.error('Error switching school:', error);
-        UI.showToast('Error switching school', 'error');
+        showToast('Error switching school', 'error');
     }
+}
+
+// --- REFACTORED: Initialization and Event Listeners ---
+function initDashboard() {
+    // Remove user profile menu from dashboard header since it's now in navbar
+    const dashboardHeader = document.querySelector('.dashboard-header');
+    if (dashboardHeader) {
+        const existingUserProfile = dashboardHeader.querySelector('.user-profile-menu');
+        if (existingUserProfile) {
+            existingUserProfile.remove();
+        }
+    }
+
+    renderDashboard(); // Initial render with data from AppState
+    setupEventListeners();
+
+    // Listen for state changes from the core app script
+    document.addEventListener('schools:loaded', renderDashboard);
+    document.addEventListener('school:changed', renderDashboard);
 }
 
 function setupEventListeners() {
@@ -184,9 +116,20 @@ function setupEventListeners() {
     // Enter Portal button
     document.getElementById('enterPortalBtn')?.addEventListener('click', () => {
         if (AppState.currentSchool) {
-            Router.navigateTo('school');
+            // Use the global showLevelSelection if needed, then navigate
+            const school = AppState.currentSchool;
+            if (school.level === 'primary' || school.level === 'secondary') {
+                showLevelSelection(school.level).then(academicLevel => {
+                    if (academicLevel) {
+                        setAcademicLevel(academicLevel);
+                        navigateTo('school');
+                    }
+                });
+            } else {
+                navigateTo('school');
+            }
         } else {
-            UI.showToast('Please join or create a school first', 'warning');
+            showToast('Please join or create a school first.', 'warning');
         }
     });
     
@@ -195,6 +138,18 @@ function setupEventListeners() {
         showSchoolSwitchModal();
     });
 }
+
+// --- Entry Point ---
+function onAppReady() {
+    initDashboard();
+}
+
+if (window.appInitialized) {
+    onAppReady();
+} else {
+    document.addEventListener('app:initialized', onAppReady);
+}
+
 
 function showJoinSchoolModal() {
     const modal = document.createElement('div');
@@ -308,26 +263,29 @@ function showJoinSchoolModal() {
         }
         
         try {
-            UI.showLoading('Joining school...');
+            if (!AppState.currentUser || !AppState.currentUser.uid) {
+                showJoinError('User not authenticated. Please log in again.');
+                hideLoading();
+                return;
+            }
+
+            showLoading('Joining school...');
             
-            // Search for school
-            const schools = await Firebase.db.query('schools', [
-                { field: 'code', op: '==', value: schoolCode },
-                { field: 'name', op: '>=', value: schoolName },
-                { field: 'name', op: '<=', value: schoolName + '\uf8ff' }
-            ]);
+            // Search for school in cache
+            // Use schoolsCache populated from Firebase.db.getAll('schools')
+            const school = schoolsCache.find(s => 
+                s.code === schoolCode && s.name.toLowerCase() === schoolName.toLowerCase()
+            );
             
-            if (schools.length === 0) {
-                UI.hideLoading();
+            if (!school) {
+                hideLoading();
                 showJoinError('School not found. Please check name and code.');
                 return;
             }
             
-            const school = schools[0];
-            
             // Check if user is already a member
             if (school.teachers && school.teachers.includes(AppState.currentUser.uid)) {
-                UI.hideLoading();
+                hideLoading();
                 showJoinError('You are already a member of this school');
                 return;
             }
@@ -346,25 +304,29 @@ function showJoinSchoolModal() {
             AppState.currentSchool = { id: school.id, ...school };
             AppState.currentUserData.schoolId = school.id;
             
-            UI.hideLoading();
+            // Update app state and navigate immediately
+            AppState.currentSchool = { id: school.id, ...school };
+            AppState.currentUserData.schoolId = school.id;
+            
+            hideLoading();
             
             // Show success
             modal.querySelector('#joinError').style.display = 'none';
             const successEl = modal.querySelector('#joinSuccess');
             const successText = modal.querySelector('#joinSuccessText');
-            successText.textContent = `Successfully joined ${school.name}!`;
+            successText.textContent = `Successfully joined ${school.name}! Redirecting to portal...`;
             successEl.style.display = 'flex';
             
-            // Close modal and reload dashboard after 2 seconds
+            // Navigate to school portal after a short delay
             setTimeout(() => {
                 document.body.removeChild(modal);
-                loadUserSchools();
-            }, 2000);
+                navigateTo('school');
+            }, 1500);
             
         } catch (error) {
-            UI.hideLoading();
+            hideLoading();
             console.error('Error joining school:', error);
-            showJoinError('Error joining school. Please try again.');
+            showJoinError(`Error joining school: ${error.message || 'Please try again.'}`);
         }
     });
     
@@ -456,31 +418,34 @@ function showRegisterSchoolModal() {
     const logoFile = modal.querySelector('#logoFile');
     const logoPreview = modal.querySelector('#logoPreview');
     const logoPreviewImg = modal.querySelector('#logoPreviewImg');
-    const logoUrlInput = modal.querySelector('#logoUrl');
     
-    let logoImageUrl = '';
+    let logoFileToUpload = null; 
     
     logoUpload.addEventListener('click', () => logoFile.click());
     logoFile.addEventListener('change', (e) => {
         const file = e.target.files[0];
-        if (!file) return;
+        if (!file) {
+            logoFileToUpload = null;
+            return;
+        };
         
         if (!file.type.match('image.*')) {
             showRegisterSchoolError('Please select an image file');
+            logoFileToUpload = null;
             return;
         }
         
         if (file.size > 2 * 1024 * 1024) {
             showRegisterSchoolError('Image size should be less than 2MB');
+            logoFileToUpload = null;
             return;
         }
         
+        logoFileToUpload = file;
         const reader = new FileReader();
         reader.onload = (e) => {
-            logoImageUrl = e.target.result;
-            logoPreviewImg.src = logoImageUrl;
+            logoPreviewImg.src = e.target.result;
             logoPreview.style.display = 'block';
-            logoUrlInput.value = logoImageUrl;
         };
         reader.readAsDataURL(file);
     });
@@ -504,8 +469,14 @@ function showRegisterSchoolModal() {
         const code = generateSchoolCode();
         
         try {
-            UI.showLoading('Registering school...');
+            showLoading('Registering school...');
             
+            let logoUrl = '';
+            if (logoFileToUpload) {
+                showLoading('Uploading logo...');
+                logoUrl = await window.uploadToCloudinary(logoFileToUpload);
+            }
+
             // Create school document
             const schoolData = {
                 name: name,
@@ -513,7 +484,7 @@ function showRegisterSchoolModal() {
                 phone: phone,
                 level: level,
                 code: code,
-                logoUrl: logoImageUrl || '',
+                logoUrl: logoUrl,
                 admins: [AppState.currentUser.uid],
                 teachers: [AppState.currentUser.uid],
                 createdAt: Firebase.db.serverTimestamp()
@@ -535,7 +506,7 @@ function showRegisterSchoolModal() {
             // Create default classes and subjects based on level
             await createDefaultStructure(schoolRef.id, level);
             
-            UI.hideLoading();
+            hideLoading();
             
             // Show success
             modal.querySelector('#registerSchoolError').style.display = 'none';
@@ -548,7 +519,7 @@ function showRegisterSchoolModal() {
             }, 2000);
             
         } catch (error) {
-            UI.hideLoading();
+            hideLoading();
             console.error('Error registering school:', error);
             showRegisterSchoolError('Error registering school. Please try again.');
         }
@@ -568,7 +539,7 @@ function showRegisterSchoolModal() {
 function showSchoolSwitchModal() {
     // This would show a modal with all user's schools
     // Similar to join school modal but for switching
-    UI.showToast('School switching functionality', 'info');
+    showToast('School switching functionality', 'info');
 }
 
 function generateSchoolCode() {

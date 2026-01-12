@@ -1,145 +1,210 @@
-<div class="school-page">
-    <div class="page-header">
-        <div class="header-content">
-            <h1 id="schoolPortalTitle">School Portal</h1>
-            <div class="school-info-badge">
-                <span class="school-level-badge" id="schoolLevelBadge"></span>
-                <span class="school-code">Code: <strong id="currentSchoolCode"></strong></span>
-            </div>
-        </div>
-        <div class="header-actions">
-            <button class="btn btn-secondary" id="refreshSchoolData">
-                <i class="fas fa-sync-alt"></i> Refresh
-            </button>
-            <button class="btn btn-info" id="switchLevelBtn">
-                <i class="fas fa-exchange-alt"></i> Switch Level
-            </button>
-        </div>
-    </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skore Point - School Portal</title>
+    <link rel="stylesheet" href="../../shared/css/variables.css">
+    <link rel="stylesheet" href="../../shared/css/base.css">
+    <link rel="stylesheet" href="../../shared/css/components.css">
+    <link rel="stylesheet" href="./school.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navbar will be injected by ui.js -->
 
-    <!-- Level Navigation -->
-    <div class="level-navigation" id="levelNavigation">
-        <!-- Dynamically generated based on school level -->
-    </div>
-
-    <!-- Main Content Area -->
-    <div class="school-content">
-        <!-- Classes Tab -->
-        <div class="content-section active" id="classesSection">
-            <div class="section-header">
-                <h2><i class="fas fa-chalkboard"></i> Classes</h2>
-                <div class="section-actions">
-                    <div class="level-filter" id="classLevelFilter"></div>
-                    <button class="btn btn-primary" id="addClassBtn">
-                        <i class="fas fa-plus"></i> Add Class
-                    </button>
+    <div class="school-page">
+        <div class="page-header">
+            <div class="header-content">
+                <h1 id="schoolPortalTitle">School Portal</h1>
+                <div class="school-info-badge">
+                    <span class="school-level-badge" id="schoolLevelBadge"></span>
+                    <span class="school-code">Code: <strong id="currentSchoolCode"></strong></span>
                 </div>
             </div>
-            
-            <div class="classes-grid" id="classesGrid">
-                <!-- Classes will be loaded here -->
-            </div>
-            
-            <div class="empty-state" id="classesEmpty">
-                <i class="fas fa-chalkboard"></i>
-                <h3>No Classes Found</h3>
-                <p>Add classes to get started.</p>
+            <div class="header-actions">
+                <button class="btn" id="settingsTabBtn">
+                    <i class="fas fa-cog"></i> Settings
+                </button>
+                <button class="btn btn-secondary" id="refreshSchoolData">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+                <button class="btn btn-info" id="switchLevelBtn">
+                    <i class="fas fa-exchange-alt"></i> Switch Level
+                </button>
             </div>
         </div>
-
-        <!-- Students Tab -->
-        <div class="content-section" id="studentsSection">
-            <div class="section-header">
-                <h2><i class="fas fa-users"></i> Students</h2>
-                <div class="section-actions">
-                    <div class="filters-row">
-                        <div class="level-filter" id="studentLevelFilter"></div>
-                        <select class="form-control" id="classFilter" style="min-width: 200px;">
-                            <option value="">All Classes</option>
-                        </select>
+    
+        <!-- Content Tabs -->
+        <div class="content-tabs" id="contentTabs">
+            <button class="content-tab active" data-section="classes">
+                <i class="fas fa-chalkboard"></i> Classes
+            </button>
+            <button class="content-tab" data-section="students">
+                <i class="fas fa-users"></i> Students
+            </button>
+            <button class="content-tab" data-section="subjects">
+                <i class="fas fa-book"></i> Subjects
+            </button>
+            <button class="content-tab" data-section="teachers">
+                <i class="fas fa-chalkboard-teacher"></i> Teachers
+            </button>
+        </div>
+    
+        <!-- Level Navigation -->
+        <div class="level-navigation" id="levelNavigation">
+            <!-- Dynamically generated based on school level -->
+        </div>
+    
+        <!-- Main Content Area -->
+        <div class="school-content">
+            <!-- Classes Tab -->
+            <div class="content-section active" id="classesSection">
+                <div class="section-header">
+                    <h2><i class="fas fa-chalkboard"></i> Classes</h2>
+                    <div class="section-actions">
+                        <div class="level-filter" id="classLevelFilter"></div>
+                        <button class="btn btn-primary" id="addClassBtn">
+                            <i class="fas fa-plus"></i> Add Class
+                        </button>
                     </div>
-                    <button class="btn btn-primary" id="addStudentBtn">
-                        <i class="fas fa-plus"></i> Add Student
-                    </button>
-                </div>
-            </div>
-            
-            <div class="students-container">
-                <div class="file-upload-area" id="bulkUploadArea">
-                    <i class="fas fa-file-excel"></i>
-                    <p>Upload Student List (Excel)</p>
-                    <span>Drag & drop or click to upload</span>
-                    <input type="file" id="studentExcelFile" accept=".xlsx,.xls">
                 </div>
                 
-                <div class="students-table-container">
-                    <table class="students-table" id="studentsTable">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Class</th>
-                                <th>Level</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Students will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Subjects Tab -->
-        <div class="content-section" id="subjectsSection">
-            <div class="section-header">
-                <h2><i class="fas fa-book"></i> Subjects</h2>
-                <div class="section-actions">
-                    <div class="level-filter" id="subjectLevelFilter"></div>
-                    <button class="btn btn-primary" id="addSubjectBtn">
-                        <i class="fas fa-plus"></i> Add Subject
-                    </button>
-                </div>
-            </div>
-            
-            <div class="subjects-container">
-                <div class="subjects-grid" id="subjectsGrid">
-                    <!-- Subjects will be loaded here -->
+                <div class="classes-grid" id="classesGrid">
+                    <!-- Classes will be loaded here -->
                 </div>
                 
-                <div class="empty-state" id="subjectsEmpty">
-                    <i class="fas fa-book"></i>
-                    <h3>No Subjects Found</h3>
-                    <p>Add subjects to the curriculum.</p>
+                <div class="empty-state" id="classesEmpty">
+                    <i class="fas fa-chalkboard"></i>
+                    <h3>No Classes Found</h3>
+                    <p>Add classes to get started.</p>
                 </div>
             </div>
-        </div>
-
-        <!-- Teachers Tab -->
-        <div class="content-section" id="teachersSection">
-            <div class="section-header">
-                <h2><i class="fas fa-chalkboard-teacher"></i> Teachers</h2>
-                <div class="section-actions">
-                    <button class="btn btn-primary" id="addTeacherBtn">
-                        <i class="fas fa-user-plus"></i> Add Teacher
-                    </button>
-                    <button class="btn btn-warning" id="assignSubjectsBtn">
-                        <i class="fas fa-tasks"></i> Assign Subjects
-                    </button>
-                </div>
-            </div>
-            
-            <div class="teachers-container">
-                <div class="teachers-grid" id="teachersGrid">
-                    <!-- Teachers will be loaded here -->
+    
+            <!-- Students Tab -->
+            <div class="content-section" id="studentsSection">
+                <div class="section-header">
+                    <h2><i class="fas fa-users"></i> Students</h2>
+                    <div class="section-actions">
+                        <div class="filters-row">
+                            <div class="level-filter" id="studentLevelFilter"></div>
+                            <select class="form-control" id="classFilter" style="min-width: 200px;">
+                                <option value="">All Classes</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" id="addStudentBtn">
+                            <i class="fas fa-plus"></i> Add Student
+                        </button>
+                    </div>
                 </div>
                 
-                <div class="empty-state" id="teachersEmpty">
-                    <i class="fas fa-chalkboard-teacher"></i>
-                    <h3>No Teachers Found</h3>
-                    <p>Add teachers to your school staff.</p>
+                <div class="students-container">
+                    <div class="file-upload-area" id="bulkUploadArea">
+                        <i class="fas fa-file-excel"></i>
+                        <p>Upload Student List (Excel)</p>
+                        <span>Drag & drop or click to upload</span>
+                        <input type="file" id="studentExcelFile" accept=".xlsx,.xls">
+                    </div>
+                    
+                    <div class="students-table-container">
+                        <table class="students-table" id="studentsTable">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Class</th>
+                                    <th>Level</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Students will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+    
+            <!-- Subjects Tab -->
+            <div class="content-section" id="subjectsSection">
+                <div class="section-header">
+                    <h2><i class="fas fa-book"></i> Subjects</h2>
+                    <div class="section-actions">
+                        <div class="level-filter" id="subjectLevelFilter"></div>
+                        <button class="btn btn-primary" id="addSubjectBtn">
+                            <i class="fas fa-plus"></i> Add Subject
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="subjects-container">
+                    <div class="subjects-grid" id="subjectsGrid">
+                        <!-- Subjects will be loaded here -->
+                    </div>
+                    
+                    <div class="empty-state" id="subjectsEmpty">
+                        <i class="fas fa-book"></i>
+                        <h3>No Subjects Found</h3>
+                        <p>Add subjects to the curriculum.</p>
+                    </div>
+                </div>
+            </div>
+    
+            <!-- Teachers Tab -->
+            <div class="content-section" id="teachersSection">
+                <div class="section-header">
+                    <h2><i class="fas fa-chalkboard-teacher"></i> Teachers</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-primary" id="addTeacherBtn">
+                            <i class="fas fa-user-plus"></i> Add Teacher
+                        </button>
+                        <button class="btn btn-warning" id="assignSubjectsBtn">
+                            <i class="fas fa-tasks"></i> Assign Subjects
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="teachers-container">
+                    <div class="teachers-grid" id="teachersGrid">
+                        <!-- Teachers will be loaded here -->
+                    </div>
+                    
+                    <div class="empty-state" id="teachersEmpty">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                        <h3>No Teachers Found</h3>
+                        <p>Add teachers to your school staff.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="content-section" id="settingsSection">
+                <div class="section-header">
+                    <h2><i class="fas fa-cogs"></i> School Settings</h2>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3>School Badge</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="profile-picture-section">
+                            <img src="https://via.placeholder.com/100" alt="Current school badge" id="schoolBadgePreview" class="profile-picture-preview">
+                            <div class="upload-area">
+                                <p>Upload a new school badge. Square images work best.</p>
+                                <div class="form-group">
+                                    <input type="file" id="schoolBadgeInput" accept="image/png, image/jpeg, image/gif">
+                                </div>
+                                <button class="btn btn-primary" id="uploadSchoolBadgeBtn" disabled>
+                                    <i class="fas fa-upload"></i> Upload Badge
+                                </button>
+                            </div>
+                        </div>
+                         <div id="uploadBadgeStatus" class="alert" style="display: none; margin-top: 15px;"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+
+    <script src="../../shared/js/app.js" defer></script>
+    <script src="../../shared/js/ui.js" defer></script>
+    <script src="./school.js" defer></script>
+</body>
+</html>
