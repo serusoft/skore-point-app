@@ -263,17 +263,25 @@
     cursor: pointer;
     transition: var(--transition);
     background: rgba(255, 255, 255, 0.02);
+    margin-bottom: 30px;
 }
 
 .file-upload-area:hover {
     border-color: var(--primary);
     background: rgba(67, 97, 238, 0.05);
+    transform: translateY(-2px);
 }
 
 .file-upload-area i {
     font-size: 40px;
     color: var(--primary-light);
     margin-bottom: 15px;
+    display: block;
+    transition: var(--transition);
+}
+
+.file-upload-area:hover i {
+    transform: scale(1.1);
 }
 
 .file-upload-area p {
@@ -504,4 +512,156 @@
     .students-table {
         font-size: 14px;
     }
+}
+/* Enter Marks Section Styles */
+#enterMarksSection .section-actions {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+#enterMarksClassFilter {
+    padding: 10px 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius-sm);
+    color: var(--light);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+#enterMarksClassFilter:hover {
+    border-color: var(--primary);
+    background: rgba(67, 97, 238, 0.05);
+}
+
+#enterMarksClassFilter:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: rgba(67, 97, 238, 0.1);
+}
+
+#enterMarksContainer {
+    padding: 30px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--border-radius-sm);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    text-align: center;
+    color: var(--gray-light);
+}
+
+#enterMarksBtn, #viewReportCardsBtn {
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+#enterMarksBtn:hover, #viewReportCardsBtn:hover {
+    transform: translateY(-2px);
+}
+
+#enterMarksBtn:active, #viewReportCardsBtn:active {
+    transform: translateY(0);
+}
+/* Report Card Section Styles */
+#reportCardSection .section-actions {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+#reportCardClassFilter {
+    padding: 10px 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius-sm);
+    color: var(--light);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+#reportCardClassFilter:hover {
+    border-color: var(--primary);
+    background: rgba(67, 97, 238, 0.05);
+}
+
+#reportCardClassFilter:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: rgba(67, 97, 238, 0.1);
+}
+
+#reportCardContainer {
+    padding: 30px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--border-radius-sm);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    text-align: center;
+    color: var(--gray-light);
+}
+
+#viewReportCardBtn, #downloadReportCardBtn {
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+/* Mobile Responsive Design */
+@media (max-width: 768px) {
+    .school-page {
+        padding-bottom: 100px;
+    }
+    
+    .content-tabs {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(15, 23, 42, 0.98);
+        backdrop-filter: blur(10px);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom: none;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-around;
+        align-items: center;
+        z-index: 1000;
+        padding: 8px 0;
+        gap: 0;
+    }
+    
+    .content-tab {
+        flex: 1;
+        min-width: 60px;
+        padding: 8px 10px !important;
+        font-size: 11px !important;
+        text-align: center;
+        border: none;
+        border-radius: 0;
+        margin: 0;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .content-tab i {
+        font-size: 16px;
+    }
+    
+    .page-header {
+        margin-bottom: 20px;
+    }
+}
+
+@media (min-width: 769px) {
+    /* Keep original styles for desktop */
+}
+
+#viewReportCardBtn:hover, #downloadReportCardBtn:hover {
+    transform: translateY(-2px);
+}
+
+#viewReportCardBtn:active, #downloadReportCardBtn:active {
+    transform: translateY(0);
 }

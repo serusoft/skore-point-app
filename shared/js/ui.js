@@ -129,102 +129,9 @@ class AppUI {
             console.log('Injecting navbar, authenticated:', isAuthenticated);
 
             if (isAuthenticated) {
-                // Check if on school page to clean up nav
-                const isSchoolPage = window.location.pathname.includes('school.html');
-                
-                const desktopLinks = isSchoolPage ? '' : `
-                                <a href="#dashboard" data-page="dashboard" class="nav-link" style="margin-right: 20px; text-decoration: none; color: inherit; font-weight: 500; display: flex; align-items: center; gap: 8px;">
-                                    <i class="fas fa-home"></i> Dashboard
-                                </a>
-                                <a href="#school" data-page="school" class="nav-link" style="text-decoration: none; color: inherit; font-weight: 500; display: flex; align-items: center; gap: 8px;">
-                                    <i class="fas fa-school"></i> School
-                                </a>`;
-                                
-                // Mobile links: Eliminated as requested for a cleaner look
-                const mobileLinks = '';
-
-                navHtml = `
-                    <nav class="navbar" id="main-navbar" style="background: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000; padding: 0.5rem 0;">
-                        <div class="navbar-container" style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 20px;">
-                            <div class="navbar-brand" style="display: flex; align-items: center; gap: 12px; color: var(--text-dark, #333);">
-                                <div style="width: 40px; height: 40px; background: var(--primary, #4361ee); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white;">
-                                    <i class="fas fa-graduation-cap" style="font-size: 1.2rem;"></i>
-                                </div>
-                                <span style="font-weight: 700; font-size: 1.3rem; letter-spacing: -0.5px;">Skore Point</span>
-                            </div>
-                            
-                            <!-- Desktop Menu -->
-                            <div class="navbar-menu desktop-only" style="display: flex; align-items: center;">
-                                ${desktopLinks}
-                            </div>
-
-                            <div class="navbar-right" style="display: flex; align-items: center; gap: 15px;">
-                                <!-- User Profile (Visible on both) -->
-                                <div class="navbar-user" id="navbarUser">
-                                    <div class="user-profile-skeleton">
-                                        <div class="profile-image-skeleton" style="width: 35px; height: 35px; border-radius: 50%; background: #eee;"></div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Hamburger Menu (Mobile Only) -->
-                                <button class="navbar-toggle" id="navbar-toggle" style="background: none; border: none; color: var(--text-dark, #333); font-size: 1.2rem; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center;">
-                                    <i class="fas fa-bars"></i>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Mobile Dropdown Menu -->
-                        <div class="mobile-nav" id="navbar-mobile-nav" style="display: none; flex-direction: column; background: #ffffff; position: absolute; top: 100%; left: 0; width: 100%; padding: 10px 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); border-top: 1px solid #eee; z-index: 1000;">
-                            ${mobileLinks}
-                            <a href="#" class="nav-link logout-btn-mobile" style="padding: 12px 0; color: var(--danger, #e74c3c); text-decoration: none; display: flex; align-items: center; gap: 10px; font-weight: 500;">
-                                <i class="fas fa-sign-out-alt"></i> Logout
-                            </a>
-                        </div>
-                        <style>
-                            @media (min-width: 769px) {
-                                .navbar-toggle { display: none !important; }
-                                .mobile-nav { display: none !important; }
-                            }
-                            @media (max-width: 768px) {
-                                .desktop-only { display: none !important; }
-                            }
-                        </style>
-                    </nav>
-                `;
+                navHtml = this.createAuthenticatedNavbar();
             } else {
-                // User is not logged in - show auth links
-                navHtml = `
-                    <nav class="navbar" id="main-navbar">
-                        <div class="container">
-                            <div class="navbar-brand">
-                                <i class="fas fa-graduation-cap" aria-hidden="true"></i>
-                                <span class="brand-title">SKORE POINT</span>
-                            </div>
-
-                            <button class="navbar-toggle desktop-hidden" id="navbar-toggle" aria-label="Open menu">
-                                <i class="fas fa-bars"></i>
-                            </button>
-
-                            <div class="navbar-nav desktop-only" id="navbar-desktop-nav">
-                                <a href="../auth/login.html" class="nav-link" data-page="login">
-                                    <i class="fas fa-sign-in-alt"></i> Sign In
-                                </a>
-                                <a href="../auth/register.html" class="nav-link" data-page="register">
-                                    <i class="fas fa-user-plus"></i> Register
-                                </a>
-                            </div>
-
-                            <div class="mobile-nav mobile-only" id="navbar-mobile-nav" aria-hidden="true">
-                                <a href="../auth/login.html" class="nav-link" data-page="login">
-                                    <i class="fas fa-sign-in-alt"></i> Sign In
-                                </a>
-                                <a href="../auth/register.html" class="nav-link" data-page="register">
-                                    <i class="fas fa-user-plus"></i> Register
-                                </a>
-                            </div>
-                        </div>
-                    </nav>
-                `;
+                navHtml = this.createUnauthenticatedNavbar();
             }
 
             // If page provides a navbar container, use it
@@ -270,6 +177,77 @@ class AppUI {
         }
     }
 
+    createAuthenticatedNavbar() {
+        // Check if on school page to clean up nav
+        const isSchoolPage = window.location.pathname.includes('school.html');
+        
+        const desktopLinks = isSchoolPage ? '' : `
+                    <a href="#dashboard" data-page="dashboard" class="nav-link">
+                        <i class="fas fa-home"></i> Dashboard
+                    </a>
+                    <a href="#school" data-page="school" class="nav-link">
+                        <i class="fas fa-school"></i> School
+                    </a>`;
+                        
+        // Mobile links: Eliminated as requested for a cleaner look
+        const mobileLinks = '';
+
+        return `
+            <nav class="navbar" id="main-navbar" role="navigation" aria-label="Main navigation">
+                <a href="#dashboard" class="navbar-brand">
+                    <i class="fas fa-graduation-cap" aria-hidden="true"></i> Skore Point
+                </a>
+
+                <div class="navbar-nav desktop-only">
+                    ${desktopLinks}
+                    <div class="navbar-user" id="navbarUser">
+                        <div class="profile-placeholder"></div>
+                    </div>
+                    <button class="logout-btn" id="desktop-logout" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+
+                <button class="navbar-toggle mobile-only" id="navbar-toggle" aria-label="Open menu">
+                    <i class="fas fa-bars" aria-hidden="true"></i>
+                </button>
+            </nav>
+
+            <div class="mobile-nav" id="navbar-mobile-nav" aria-hidden="true">
+                <a href="#profile" class="nav-link">My Profile</a>
+                <a href="#settings" class="nav-link">Settings</a>
+                <a href="#" class="nav-link logout-btn-mobile">Logout</a>
+            </div>
+        `;
+    }
+
+    createUnauthenticatedNavbar() {
+        return `
+            <nav class="navbar" id="main-navbar" role="navigation" aria-label="Main navigation">
+                <div class="container">
+                    <a href="../" class="navbar-brand">
+                        <span class="brand-mark"><i class="fas fa-graduation-cap" aria-hidden="true"></i></span>
+                        <span class="brand-title">Skore Point</span>
+                    </a>
+
+                    <div class="navbar-nav desktop-only" id="navbar-desktop-nav">
+                        <a href="../auth/login.html" class="nav-link" data-page="login">Sign In</a>
+                        <a href="../auth/register.html" class="nav-link" data-page="register">Register</a>
+                    </div>
+
+                    <button class="navbar-toggle desktop-hidden" id="navbar-toggle" aria-label="Open menu">
+                        <i class="fas fa-bars" aria-hidden="true"></i>
+                    </button>
+
+                    <div class="mobile-nav mobile-only" id="navbar-mobile-nav" aria-hidden="true">
+                        <a href="../auth/login.html" class="nav-link" data-page="login">Sign In</a>
+                        <a href="../auth/register.html" class="nav-link" data-page="register">Register</a>
+                    </div>
+                </div>
+            </nav>
+        `;
+    }
+
     setupGlobalNavbarEvents() {
         const navbar = document.getElementById('main-navbar');
         if (!navbar) return;
@@ -285,21 +263,22 @@ class AppUI {
             
             newToggle.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const isHidden = mobileNav.style.display === 'none';
-                mobileNav.style.display = isHidden ? 'flex' : 'none';
-                
+                const isActive = mobileNav.classList.toggle('active');
+                mobileNav.setAttribute('aria-hidden', !isActive);
+
                 const icon = newToggle.querySelector('i');
                 if (icon) {
-                    icon.className = isHidden ? 'fas fa-times' : 'fas fa-bars';
+                    icon.className = isActive ? 'fas fa-times' : 'fas fa-bars';
                 }
             });
-            
+
             // Close when clicking outside
             document.addEventListener('click', (e) => {
-                if (mobileNav.style.display === 'flex' && 
+                if (mobileNav.classList.contains('active') && 
                     !mobileNav.contains(e.target) && 
                     !newToggle.contains(e.target)) {
-                    mobileNav.style.display = 'none';
+                    mobileNav.classList.remove('active');
+                    mobileNav.setAttribute('aria-hidden', 'true');
                     const icon = newToggle.querySelector('i');
                     if (icon) icon.className = 'fas fa-bars';
                 }
@@ -307,6 +286,22 @@ class AppUI {
             
             // Handle mobile logout
             mobileNav.querySelector('.logout-btn-mobile')?.addEventListener('click', async (e) => {
+                e.preventDefault();
+                try {
+                    await Firebase.auth.signOut();
+                    AppState.clear();
+                    navigateTo('login');
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    this.showToast('Error logging out', 'error');
+                }
+            });
+        }
+
+        // Handle desktop logout button
+        const desktopLogoutBtn = document.getElementById('desktop-logout');
+        if (desktopLogoutBtn) {
+            desktopLogoutBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
                 try {
                     await Firebase.auth.signOut();
@@ -340,7 +335,7 @@ class AppUI {
             // Create user profile element
             navbarUser.innerHTML = `
                 <div class="user-profile" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <div class="profile-image" id="profileImage" style="width: 35px; height: 35px; border-radius: 50%; overflow: hidden; background: #4361ee; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                    <div class="profile-image" id="profileImage" style="width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: #4361ee; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.95rem;">
                         ${userData.profileUrl 
                             ? `<img src="${userData.profileUrl}" alt="${userData.name || 'User'}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML=getInitials('${userData.name || ''}')">`
                             : getInitials(userData.name || '')
@@ -397,6 +392,48 @@ class AppUI {
                         this.showToast('Error logging out', 'error');
                     }
                 });
+            }
+
+            // Also populate independent user profile card on pages (e.g., dashboard)
+            const userInfoCard = document.getElementById('userInfoCard');
+            if (userInfoCard) {
+                const initials = getInitials(userData.name || 'U');
+                const profileUrl = userData.profileUrl || '';
+                const name = userData.name || user.email || 'User';
+                const email = user.email || '';
+                const role = (userData.role || 'teacher');
+
+                userInfoCard.innerHTML = `
+                    <div class="user-profile-img">
+                        ${profileUrl && profileUrl.startsWith('data:image')
+                            ? `<img src="${profileUrl}" alt="${name}" onerror="this.parentElement.innerHTML='${initials}'">`
+                            : `${profileUrl ? `<img src="${profileUrl}" alt="${name}" onerror="this.parentElement.innerHTML='${initials}'">` : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold;">${initials}</div>`}`
+                        }
+                    </div>
+                    <div class="user-details">
+                        <span class="user-role ${role}">${role.toUpperCase()}</span>
+                        <span class="user-name">${name}</span>
+                        <span class="user-email">${email}</span>
+                        <button class="logout-btn mobile-only" id="mobileLogoutBtn">
+                          <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                `;
+
+                const mobileLogoutBtn = document.getElementById('mobileLogoutBtn');
+                if (mobileLogoutBtn) {
+                    mobileLogoutBtn.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        try {
+                            await Firebase.auth.signOut();
+                            AppState.clear();
+                            navigateTo('login');
+                        } catch (error) {
+                            console.error('Logout error:', error);
+                            this.showToast('Error logging out', 'error');
+                        }
+                    });
+                }
             }
             
         } catch (error) {

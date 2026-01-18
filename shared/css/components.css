@@ -97,23 +97,24 @@
     transform: none !important;
 }
 
-/* Navbar - FIXED VERSION */
+/* Navbar - Clean Flexbox Layout */
 .navbar {
     background: rgba(15, 23, 42, 0.95);
     backdrop-filter: blur(10px);
-    padding: 0 30px;
+    padding: 15px 30px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
     position: fixed;
     top: 0;
     width: 100%;
-    z-index: 1000;
-    min-height: 64px;
-    height: auto;
     box-sizing: border-box;
+    z-index: 1000;
 }
+
+/* Navbar height variable used to offset page content to avoid overlap */
+.navbar { --navbar-height: 64px; min-height: var(--navbar-height); }
 
 .navbar .container {
     max-width: 1180px;
@@ -132,13 +133,18 @@
 .has-navbar .auth-page,
 .has-navbar .register-page,
 .has-navbar .login-page {
-    padding-top: 80px !important; /* Increased to accommodate expanded navbar */
+    padding-top: calc(var(--navbar-height) + 18px) !important;
+}
+
+/* Ensure dashboard and dashboard-page get sufficient top offset when navbar is present */
+.has-navbar #dashboardSection,
+.has-navbar .dashboard-page,
+.has-navbar .dashboard {
+    padding-top: calc(var(--navbar-height) + 18px) !important;
 }
 
 .navbar-brand {
-    grid-column: 1;
-    justify-self: start;
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 800;
     background: var(--gradient);
     -webkit-background-clip: text;
@@ -148,15 +154,16 @@
     align-items: center;
     gap: 10px;
     text-decoration: none;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.navbar-brand:hover {
+    opacity: 0.8;
 }
 
 .navbar-brand i {
-    font-size: 22px;
-    line-height: 1;
-}
-
-.navbar-brand .brand-title {
-    line-height: 1;
+    font-size: 18px;
 }
 
 /* Navbar Links */
@@ -165,7 +172,6 @@
     gap: 15px;
     align-items: center;
     margin-left: auto;
-    padding: 20px 0; /* Added padding to maintain vertical centering */
 }
 
 .nav-link {
@@ -178,6 +184,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    white-space: nowrap;
 }
 
 .nav-link:hover {
@@ -188,23 +195,6 @@
     background: var(--primary);
 }
 
-.navbar-nav .nav-link[data-page="login"] {
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.08);
-    color: rgba(255,255,255,0.95);
-}
-
-.navbar-nav .nav-link[data-page="register"] {
-    background: var(--primary);
-    color: white;
-    border: 1px solid rgba(0,0,0,0.08);
-}
-
-.navbar-nav .nav-link:hover { 
-    transform: translateY(-1px); 
-    box-shadow: 0 6px 18px rgba(0,0,0,0.12); 
-}
-
 
 
 /* Navbar toggle (hamburger) for mobile */
@@ -213,106 +203,76 @@
     border: none;
     color: var(--light);
     font-size: 20px;
-    padding: 22px 15px; /* Increased padding for better touch */
+    padding: 8px 12px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    margin-left: auto;
-    height: 100%; /* Take full height */
+    transition: var(--transition);
+}
+
+.navbar-toggle:hover {
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .mobile-nav {
     display: none;
-    position: absolute;
-    top: 100%; /* Changed from fixed pixel value */
+    position: fixed;
+    top: 64px;
+    left: 0;
     right: 0;
-    background: rgba(15,23,42,0.98);
-    border: 1px solid rgba(255,255,255,0.04);
-    border-radius: 0 0 10px 10px;
-    padding: 10px;
-    min-width: 180px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    background: rgba(15, 23, 42, 0.98);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 12px 20px;
     flex-direction: column;
-    gap: 6px;
-    z-index: 1200;
+    gap: 8px;
+    z-index: 999;
 }
 
-.mobile-nav .nav-link { 
-    display: block; 
-    padding: 10px 12px; 
+.mobile-nav.active {
+    display: flex;
 }
 
-.mobile-nav.active { 
-    display: flex; 
+.mobile-nav .nav-link {
+    padding: 12px 16px;
+    border-radius: 6px;
 }
 
 /* Mobile navbar adjustments */
 @media (max-width: 768px) {
     .navbar {
-        min-height: 56px; /* Reduced height for mobile */
-    }
-    
-    .navbar .container {
-        padding: 0 15px;
-        min-height: 56px;
+        padding: 12px 15px;
     }
     
     .navbar-brand {
-        padding: 16px 0;
-        font-size: 20px;
-    }
-    
-    .navbar-brand i {
         font-size: 18px;
     }
     
-    .navbar .user-avatar-btn .username {
-        display: none;
-    }
-    
-    .navbar .user-avatar-btn {
-        padding: 0 8px;
-    }
-    
-    .navbar .user-avatar-btn .profile-picture {
-        width: 100px;
-        height: 100px;
-    }
-    
-    .navbar .user-dropdown {
-        position: fixed;
-        top: 56px;
-        right: 10px;
-        left: 10px;
-        width: auto;
-        border-radius: var(--border-radius-sm);
+    .navbar-brand i {
+        font-size: 16px;
     }
     
     .desktop-only { 
         display: none !important; 
     }
-    .desktop-hidden { 
-        display: inline-flex !important; 
-    }
+    
     .mobile-only { 
-        display: block !important; 
-    }
-    .navbar .container { 
-        padding-right: 12px; 
-        padding-left: 12px; 
-    }
-    .navbar-nav .nav-link {
-        padding: 8px 10px;
-        font-size: 14px;
-    }
-    .navbar-nav {
-        gap: 5px;
+        display: inline-flex !important; 
     }
     
     .navbar-toggle {
-        padding: 18px 12px;
+        padding: 8px 12px;
         font-size: 18px;
+    }
+    
+    .mobile-nav {
+        width: 100%;
+        gap: 6px;
+    }
+    
+    .mobile-nav .nav-link {
+        padding: 10px 12px;
+        font-size: 14px;
     }
     
     .has-navbar .main-content,
@@ -320,13 +280,13 @@
     .has-navbar .auth-page,
     .has-navbar .register-page,
     .has-navbar .login-page {
-        padding-top: 70px !important; /* Adjusted for mobile */
+        padding-top: 120px !important;
     }
 }
 
 @media (min-width: 769px) {
     .navbar-toggle { 
-        display: none; 
+        display: none !important; 
     }
     .mobile-nav { 
         display: none !important; 
@@ -340,10 +300,70 @@
 }
 
 /* Ensure brand and nav items are vertically centered */
-.navbar .container > * { 
+.navbar > * { 
     display: flex; 
     align-items: center; 
 }
+
+/* Refined brand and controls */
+.navbar-brand {
+    text-decoration: none;
+    color: var(--light);
+}
+.navbar-brand .brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    background: var(--primary);
+    color: white;
+    font-size: 18px;
+}
+.navbar-brand .brand-title {
+    font-weight: 800;
+    margin-left: 10px;
+    letter-spacing: -0.3px;
+    font-size: 18px;
+}
+
+.navbar-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.profile-placeholder {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+}
+
+.logout-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: transparent;
+    color: var(--light);
+    cursor: pointer;
+}
+.logout-btn:hover {
+    background: rgba(255,255,255,0.03);
+}
+
+/* Mobile nav visibility controlled by .active */
+.mobile-nav {
+    display: none;
+}
+.mobile-nav.active {
+    display: flex;
+}
+
 
 /* Cards */
 .card {
@@ -385,6 +405,15 @@
     margin-bottom: 20px;
 }
 
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 14px;
+    letter-spacing: -0.2px;
+}
+
 .form-label {
     display: block;
     margin-bottom: 8px;
@@ -408,6 +437,7 @@
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+    background: var(--input-bg);
 }
 
 .form-control::placeholder {
@@ -417,6 +447,37 @@
 .form-control:disabled {
     background: var(--disabled-bg);
     cursor: not-allowed;
+}
+
+/* Modal form styling */
+.modal-body .form-group {
+    margin-bottom: 20px;
+}
+
+.modal-body .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.modal-body .form-control {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    background: var(--input-bg);
+    color: var(--text-color);
+    font-size: 15px;
+    transition: all 0.2s ease;
+}
+
+.modal-body .form-control:hover {
+    border-color: rgba(var(--primary-rgb), 0.5);
+}
+
+.modal-body .form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.12);
+    background: var(--input-bg);
 }
 
 /* Ensure plain inputs/selects/textarea without .form-control still get styled */
@@ -481,6 +542,16 @@ select:focus {
     font-size: 13px;
     color: var(--text-muted);
     margin-top: 5px;
+}
+
+.form-control-static {
+    display: block;
+    padding: 12px 15px;
+    color: var(--text-color);
+    background: rgba(var(--primary-rgb), 0.05);
+    border: 1px solid rgba(var(--primary-rgb), 0.2);
+    border-radius: var(--border-radius-sm);
+    font-size: 15px;
 }
 
 .form-check {
@@ -554,8 +625,9 @@ select:focus {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     display: none;
     align-items: center;
     justify-content: center;
@@ -565,7 +637,18 @@ select:focus {
 
 .modal.active {
     display: flex;
-    animation: fadeIn 0.3s ease;
+    animation: fadeInBackdrop 0.3s ease;
+}
+
+@keyframes fadeInBackdrop {
+    from {
+        background: rgba(0, 0, 0, 0);
+        backdrop-filter: blur(0px);
+    }
+    to {
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+    }
 }
 
 .modal-content {
@@ -578,6 +661,8 @@ select:focus {
     overflow-y: auto;
     position: relative;
     animation: slideUp 0.3s ease;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 1px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .modal-header {
@@ -594,6 +679,29 @@ select:focus {
     color: var(--text-color);
     margin: 0;
     font-weight: 600;
+    letter-spacing: -0.3px;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 24px;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    padding: 0;
+}
+
+.modal-close:hover {
+    background: rgba(var(--error-rgb), 0.1);
+    color: var(--error);
+    transform: rotate(90deg);
 }
 
 .close-modal {
@@ -618,6 +726,14 @@ select:focus {
 
 .modal-body {
     margin-bottom: 25px;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
 }
 
 .modal-actions {

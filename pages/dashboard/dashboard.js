@@ -7,22 +7,25 @@ function renderDashboard() {
 
     const schools = AppState.userSchools || [];
     const currentSchool = AppState.currentSchool;
-    
-    const schoolPortalCard = document.getElementById('schoolPortalCard');
-    const mySchoolsCard = document.getElementById('mySchoolsCard');
+
+    const manageSchoolCard = document.getElementById('manageSchoolCard');
+    const joinSchoolCard = document.getElementById('joinSchoolCard');
+    const registerSchoolCard = document.getElementById('registerSchoolCard');
     const schoolsList = document.getElementById('schoolsList');
-    const noSchoolsMessage = document.getElementById('noSchoolsMessage'); // Assuming an element for this state
+    const noSchoolsMessage = document.getElementById('noSchoolsMessage'); // Optional element for empty state
 
     if (schools.length === 0) {
-        schoolPortalCard.style.display = 'none';
-        mySchoolsCard.style.display = 'none';
+        if (manageSchoolCard) manageSchoolCard.style.display = 'none';
+        if (joinSchoolCard) joinSchoolCard.style.display = 'block';
+        if (registerSchoolCard) registerSchoolCard.style.display = 'block';
         if (noSchoolsMessage) noSchoolsMessage.style.display = 'block';
         return;
     }
-    
-    // Show cards and hide no-school message
-    schoolPortalCard.style.display = 'block';
-    mySchoolsCard.style.display = 'block';
+
+    // Show management card and hide no-school message
+    if (manageSchoolCard) manageSchoolCard.style.display = 'block';
+    if (joinSchoolCard) joinSchoolCard.style.display = 'block';
+    if (registerSchoolCard) registerSchoolCard.style.display = 'block';
     if (noSchoolsMessage) noSchoolsMessage.style.display = 'none';
 
     // Update current school info display
@@ -55,25 +58,23 @@ function renderDashboard() {
 
 function updateCurrentSchoolInfo(school) {
     if (!school) return;
-    const schoolName = document.getElementById('schoolName');
-    const schoolCode = document.getElementById('schoolCode');
-    const schoolInfo = document.getElementById('schoolInfo');
-    const schoolLogo = document.getElementById('schoolLogo');
-    const defaultSchoolIcon = document.getElementById('defaultSchoolIcon');
-    
-    if (schoolLogo && defaultSchoolIcon) {
+    const schoolName = document.getElementById('schoolCardName');
+    const schoolCode = document.getElementById('schoolCardCode');
+    const schoolInfo = document.getElementById('schoolCardInfo');
+    const schoolLogo = document.getElementById('schoolCardLogo');
+    const defaultSchoolIcon = null; // not used in new card
+
+    if (schoolLogo) {
         if (school.logoUrl) {
             schoolLogo.src = school.logoUrl;
             schoolLogo.style.display = 'block';
-            defaultSchoolIcon.style.display = 'none';
         } else {
             schoolLogo.style.display = 'none';
-            defaultSchoolIcon.style.display = 'block';
         }
     }
-    
+
     if (schoolName) schoolName.textContent = school.name;
-    if (schoolCode) schoolCode.textContent = `Code: ${school.code}`;
+    if (schoolCode) schoolCode.textContent = school.code || '';
     if (schoolInfo) schoolInfo.style.display = 'block';
 }
 
@@ -127,9 +128,8 @@ function setupEventListeners() {
     });
     
     // Enter Portal button
-    document.getElementById('enterPortalBtn')?.addEventListener('click', () => {
+    document.getElementById('openSchoolPortalBtn')?.addEventListener('click', () => {
         if (AppState.currentSchool) {
-            // Use the global showLevelSelection if needed, then navigate
             const school = AppState.currentSchool;
             if (school.level === 'primary' || school.level === 'secondary') {
                 showLevelSelection(school.level).then(academicLevel => {

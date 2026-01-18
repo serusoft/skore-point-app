@@ -26,91 +26,55 @@
     </style>
 </head>
 <body>
-    <!-- Navbar will be injected here by ui.js -->
-    <div class="dashboard-page">
-        <div class="dashboard-header">
-            <h1>Dashboard</h1>
-        </div>
-        
-        <div class="dashboard-grid">
-            <!-- School Portal Card -->
-            <div class="dashboard-card" id="schoolPortalCard" style="display: none;">
-                <div class="card-icon">
-                    <i class="fas fa-school" id="defaultSchoolIcon"></i>
-                    <img id="schoolLogo" src="" alt="School Logo" style="display: none;">
-                </div>
-                <h3>School Portal</h3>
-                <p>Access your school management portal</p>
-                <div class="school-info" id="schoolInfo" style="display: none;">
-                    <h4 id="schoolName"></h4>
-                    <p>Code: <strong id="schoolCode"></strong></p>
-                    <div class="card-actions">
-                        <button class="btn btn-success btn-block" id="enterPortalBtn">
-                            <i class="fas fa-door-open"></i> Enter Portal
-                        </button>
-                        <button class="btn btn-secondary btn-block mt-10" id="switchSchoolBtn">
-                            <i class="fas fa-exchange-alt"></i> Switch School
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Join School Card -->
-            <div class="dashboard-card" id="joinSchoolCard">
-                <div class="card-icon">
-                    <i class="fas fa-user-plus"></i>
-                </div>
-                <h3>Join School</h3>
-                <p>Join an existing school using the school code</p>
-                <button class="btn btn-secondary btn-block mt-20" id="joinSchoolBtn">
-                    <i class="fas fa-sign-in-alt"></i> Join School
-                </button>
-            </div>
-            
-            <!-- Register School Card -->
-            <div class="dashboard-card" id="registerSchoolCard">
-                <div class="card-icon">
-                    <i class="fas fa-plus-circle"></i>
-                </div>
-                <h3>Register School</h3>
-                <p>Create a new school and become administrator</p>
-                <button class="btn btn-primary btn-block mt-20" id="registerSchoolBtn">
-                    <i class="fas fa-school"></i> Register School
-                </button>
-            </div>
-            
-            <!-- My Schools Card -->
-            <div class="dashboard-card" id="mySchoolsCard" style="display: none;">
-                <div class="card-icon">
-                    <i class="fas fa-list"></i>
-                </div>
-                <h3>My Schools</h3>
-                <p>View and switch between your schools</p>
-                <div class="schools-list" id="schoolsList">
-                    <!-- Schools will be loaded here -->
-                </div>
-            </div>
+        <!-- Navbar will be injected here by ui.js -->
 
-            <!-- What's New Card -->
-            <div class="dashboard-card" id="whatsNewCard">
-                <div class="card-icon">
-                    <i class="fas fa-bullhorn"></i>
+        <div class="container" id="dashboardSection">
+            <div class="dashboard">
+                <div class="dashboard-header">
+                    <h1>Dashboard</h1>
+                    <div class="user-info" id="userInfoCard">
+                        <!-- Profile picture and details will be loaded here -->
+                    </div>
                 </div>
-                <h3>What's New</h3>
-                <div class="updates-list">
-                    <div class="update-item">
-                        <strong>Improved Dashboard:</strong> Your dashboard has a new look and feel.
+
+                <div class="dashboard-cards">
+                    <!-- School Portal Card (management) -->
+                    <div class="card" id="manageSchoolCard" style="display: none;">
+                        <i class="fas fa-school"></i>
+                        <h3>School Portal</h3>
+                        <p>Access your school's management portal to manage classes, students, and generate reports.</p>
+                        <div id="schoolCardInfo" class="mt-30">
+                            <img id="schoolCardLogo" class="school-logo" src="" alt="School Logo" style="display:none;">
+                            <h4 id="schoolCardName"></h4>
+                            <p>Code: <strong id="schoolCardCode"></strong></p>
+                            <div class="mt-20">
+                                <button class="btn btn-success btn-block" id="openSchoolPortalBtn">
+                                    <i class="fas fa-door-open"></i> Enter Portal
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="update-item">
-                        <strong>Offline Access:</strong> You can now access some features offline.
+
+                    <div class="card" id="joinSchoolCard">
+                        <i class="fas fa-user-plus"></i>
+                        <h3>Join School</h3>
+                        <p>Join an existing school using the school name and unique access code provided by your administrator.</p>
+                        <button class="btn btn-secondary btn-block mt-20" id="joinSchoolBtn">
+                            <i class="fas fa-sign-in-alt"></i> Join School
+                        </button>
                     </div>
-                    <div class="update-item">
-                        <strong>Report Generation:</strong> Generate and download student reports in PDF format.
+
+                    <div class="card" id="registerSchoolCard">
+                        <i class="fas fa-plus-circle"></i>
+                        <h3>Register School</h3>
+                        <p>Create a new school on Skore Point and become the administrator. Get a unique code for other teachers to join.</p>
+                        <button class="btn btn-primary btn-block mt-20" id="registerSchoolBtn">
+                            <i class="fas fa-school"></i> Register School
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
     <script src="../../services/cloudinary.service.js" defer></script>
     <script src="../../shared/js/app.js" defer></script>
     <script src="../../shared/js/ui.js" defer></script>
