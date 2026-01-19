@@ -98,10 +98,26 @@
 }
 
 /* Navbar - Clean Flexbox Layout */
+#navbar-container {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    position: relative;
+    z-index: 1001;
+}
+
+#navbar-container .navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+}
+
 .navbar {
     background: rgba(15, 23, 42, 0.95);
     backdrop-filter: blur(10px);
-    padding: 15px 30px;
+    padding: 0 30px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     justify-content: space-between;
@@ -111,10 +127,11 @@
     width: 100%;
     box-sizing: border-box;
     z-index: 1000;
+    height: 56px;
 }
 
 /* Navbar height variable used to offset page content to avoid overlap */
-.navbar { --navbar-height: 64px; min-height: var(--navbar-height); }
+.navbar { --navbar-height: 56px; }
 
 .navbar .container {
     max-width: 1180px;
@@ -122,9 +139,33 @@
     margin: 0 auto;
     padding: 0 30px;
     display: flex;
-    align-items: stretch; /* Changed from center to stretch */
+    align-items: center;
     justify-content: space-between;
-    min-height: 64px;
+    gap: 12px;
+}
+
+/* Adjust navbar elements to fit within navbar height */
+.navbar .container .navbar-brand {
+    padding: 0;
+    margin: 0;
+}
+
+.navbar .container .navbar-brand span {
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+}
+
+.navbar .container .navbar-nav {
+    padding: 0;
+    margin: 0;
+}
+
+.navbar .container > div {
+    display: flex;
+    align-items: center;
 }
 
 /* When navbar is present add top offset to main containers to avoid overlap */
@@ -144,7 +185,7 @@
 }
 
 .navbar-brand {
-    font-size: 20px;
+    font-size: 15px;
     font-weight: 800;
     background: var(--gradient);
     -webkit-background-clip: text;
@@ -152,10 +193,14 @@
     color: transparent;
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: center;
+    gap: 4px;
     text-decoration: none;
     transition: var(--transition);
     white-space: nowrap;
+    line-height: 1;
+    padding: 0;
+    margin: 0;
 }
 
 .navbar-brand:hover {
@@ -163,28 +208,36 @@
 }
 
 .navbar-brand i {
-    font-size: 18px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    line-height: 1;
 }
 
 /* Navbar Links */
 .navbar-nav {
     display: flex;
-    gap: 15px;
+    gap: 12px;
     align-items: center;
+    justify-content: center;
     margin-left: auto;
 }
 
 .nav-link {
     color: var(--light);
     text-decoration: none;
-    padding: 8px 16px;
+    padding: 6px 10px;
     border-radius: var(--border-radius-sm);
     transition: var(--transition);
     font-weight: 500;
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 4px;
     white-space: nowrap;
+    font-size: 13px;
+    line-height: 1;
+    margin: 0;
 }
 
 .nav-link:hover {
@@ -344,13 +397,18 @@
 .logout-btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: 8px;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
     border: 1px solid rgba(255,255,255,0.06);
     background: transparent;
     color: var(--light);
     cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+    margin: 0;
 }
 .logout-btn:hover {
     background: rgba(255,255,255,0.03);
@@ -505,6 +563,34 @@ select:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.08);
+}
+
+/* Dropdown and option styling for visibility */
+select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e6eef8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 20px;
+    padding-right: 40px;
+}
+
+select option {
+    background: var(--darker);
+    color: var(--text-color);
+    padding: 10px;
+    border: none;
+    border-radius: 0;
+}
+
+select option:hover {
+    background: var(--card-bg);
+    color: var(--primary);
+}
+
+select option:checked {
+    background: var(--primary);
+    color: white;
 }
 
 /* Specific styling to ensure auth page inputs look clear and professional */

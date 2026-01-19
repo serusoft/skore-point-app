@@ -126,7 +126,7 @@ class AppUI {
             const isAuthenticated = AppState && AppState.isAuthenticated;
             let navHtml = '';
             
-            console.log('Injecting navbar, authenticated:', isAuthenticated);
+            console.log('UI.injectNavbar() - Injecting navbar, authenticated:', isAuthenticated);
 
             if (isAuthenticated) {
                 navHtml = this.createAuthenticatedNavbar();
@@ -137,14 +137,18 @@ class AppUI {
             // If page provides a navbar container, use it
             const container = document.getElementById('navbar-container');
             if (container) {
+                console.log('UI.injectNavbar() - Found navbar-container, injecting navbar');
                 container.innerHTML = navHtml;
                 document.body.classList.add('has-navbar');
+                console.log('UI.injectNavbar() - Added has-navbar class to body');
+                
                 // Setup event listeners when injected into a container
                 this.setupGlobalNavbarEvents();
                 
                 // Populate user info if authenticated
                 if (isAuthenticated && AppState.currentUser) {
                     setTimeout(() => {
+                        console.log('UI.injectNavbar() - Loading user profile in navbar');
                         this.loadUserProfileInNavbar();
                     }, 100);
                 }
@@ -152,28 +156,33 @@ class AppUI {
             }
 
             // Otherwise, ensure a single navbar is present at top of body
+            console.log('UI.injectNavbar() - No navbar-container found, injecting navbar at body start');
             let existingNavbar = document.querySelector('nav.navbar');
             if (existingNavbar) {
                 // Replace existing navbar
+                console.log('UI.injectNavbar() - Replacing existing navbar');
                 existingNavbar.outerHTML = navHtml;
             } else {
                 // Insert new navbar at top
+                console.log('UI.injectNavbar() - Inserting new navbar at top of body');
                 document.body.insertAdjacentHTML('afterbegin', navHtml);
             }
             
             document.body.classList.add('has-navbar');
+            console.log('UI.injectNavbar() - Added has-navbar class to body');
 
             // Setup event listeners
             setTimeout(() => {
                 this.setupGlobalNavbarEvents();
                 // Populate user info if authenticated
                 if (isAuthenticated && AppState.currentUser) {
+                    console.log('UI.injectNavbar() - Loading user profile in navbar');
                     this.loadUserProfileInNavbar();
                 }
             }, 50);
             
         } catch (e) {
-            console.error('Failed to inject navbar', e);
+            console.error('UI.injectNavbar() - Failed to inject navbar', e);
         }
     }
 

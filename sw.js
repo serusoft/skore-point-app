@@ -1,6 +1,7 @@
 // Service Worker for Skore Point PWA
 
-const CACHE_NAME = 'skore-point-v1.0.4';
+const CACHE_VERSION = Date.now(); // Use timestamp for automatic cache busting
+const CACHE_NAME = `skore-point-v${CACHE_VERSION}`;
 const urlsToCache = [
     'index.html',
     './',
@@ -107,50 +108,87 @@ self.addEventListener('fetch', event => {
         return;
     }
     
-    event.respondWith(
-        caches.match(event.request)
-            .then(cachedResponse => {
-                // Return cached response if found
-                if (cachedResponse) {
-                    console.log('Serving from cache:', event.request.url);
-                    return cachedResponse;
-                }
-                
-                // Otherwise fetch from network
-                return fetch(event.request)
-                    .then(response => {
-                        // Check if we received a valid response
-                        if (!response || response.status !== 200 || response.type !== 'basic') {
-                            return response;
-                        }
-                        
-                        // Clone the response
-                        const responseToCache = response.clone();
-                        
-                        // Cache the new resource
-                        caches.open(CACHE_NAME)
-                            .then(cache => {
-                                cache.put(event.request, responseToCache);
-                            });
-                        
+    // Determine if this is an HTML, CSS, or JS file that should be network-first
+    const isHTMLRequest = event.request.headers.get('Accept').includes('text/html');
+    const isCSSRequest = requestUrl.endsWith('.css');
+    const isJSRequest = requestUrl.endsWith('.js');
+    
+    if (isHTMLRequest || isCSSRequest || isJSRequest) {
+        // Network-first strategy for HTML, CSS, and JS
+        event.respondWith(
+            fetch(event.request)
+                .then(response => {
+                    if (!response || response.status !== 200) {
                         return response;
-                    })
-                    .catch(error => {
-                        console.log('Fetch failed; returning offline page:', error);
-                        
-                        // If it's a page request, return the offline page
-                        if (event.request.headers.get('Accept').includes('text/html')) {
-                            return caches.match('pages/offline/offline.html');
-                        }
-                        
-                        // For other requests, return a fallback
-                        return new Response('Network error', {
-                            status: 408,
-                            headers: { 'Content-Type': 'text/plain' }
+                    }
+                    
+                    // Clone and cache the response
+                    const responseToCache = response.clone();
+                    caches.open(CACHE_NAME)
+                        .then(cache => {
+                            cache.put(event.request, responseToCache);
                         });
-                    });
-            })
-    );
+                    
+                    return response;
+                })
+                .catch(error => {
+                    // Fall back to cache if network fails
+                    console.log('Network failed, trying cache:', event.request.url);
+                    return caches.match(event.request)
+                        .then(cachedResponse => {
+                            if (cachedResponse) {
+                                return cachedResponse;
+                            }
+                            
+                            // If it's a page request, return offline page
+                            if (isHTMLRequest) {
+                                return caches.match('pages/offline/offline.html');
+                            }
+                            
+                            return new Response('Resource not available', {
+                                status: 404,
+                                headers: { 'Content-Type': 'text/plain' }
+                            });
+                        });
+                })
+        );
+    } else {
+        // Cache-first strategy for assets
+        event.respondWith(
+            caches.match(event.request)
+                .then(cachedResponse => {
+                    // Return cached response if found
+                    if (cachedResponse) {
+                        console.log('Serving from cache:', event.request.url);
+                        return cachedResponse;
+                    }
+                    
+                    // Otherwise fetch from network
+                    return fetch(event.request)
+                        .then(response => {
+                            // Check if we received a valid response
+                            if (!response || response.status !== 200 || response.type !== 'basic') {
+                                return response;
+                            }
+                            
+                            // Clone the response
+                            const responseToCache = response.clone();
+                            
+                            // Cache the new resource
+                            caches.open(CACHE_NAME)
+                                .then(cache => {
+                                    cache.put(event.request, responseToCache);
+                                });
+                            
+                            return response;
+                        })
+                        .catch(error => {
+                            console.log('Fetch failed:', error);
+                            return caches.match('pages/offline/offline.html');
+                        });
+                })
+        );
+    }
 });
 
 // Background sync for offline data

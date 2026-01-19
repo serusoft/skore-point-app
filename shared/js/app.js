@@ -301,7 +301,7 @@ function updateNavbarUserInfo() {
     const dropdownUserEmail = document.getElementById('globalDropdownUserEmail');
     
     if (profilePicture) {
-        profilePicture.src = userData.profileUrl || 'https://via.placeholder.com/40';
+        profilePicture.src = userData.profileUrl || 'https://placehold.co/40x40.png';
         profilePicture.alt = userData.name || user.email;
     }
     

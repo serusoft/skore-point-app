@@ -29,9 +29,10 @@ service cloud.firestore {
 
     function isSchoolAdmin(schoolId) {
       let schoolData = getSchool(schoolId).data;
-      return schoolData != null
+      let userData = getUser(request.auth.uid).data;
+      return (schoolData != null
         && schoolData.admins is list
-        && schoolData.admins.hasAny([request.auth.uid]);
+        && schoolData.admins.hasAny([request.auth.uid])) || (userData != null && userData.role == 'admin');
     }
 
     function isSchoolTeacher(schoolId) {
@@ -125,11 +126,20 @@ service cloud.firestore {
         && isValidSchool(resource.data.schoolId)
         && userBelongsToSchool(resource.data.schoolId);
 
-      allow create, update, delete: if isAuthenticated()
+      allow create: if isAuthenticated()
         && request.resource.data.schoolId != null
         && isValidSchool(request.resource.data.schoolId)
-        && userBelongsToSchool(request.resource.data.schoolId)
         && isSchoolAdmin(request.resource.data.schoolId);
+      
+      allow update: if isAuthenticated()
+        && request.resource.data.schoolId != null
+        && isValidSchool(request.resource.data.schoolId)
+        && isSchoolAdmin(request.resource.data.schoolId);
+
+      allow delete: if isAuthenticated()
+        && resource.data.schoolId != null
+        && isValidSchool(resource.data.schoolId)
+        && isSchoolAdmin(resource.data.schoolId);
     }
 
     /* =========================
@@ -146,16 +156,16 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && request.resource.data.schoolId != null
         && isValidSchool(request.resource.data.schoolId)
-        && userBelongsToSchool(request.resource.data.schoolId)
-        && (
-          isSchoolAdmin(request.resource.data.schoolId) ||
-          isSchoolTeacher(request.resource.data.schoolId)
-        );
+        && (isSchoolAdmin(request.resource.data.schoolId) || isSchoolTeacher(request.resource.data.schoolId));
 
-      allow update, delete: if isAuthenticated()
+      allow update: if isAuthenticated()
         && resource.data.schoolId != null
         && isValidSchool(resource.data.schoolId)
-        && userBelongsToSchool(resource.data.schoolId)
+        && isSchoolAdmin(resource.data.schoolId);
+        
+      allow delete: if isAuthenticated()
+        && resource.data.schoolId != null
+        && isValidSchool(resource.data.schoolId)
         && isSchoolAdmin(resource.data.schoolId);
     }
 
@@ -170,11 +180,20 @@ service cloud.firestore {
         && isValidSchool(resource.data.schoolId)
         && userBelongsToSchool(resource.data.schoolId);
 
-      allow create, update, delete: if isAuthenticated()
+      allow create: if isAuthenticated()
         && request.resource.data.schoolId != null
         && isValidSchool(request.resource.data.schoolId)
-        && userBelongsToSchool(request.resource.data.schoolId)
         && isSchoolAdmin(request.resource.data.schoolId);
+      
+      allow update: if isAuthenticated()
+        && request.resource.data.schoolId != null
+        && isValidSchool(request.resource.data.schoolId)
+        && isSchoolAdmin(request.resource.data.schoolId);
+
+      allow delete: if isAuthenticated()
+        && resource.data.schoolId != null
+        && isValidSchool(resource.data.schoolId)
+        && isSchoolAdmin(resource.data.schoolId);
     }
 
     /* =========================

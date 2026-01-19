@@ -122,8 +122,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             setupSchoolSettings();
             setupEnterMarksHandlers();
             await populateEnterMarksClassFilter();
-            setupReportCardHandlers();
-            await populateReportCardClassFilter();
             schoolDataLoaded = true;
             
             console.log('School Page: initializeAndLoad() - Initialization completed successfully.');
@@ -362,9 +360,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                     break;
             }
         });
-
         listenersSetup = true;
         console.log('School Page: setupEventListeners() - Event listeners set up via delegation.');
+        
+        // Setup exit button
+        const exitBtn = document.getElementById('exitSchoolBtn');
+        if (exitBtn) {
+            exitBtn.addEventListener('click', () => {
+                if (typeof showToast === 'function') showToast('Exiting school portal...', 'info');
+                if (typeof window.navigateTo === 'function') {
+                    window.navigateTo('dashboard');
+                }
+            });
+        }
         
         // Setup Excel file upload handler for students
         setupExcelUpload();
@@ -427,66 +435,64 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Read the Excel file
             const reader = new FileReader();
             reader.onload = async (e) => {
-                try {
-                    // Get the binary data
-                    const data = new Uint8Array(e.target.result);
-                    
-                    // Parse Excel using a simple approach
-                    // Note: This requires SheetJS library for production
-                    // For now, we'll show a message
-                    const students = parseExcelData(data);
-                    
-                    if (students.length === 0) {
-                        showToast('No students found in the Excel file', 'warning');
-                        hidePageLoading();
-                        return;
-                    }
-                    
-                    // Get selected class
-                    const classFilter = document.getElementById('classFilter');
-                    const selectedClassId = classFilter ? classFilter.value : '';
-                    
-                    if (!selectedClassId) {
-                        showToast('Please select a class first', 'warning');
-                        hidePageLoading();
-                        return;
-                    }
-                    
-                    // Find the class name
-                    const constraints = [
-                        { field: 'id', op: '==', value: selectedClassId }
-                    ];
-                    const classData = await Firebase.db.query('classes', constraints);
-                    const className = classData.length > 0 ? classData[0].name : 'Unknown Class';
-                    
-                    // Add each student to Firebase
-                    let addedCount = 0;
-                    for (const student of students) {
-                        try {
-                            await Firebase.db.addDoc('students', {
-                                name: student.name,
-                                classId: selectedClassId,
-                                schoolId: AppState.currentSchool.id,
-                                category: AppState.currentAcademicLevel
-                            });
-                            addedCount++;
-                        } catch (error) {
-                            console.error('Error adding student:', error);
-                        }
-                    }
-                    
-                    showToast(`Successfully imported ${addedCount} students to ${className}`, 'success');
-                    
-                    // Refresh students list
-                    await loadStudents(AppState.currentAcademicLevel);
-                    
-                    // Clear file input
-                    event.target.value = '';
-                    
-                } catch (error) {
-                    console.error('Error processing Excel file:', error);
-                    showToast('Error processing Excel file. Expected columns: Name, Gender', 'error');
+                // Get the binary data
+                const data = new Uint8Array(e.target.result);
+                
+                const students = parseExcelData(data);
+                
+                if (students.length === 0) {
+                    showToast('No students found in the Excel file or the file is empty.', 'warning');
+                    hidePageLoading();
+                    return;
                 }
+                
+                // Get selected class
+                const classFilter = document.getElementById('classFilter');
+                const selectedClassId = classFilter ? classFilter.value : '';
+                
+                if (!selectedClassId) {
+                    showToast('Please select a class before importing students.', 'warning');
+                    hidePageLoading();
+                    return;
+                }
+                
+                // Find the class name
+                const constraints = [
+                    { field: 'id', op: '==', value: selectedClassId }
+                ];
+                const classData = await Firebase.db.query('classes', constraints);
+                const className = classData.length > 0 ? classData[0].name : 'Unknown Class';
+                
+                // Add each student to Firebase
+                let addedCount = 0;
+                let errorCount = 0;
+                for (const student of students) {
+                    try {
+                        await Firebase.db.addDoc('students', {
+                            name: student.name,
+                            classId: selectedClassId,
+                            schoolId: AppState.currentSchool.id,
+                            category: AppState.currentAcademicLevel
+                        });
+                        addedCount++;
+                    } catch (error) {
+                        console.error('Error adding student:', error);
+                        errorCount++;
+                    }
+                }
+                
+                if (addedCount > 0) {
+                    showToast(`Successfully imported ${addedCount} students to ${className}.`, 'success');
+                }
+                if (errorCount > 0) {
+                    showToast(`${errorCount} students could not be imported due to an error.`, 'error');
+                }
+                
+                // Refresh students list
+                await loadStudents(AppState.currentAcademicLevel);
+                
+                // Clear file input
+                event.target.value = '';
                 
                 hidePageLoading();
             };
@@ -502,12 +508,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     /**
      * Parse Excel data using SheetJS library
-     * Expected column: Name (only one column needed)
+     * Expected column: Name (only one column needed, others are ignored)
+     * The function will focus on the Name column and ignore Gender or other columns
      */
     function parseExcelData(data) {
         try {
             if (typeof XLSX === 'undefined') {
                 console.error('SheetJS library not loaded');
+                if (typeof showToast === 'function') {
+                    showToast('A required library for Excel parsing is missing.', 'error');
+                }
                 return [];
             }
             
@@ -515,28 +525,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             const sheetName = workbook.SheetNames[0];
             const sheet = workbook.Sheets[sheetName];
             
-            // Convert to JSON with headers
-            const rows = XLSX.utils.sheet_to_json(sheet);
+            // Convert sheet to an array of arrays, ignoring headers.
+            // Each inner array represents a row.
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
             
             if (rows.length === 0) {
                 return [];
             }
             
-            // Map Excel column to student object
-            // Expected header: Name (case-insensitive)
-            const students = rows.map(row => {
-                // Get the first column regardless of headers
-                const keys = Object.keys(row);
-                const name = row[keys[0]] || row['Name'] || row['name'] || '';
-                
-                return {
-                    name: String(name).trim()
-                };
-            }).filter(student => student.name.length > 0);
+            // Treat every row as a potential student, taking the name from the first column.
+            const students = rows.map(row => ({
+                name: String(row[0] || '').trim()
+            })).filter(student => student.name.length > 0);
             
             return students;
         } catch (error) {
             console.error('Error parsing Excel file:', error);
+            if (typeof showToast === 'function') {
+                showToast('Could not read the Excel file. It might be corrupted or in an unsupported format.', 'error');
+            }
             return [];
         }
     }
@@ -622,8 +629,6 @@ document.addEventListener('DOMContentLoaded', async () => {
      */
     async function loadClasses(level) {
         console.log(`Loading classes for level: ${level}`);
-        const classesList = document.getElementById('classesGrid') || document.getElementById('classesList');
-        if (classesList) classesList.innerHTML = '<div class="loading-spinner"></div>'; 
         
         try {
             // Query classes for this school and level category
@@ -636,6 +641,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderClasses(classes);
         } catch (error) {
             console.error('Error loading classes:', error);
+            const classesList = document.getElementById('classesGrid') || document.getElementById('classesList');
             if (classesList) classesList.innerHTML = '<p class="error-message">Failed to load classes.</p>';
         }
     }
@@ -645,30 +651,72 @@ document.addEventListener('DOMContentLoaded', async () => {
      */
     function renderClasses(classes) {
         const classesList = document.getElementById('classesGrid') || document.getElementById('classesList');
+        const emptyState = document.getElementById('classesEmpty');
+        
         if (!classesList) return; 
         
         if (!classes || classes.length === 0) {
-            classesList.innerHTML = '<div class="empty-state"><p>No classes found for this level.</p></div>';
+            if (emptyState) {
+                emptyState.style.display = 'flex';
+                classesList.innerHTML = '';
+            }
             return;
         }
         
+        if (emptyState) emptyState.style.display = 'none';
+        
         classesList.innerHTML = classes.map(cls => `
-            <div class="class-card" data-id="${cls.id}" style="cursor: pointer;">
-                <h3>${cls.name}</h3>
-                <p>${cls.studentsCount || 0} Students</p>
-                <div class="card-actions" style="margin-top: 10px;">
-                    <span style="color: var(--primary); font-size: 0.9rem;">View Details <i class="fas fa-arrow-right"></i></span>
+            <div class="class-card" data-id="${cls.id}" style="cursor: pointer; position: relative;">
+                <div style="flex: 1;">
+                    <h3>${cls.name}</h3>
+                    <p>${cls.studentsCount || 0} Students</p>
+                    <div class="card-actions" style="margin-top: 10px;">
+                        <span style="color: var(--primary); font-size: 0.9rem;">View Details <i class="fas fa-arrow-right"></i></span>
+                    </div>
                 </div>
+                <button class="btn-delete" data-class-id="${cls.id}" style="position: absolute; top: 10px; right: 10px; background: #ff4757; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
             </div>
         `).join('');
         
         // Add click listeners to class cards
         classesList.querySelectorAll('.class-card').forEach(card => {
-            card.addEventListener('click', () => {
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.btn-delete')) return;
                 const className = card.querySelector('h3').textContent;
                 if (typeof showToast === 'function') showToast(`Opening class: ${className}`, 'info');
             });
         });
+        
+        // Add delete button listeners
+        classesList.querySelectorAll('.btn-delete').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const classId = btn.dataset.classId;
+                await deleteClass(classId);
+            });
+        });
+    }
+    
+    /**
+     * Delete a class
+     */
+    async function deleteClass(classId) {
+        const confirmed = confirm('Are you sure you want to delete this class? This action cannot be undone.');
+        if (!confirmed) return;
+        
+        showPageLoading('Deleting class...');
+        try {
+            await Firebase.db.deleteDoc('classes', classId);
+            showToast('Class deleted successfully', 'success');
+            await loadClasses(AppState.currentAcademicLevel);
+        } catch (error) {
+            console.error('Error deleting class:', error);
+            showToast('Error deleting class', 'error');
+        } finally {
+            hidePageLoading();
+        }
     }
     
     /**
@@ -677,7 +725,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function loadStudents(level) {
         console.log(`Loading students for level: ${level}`);
         const studentsList = document.querySelector('#studentsTable tbody') || document.getElementById('studentsList');
-        if (studentsList) studentsList.innerHTML = '<div class="loading-spinner"></div>'; 
+        if (studentsList) studentsList.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;"><div class="loading-spinner"></div></td></tr>'; 
         
         try {
             // Query students for this school and level category
@@ -687,38 +735,78 @@ document.addEventListener('DOMContentLoaded', async () => {
             ];
 
             const students = await Firebase.db.query('students', constraints);
-            renderStudents(students);
+            
+            // Fetch classes to create a lookup
+            const classConstraints = [
+                { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
+                { field: 'category', op: '==', value: level }
+            ];
+            const classes = await Firebase.db.query('classes', classConstraints);
+            const classMap = {};
+            classes.forEach(cls => {
+                classMap[cls.id] = cls.name;
+            });
+            
+            renderStudents(students, classMap);
         } catch (error) {
             console.error('Error loading students:', error);
-            if (studentsList) studentsList.innerHTML = '<p class="error-message">Failed to load students.</p>';
+            if (studentsList) studentsList.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;"><p class="error-message">Failed to load students.</p></td></tr>';
         }
     }
 
     /**
      * Render students list
      */
-    function renderStudents(students) {
+    function renderStudents(students, classMap = {}) {
         const studentsList = document.querySelector('#studentsTable tbody') || document.getElementById('studentsList');
         if (!studentsList) return; 
         
         if (!students || students.length === 0) {
-            studentsList.innerHTML = '<div class="empty-state"><p>No students found. Click "Add Student" to start.</p></div>';
+            studentsList.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">No students found. Click "Add Student" to start.</td></tr>';
             return;
         }
         
-        // We need to fetch class names for display, but for now we'll just list them
-        // In a real app, we'd map classId to className using a cache
-        
         studentsList.innerHTML = students.map(student => `
-            <div class="student-card">
-                <div class="student-avatar">${getInitials(student.name)}</div>
-                <div class="student-info">
-                    <h4>${student.name}</h4>
-                    <p>${student.gender || 'N/A'}</p>
-                </div>
-                <button class="btn-icon"><i class="fas fa-ellipsis-v"></i></button>
-            </div>
+            <tr data-student-id="${student.id}">
+                <td>${student.name}</td>
+                <td>${classMap[student.classId] || 'N/A'}</td>
+                <td>${student.category || 'N/A'}</td>
+                <td>
+                    <button class="btn-delete" data-student-id="${student.id}" style="background: #ff4757; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </td>
+            </tr>
         `).join('');
+        
+        // Add delete button listeners
+        studentsList.querySelectorAll('.btn-delete').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const studentId = btn.dataset.studentId;
+                await deleteStudent(studentId);
+            });
+        });
+    }
+    
+    /**
+     * Delete a student
+     */
+    async function deleteStudent(studentId) {
+        const confirmed = confirm('Are you sure you want to delete this student? This action cannot be undone.');
+        if (!confirmed) return;
+        
+        showPageLoading('Deleting student...');
+        try {
+            await Firebase.db.deleteDoc('students', studentId);
+            showToast('Student deleted successfully', 'success');
+            await loadStudents(AppState.currentAcademicLevel);
+        } catch (error) {
+            console.error('Error deleting student:', error);
+            showToast('Error deleting student', 'error');
+        } finally {
+            hidePageLoading();
+        }
     }
     
     /**
@@ -726,8 +814,6 @@ document.addEventListener('DOMContentLoaded', async () => {
      */
     async function loadSubjects(level) {
         console.log(`Loading subjects for level: ${level}`);
-        const subjectsList = document.getElementById('subjectsGrid') || document.getElementById('subjectsList');
-        if (subjectsList) subjectsList.innerHTML = '<div class="loading-spinner"></div>'; 
         
         try {
             const constraints = [
@@ -738,29 +824,71 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderSubjects(subjects);
         } catch (error) {
             console.error('Error loading subjects:', error);
+            const subjectsList = document.getElementById('subjectsGrid') || document.getElementById('subjectsList');
             if (subjectsList) subjectsList.innerHTML = '<p class="error-message">Failed to load subjects.</p>';
         }
     }
 
     function renderSubjects(subjects) {
         const subjectsList = document.getElementById('subjectsGrid') || document.getElementById('subjectsList');
+        const emptyState = document.getElementById('subjectsEmpty');
+        
         if (!subjectsList) return; 
         
         if (!subjects || subjects.length === 0) {
-            subjectsList.innerHTML = '<div class="empty-state"><p>No subjects found. Click "Add Subject" to start.</p></div>';
+            if (emptyState) {
+                emptyState.style.display = 'flex';
+                subjectsList.innerHTML = '';
+            }
             return;
         }
         
+        if (emptyState) emptyState.style.display = 'none';
+        subjectsList.style.display = 'grid';
+        
         subjectsList.innerHTML = subjects.map(subject => `
-            <div class="subject-card">
-                <div class="subject-icon"><i class="fas fa-book"></i></div>
-                <div class="subject-info">
-                    <h4>${subject.name}</h4>
-                    <p>${subject.code || ''}</p>
+            <div class="subject-card" data-subject-id="${subject.id}" style="position: relative;">
+                <div style="flex: 1;">
+                    <div class="subject-icon"><i class="fas fa-book"></i></div>
+                    <div class="subject-info">
+                        <h4>${subject.name}</h4>
+                        <p>${subject.code || ''}</p>
+                    </div>
                 </div>
-                <button class="btn-icon"><i class="fas fa-ellipsis-v"></i></button>
+                <button class="btn-delete" data-subject-id="${subject.id}" style="position: absolute; top: 10px; right: 10px; background: #ff4757; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
             </div>
         `).join('');
+        
+        // Add delete button listeners
+        subjectsList.querySelectorAll('.btn-delete').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const subjectId = btn.dataset.subjectId;
+                await deleteSubject(subjectId);
+            });
+        });
+    }
+    
+    /**
+     * Delete a subject
+     */
+    async function deleteSubject(subjectId) {
+        const confirmed = confirm('Are you sure you want to delete this subject? This action cannot be undone.');
+        if (!confirmed) return;
+        
+        showPageLoading('Deleting subject...');
+        try {
+            await Firebase.db.deleteDoc('subjects', subjectId);
+            showToast('Subject deleted successfully', 'success');
+            await loadSubjects(AppState.currentAcademicLevel);
+        } catch (error) {
+            console.error('Error deleting subject:', error);
+            showToast('Error deleting subject', 'error');
+        } finally {
+            hidePageLoading();
+        }
     }
     
     /**
@@ -1140,69 +1268,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         } catch (error) {
             console.error('Error populating class filter:', error);
-        }
-    }
-    /**
-     * Setup Report Card page - wire up handler buttons
-     */
-    function setupReportCardHandlers() {
-        const viewReportCardBtn = document.getElementById('viewReportCardBtn');
-        const downloadReportCardBtn = document.getElementById('downloadReportCardBtn');
-        const reportCardClassFilter = document.getElementById('reportCardClassFilter');
-        
-        if (viewReportCardBtn) {
-            viewReportCardBtn.addEventListener('click', async () => {
-                const selectedClass = reportCardClassFilter ? reportCardClassFilter.value : '';
-                if (!selectedClass) {
-                    if (typeof showToast === 'function') showToast('Please select a class first', 'warning');
-                    return;
-                }
-                if (typeof showToast === 'function') showToast('Loading report card for selected class...', 'info');
-                if (typeof window.navigateTo === 'function') {
-                    window.navigateTo('reports');
-                }
-            });
-        }
-        
-        if (downloadReportCardBtn) {
-            downloadReportCardBtn.addEventListener('click', async () => {
-                const selectedClass = reportCardClassFilter ? reportCardClassFilter.value : '';
-                if (!selectedClass) {
-                    if (typeof showToast === 'function') showToast('Please select a class first', 'warning');
-                    return;
-                }
-                if (typeof showToast === 'function') showToast('Downloading report card...', 'info');
-                // TODO: Implement download functionality
-                setTimeout(() => {
-                    if (typeof showToast === 'function') showToast('Report card download started', 'success');
-                }, 1000);
-            });
-        }
-    }
-
-    /**
-     * Populate Report Card class filter dropdown
-     */
-    async function populateReportCardClassFilter() {
-        const classFilter = document.getElementById('reportCardClassFilter');
-        if (!classFilter || !AppState.currentSchool) return;
-        
-        try {
-            const constraints = [
-                { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-                { field: 'category', op: '==', value: AppState.currentAcademicLevel || 'lower-primary' }
-            ];
-            const classes = await Firebase.db.query('classes', constraints);
-            
-            classFilter.innerHTML = '<option value="">Select Class</option>';
-            classes.forEach(cls => {
-                const option = document.createElement('option');
-                option.value = cls.id;
-                option.textContent = cls.name;
-                classFilter.appendChild(option);
-            });
-        } catch (error) {
-            console.error('Error populating report card class filter:', error);
         }
     }
 });
