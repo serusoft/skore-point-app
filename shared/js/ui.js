@@ -186,46 +186,53 @@ class AppUI {
         }
     }
 
+    // createAuthenticatedNavbar - FIXED VERSION
     createAuthenticatedNavbar() {
-        // Check if on school page to clean up nav
-        const isSchoolPage = window.location.pathname.includes('school.html');
-        
-        const desktopLinks = isSchoolPage ? '' : `
+        return `
+            <nav class="navbar" id="main-navbar" role="navigation" aria-label="Main navigation">
+                <a href="#dashboard" class="navbar-brand">
+                    <span class="brand-mark"><i class="fas fa-graduation-cap"></i></span>
+                    <span class="brand-title">Skore Point</span>
+                </a>
+
+                <div class="navbar-nav desktop-only">
                     <a href="#dashboard" data-page="dashboard" class="nav-link">
                         <i class="fas fa-home"></i> Dashboard
                     </a>
                     <a href="#school" data-page="school" class="nav-link">
                         <i class="fas fa-school"></i> School
-                    </a>`;
-                        
-        // Mobile links: Eliminated as requested for a cleaner look
-        const mobileLinks = '';
-
-        return `
-            <nav class="navbar" id="main-navbar" role="navigation" aria-label="Main navigation">
-                <a href="#dashboard" class="navbar-brand">
-                    <i class="fas fa-graduation-cap" aria-hidden="true"></i> Skore Point
-                </a>
-
-                <div class="navbar-nav desktop-only">
-                    ${desktopLinks}
+                    </a>
+                    
                     <div class="navbar-user" id="navbarUser">
-                        <div class="profile-placeholder"></div>
+                        <!-- User profile will be injected here -->
                     </div>
-                    <button class="logout-btn" id="desktop-logout" title="Logout">
+                    
+                    <button class="logout-btn desktop-only" id="desktop-logout" title="Logout">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </button>
                 </div>
 
                 <button class="navbar-toggle mobile-only" id="navbar-toggle" aria-label="Open menu">
-                    <i class="fas fa-bars" aria-hidden="true"></i>
+                    <i class="fas fa-bars"></i>
                 </button>
             </nav>
 
             <div class="mobile-nav" id="navbar-mobile-nav" aria-hidden="true">
-                <a href="#profile" class="nav-link">My Profile</a>
-                <a href="#settings" class="nav-link">Settings</a>
-                <a href="#" class="nav-link logout-btn-mobile">Logout</a>
+                <a href="#dashboard" data-page="dashboard" class="nav-link">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <a href="#school" data-page="school" class="nav-link">
+                    <i class="fas fa-school"></i> School
+                </a>
+                <a href="#profile" data-page="profile" class="nav-link">
+                    <i class="fas fa-user"></i> Profile
+                </a>
+                <a href="#settings" data-page="settings" class="nav-link">
+                    <i class="fas fa-cog"></i> Settings
+                </a>
+                <button class="nav-link logout-btn-mobile">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
             </div>
         `;
     }
@@ -233,25 +240,23 @@ class AppUI {
     createUnauthenticatedNavbar() {
         return `
             <nav class="navbar" id="main-navbar" role="navigation" aria-label="Main navigation">
-                <div class="container">
-                    <a href="../" class="navbar-brand">
-                        <span class="brand-mark"><i class="fas fa-graduation-cap" aria-hidden="true"></i></span>
-                        <span class="brand-title">Skore Point</span>
-                    </a>
+                <a href="../" class="navbar-brand">
+                    <span class="brand-mark"><i class="fas fa-graduation-cap"></i></span>
+                    <span class="brand-title">Skore Point</span>
+                </a>
 
-                    <div class="navbar-nav desktop-only" id="navbar-desktop-nav">
-                        <a href="../auth/login.html" class="nav-link" data-page="login">Sign In</a>
-                        <a href="../auth/register.html" class="nav-link" data-page="register">Register</a>
-                    </div>
+                <div class="navbar-nav desktop-only">
+                    <a href="../auth/login.html" data-page="login" class="nav-link">Sign In</a>
+                    <a href="../auth/register.html" data-page="register" class="nav-link btn btn-primary">Register</a>
+                </div>
 
-                    <button class="navbar-toggle desktop-hidden" id="navbar-toggle" aria-label="Open menu">
-                        <i class="fas fa-bars" aria-hidden="true"></i>
-                    </button>
+                <button class="navbar-toggle mobile-only" id="navbar-toggle" aria-label="Open menu">
+                    <i class="fas fa-bars"></i>
+                </button>
 
-                    <div class="mobile-nav mobile-only" id="navbar-mobile-nav" aria-hidden="true">
-                        <a href="../auth/login.html" class="nav-link" data-page="login">Sign In</a>
-                        <a href="../auth/register.html" class="nav-link" data-page="register">Register</a>
-                    </div>
+                <div class="mobile-nav" id="navbar-mobile-nav" aria-hidden="true">
+                    <a href="../auth/login.html" data-page="login" class="nav-link">Sign In</a>
+                    <a href="../auth/register.html" data-page="register" class="nav-link">Register</a>
                 </div>
             </nav>
         `;
@@ -327,7 +332,7 @@ class AppUI {
         // No specific event listeners needed here anymore for globalUserProfileMenu
     }
 
-    // Load user profile in navbar (replaces the global function)
+    // loadUserProfileInNavbar - FIXED VERSION (removed inline styles)
     async loadUserProfileInNavbar() {
         const navbarUser = document.getElementById('navbarUser');
         if (!navbarUser || !AppState.currentUser) {
@@ -341,17 +346,18 @@ class AppUI {
             
             console.log('Loading user profile for navbar:', user.email);
             
-            // Create user profile element
+            // Create user profile element with CSS classes
             navbarUser.innerHTML = `
-                <div class="user-profile" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                    <div class="profile-image" id="profileImage" style="width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: #4361ee; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.95rem;">
+                <div class="user-profile" id="userProfile">
+                    <div class="profile-image" id="profileImage">
                         ${userData.profileUrl 
-                            ? `<img src="${userData.profileUrl}" alt="${userData.name || 'User'}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML=getInitials('${userData.name || ''}')">`
+                            ? `<img src="${userData.profileUrl}" alt="${userData.name || 'User'}" onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML='${getInitials(userData.name || '')}'">`
                             : getInitials(userData.name || '')
                         }
                     </div>
-                    <div class="user-info desktop-only" style="display: flex; flex-direction: column;">
-                        <span class="user-name" style="font-size: 0.9rem; font-weight: 600;">${userData.name || user.email || 'User'}</span>
+                    <div class="user-info desktop-only">
+                        <span class="user-name">${userData.name || user.email || 'User'}</span>
+                        <span class="user-role">${(userData.role || 'teacher').toUpperCase()}</span>
                     </div>
                     
                     <!-- Desktop Dropdown -->
@@ -363,7 +369,7 @@ class AppUI {
                             <i class="fas fa-cog"></i> Settings
                         </a>
                         <div class="dropdown-divider"></div>
-                        <button class="dropdown-item logout-btn">
+                        <button class="dropdown-item logout-btn-dropdown">
                             <i class="fas fa-sign-out-alt"></i> Logout
                         </button>
                     </div>
@@ -372,26 +378,44 @@ class AppUI {
             
             // Add dropdown functionality
             const profileImage = document.getElementById('profileImage');
+            const userProfile = document.getElementById('userProfile');
             const dropdownMenu = document.getElementById('userDropdownMenu');
             
             if (profileImage && dropdownMenu) {
-                profileImage.addEventListener('click', (e) => {
+                userProfile.addEventListener('click', (e) => {
                     e.stopPropagation();
                     dropdownMenu.classList.toggle('show');
                 });
                 
                 // Close dropdown when clicking outside
                 document.addEventListener('click', (e) => {
-                    if (!profileImage.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                    if (!userProfile.contains(e.target) && !dropdownMenu.contains(e.target)) {
                         dropdownMenu.classList.remove('show');
                     }
                 });
             }
             
-            // Handle logout
-            const logoutBtn = navbarUser.querySelector('.logout-btn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', async () => {
+            // Handle dropdown logout
+            const dropdownLogoutBtn = document.querySelector('.logout-btn-dropdown');
+            if (dropdownLogoutBtn) {
+                dropdownLogoutBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    try {
+                        await Firebase.auth.signOut();
+                        AppState.clear();
+                        navigateTo('login');
+                    } catch (error) {
+                        console.error('Logout error:', error);
+                        this.showToast('Error logging out', 'error');
+                    }
+                });
+            }
+
+            // Handle desktop logout button
+            const desktopLogoutBtn = document.getElementById('desktop-logout');
+            if (desktopLogoutBtn) {
+                desktopLogoutBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
                     try {
                         await Firebase.auth.signOut();
                         AppState.clear();
@@ -416,7 +440,7 @@ class AppUI {
                     <div class="user-profile-img">
                         ${profileUrl && profileUrl.startsWith('data:image')
                             ? `<img src="${profileUrl}" alt="${name}" onerror="this.parentElement.innerHTML='${initials}'">`
-                            : `${profileUrl ? `<img src="${profileUrl}" alt="${name}" onerror="this.parentElement.innerHTML='${initials}'">` : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: bold;">${initials}</div>`}`
+                            : `${profileUrl ? `<img src="${profileUrl}" alt="${name}" onerror="this.parentElement.innerHTML='${initials}'">` : `<div class="profile-initials">${initials}</div>`}`
                         }
                     </div>
                     <div class="user-details">
@@ -452,13 +476,10 @@ class AppUI {
                 navbarUser.innerHTML = `
                     <div class="user-profile">
                         <div class="profile-image">${getInitials('User')}</div>
-                        <div class="user-info">
+                        <div class="user-info desktop-only">
                             <span class="user-name">User</span>
-                            <span class="user-role">Teacher</span>
+                            <span class="user-role">TEACHER</span>
                         </div>
-                        <button class="dropdown-toggle">
-                            <i class="fas fa-chevron-down"></i>
-                        </button>
                     </div>
                 `;
             }

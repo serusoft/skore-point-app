@@ -1,3 +1,4 @@
+
 .school-page {
     padding: 20px;
     max-width: 1400px;
@@ -9,152 +10,112 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     flex-wrap: wrap;
     gap: 20px;
 }
 
-.header-content h1 {
-    font-size: 28px;
+.page-header h1 {
+    font-size: clamp(26px, 5vw, 36px);
     background: linear-gradient(135deg, var(--primary), var(--accent));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     font-weight: 800;
-    margin-bottom: 10px;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
 }
 
 .school-info-badge {
-    display: flex;
-    gap: 15px;
-    align-items: center;
-}
-
-.school-level-badge {
-    padding: 6px 15px;
-    background: var(--primary);
-    color: white;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px 15px;
     border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.school-code {
-    color: var(--gray-light);
     font-size: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .header-actions {
     display: flex;
-    gap: 10px;
+    gap: 15px;
 }
 
-/* Content Tabs */
 .content-tabs {
     display: flex;
     gap: 10px;
-    margin-bottom: 20px;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: var(--border-radius);
-    padding: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 30px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    overflow-x: auto;
 }
 
 .content-tab {
-    flex: 1;
-    padding: 15px;
-    text-align: center;
-    cursor: pointer;
-    border-radius: var(--border-radius-sm);
-    transition: var(--transition);
+    padding: 15px 25px;
+    font-size: 16px;
     font-weight: 600;
-    color: var(--gray-lighter);
+    color: var(--gray-light);
     border: none;
     background: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font-size: 14px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
 }
 
 .content-tab:hover {
     background: rgba(255, 255, 255, 0.05);
+    color: var(--light);
 }
 
 .content-tab.active {
-    background: var(--primary);
-    color: white;
+    color: var(--primary-light);
+    border-bottom-color: var(--primary-light);
 }
 
-/* Level Navigation */
+.content-tab i {
+    margin-right: 8px;
+}
+
 .level-navigation {
     display: flex;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: var(--border-radius);
-    padding: 10px;
-    margin-bottom: 30px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
 }
 
 .level-tab {
-    flex: 1;
-    padding: 15px;
-    text-align: center;
-    cursor: pointer;
-    border-radius: var(--border-radius-sm);
-    transition: var(--transition);
-    font-weight: 600;
+    padding: 8px 20px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.1);
     color: var(--gray-lighter);
-    border: none;
-    background: none;
+    cursor: pointer;
+    transition: var(--transition);
 }
 
 .level-tab:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .level-tab.active {
     background: var(--primary);
     color: white;
-}
-
-.level-tab .level-icon {
-    font-size: 20px;
-    margin-bottom: 8px;
-}
-
-.level-tab .level-name {
-    font-size: 14px;
-    display: block;
-}
-
-/* Content Sections */
-.school-content {
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: var(--border-radius);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    overflow: hidden;
+    font-weight: 600;
 }
 
 .content-section {
     display: none;
-    padding: 30px;
+    animation: fadeIn 0.4s ease-out;
 }
 
 .content-section.active {
     display: block;
-    animation: fadeIn 0.3s ease;
 }
 
 .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
+    margin-bottom: 25px;
     flex-wrap: wrap;
     gap: 15px;
 }
@@ -162,93 +123,80 @@
 .section-header h2 {
     font-size: 22px;
     color: var(--light);
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    font-weight: 700;
 }
 
 .section-actions {
     display: flex;
+    align-items: center;
     gap: 15px;
-    align-items: center;
+    flex-wrap: wrap;
 }
 
-.filters-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.level-filter {
-    padding: 8px 15px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: var(--border-radius-sm);
-    font-size: 14px;
-    color: var(--primary);
-    font-weight: 600;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Classes Grid */
-.classes-grid {
+.classes-grid,
+.subjects-grid,
+.teachers-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 20px;
 }
 
-.class-card {
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: var(--border-radius-sm);
-    padding: 25px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+.class-card,
+.subject-card,
+.teacher-card {
+    background: var(--card-gradient);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
     transition: var(--transition);
-    cursor: pointer;
+    display: flex;
+    flex-direction: column;
 }
 
-.class-card:hover {
-    transform: translateY(-3px);
-    border-color: var(--primary);
-    background: rgba(67, 97, 238, 0.05);
+.class-card:hover,
+.subject-card:hover,
+.teacher-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow);
+    border-color: rgba(67, 97, 238, 0.3);
 }
 
-.class-header {
+.card-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 15px;
 }
 
-.class-name {
+.card-title {
     font-size: 18px;
     font-weight: 600;
     color: var(--light);
 }
 
-.class-category {
-    padding: 4px 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    font-size: 11px;
-    color: var(--primary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.class-stats {
-    display: flex;
-    gap: 15px;
-    margin-top: 15px;
-    font-size: 13px;
+.card-menu-btn {
+    background: none;
+    border: none;
     color: var(--gray-light);
+    font-size: 18px;
+    cursor: pointer;
 }
 
-.class-stats span {
+.card-body p {
+    color: var(--gray-lighter);
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.card-footer {
+    margin-top: auto;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
-    align-items: center;
-    gap: 5px;
+    justify-content: flex-end;
+    gap: 10px;
 }
 
-/* Students Table */
 .students-container {
     display: flex;
     flex-direction: column;
@@ -257,52 +205,42 @@
 
 .file-upload-area {
     border: 2px dashed rgba(255, 255, 255, 0.2);
-    border-radius: var(--border-radius-sm);
-    padding: 30px;
+    border-radius: var(--border-radius);
+    padding: 40px;
     text-align: center;
     cursor: pointer;
     transition: var(--transition);
-    background: rgba(255, 255, 255, 0.02);
-    margin-bottom: 30px;
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .file-upload-area:hover {
-    border-color: var(--primary);
-    background: rgba(67, 97, 238, 0.05);
-    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.07);
+    border-color: var(--primary-light);
 }
 
 .file-upload-area i {
     font-size: 40px;
     color: var(--primary-light);
     margin-bottom: 15px;
-    display: block;
-    transition: var(--transition);
-}
-
-.file-upload-area:hover i {
-    transform: scale(1.1);
 }
 
 .file-upload-area p {
-    font-weight: 500;
+    font-size: 18px;
     color: var(--light);
     margin-bottom: 5px;
 }
 
 .file-upload-area span {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--gray-light);
 }
 
-.file-upload-area input {
+.file-upload-area input[type="file"] {
     display: none;
 }
 
 .students-table-container {
     overflow-x: auto;
-    border-radius: var(--border-radius-sm);
-    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .students-table {
@@ -310,468 +248,119 @@
     border-collapse: collapse;
 }
 
-.students-table th {
-    background: rgba(255, 255, 255, 0.05);
-    padding: 15px;
+.students-table th,
+.students-table td {
+    padding: 12px 15px;
     text-align: left;
-    font-weight: 600;
-    color: var(--light);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.students-table td {
-    padding: 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    color: var(--gray-lighter);
+.students-table th {
+    background: rgba(255, 255, 255, 0.05);
+    font-weight: 600;
+    color: var(--light);
 }
 
 .students-table tbody tr:hover {
-    background: rgba(255, 255, 255, 0.02);
-}
-
-/* Subjects Grid */
-.subjects-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 15px;
-}
-
-.subject-card {
     background: rgba(255, 255, 255, 0.03);
-    border-radius: var(--border-radius-sm);
-    padding: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    transition: var(--transition);
 }
 
-.subject-card:hover {
-    border-color: var(--primary);
-    background: rgba(67, 97, 238, 0.05);
+.fixed-exit-btn {
+    position: fixed;
+    bottom: 80px;
+    left: 20px;
+    z-index: 999;
 }
 
-.subject-name {
-    font-weight: 600;
-    color: var(--light);
-    margin-bottom: 5px;
-}
-
-.subject-level {
-    font-size: 12px;
-    color: var(--primary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* Teachers Grid */
-.teachers-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-}
-
-.teacher-card {
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: var(--border-radius-sm);
-    padding: 25px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    transition: var(--transition);
-}
-
-.teacher-card:hover {
-    border-color: var(--primary);
-    background: rgba(67, 97, 238, 0.05);
-}
-
-.teacher-header {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 15px;
-}
-
-.teacher-avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 2px solid var(--primary);
-}
-
-.teacher-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.teacher-details h3 {
-    font-size: 16px;
-    color: var(--light);
-    margin-bottom: 5px;
-}
-
-.teacher-email {
-    font-size: 13px;
-    color: var(--gray-light);
-}
-
-.teacher-role {
-    display: inline-block;
-    padding: 4px 10px;
-    background: rgba(67, 97, 238, 0.2);
-    color: var(--primary);
-    border-radius: 12px;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-top: 5px;
-}
-
-.teacher-role.admin {
-    background: rgba(239, 68, 68, 0.2);
-    color: var(--error);
-}
-
-.teacher-subjects {
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.teacher-subjects h4 {
-    font-size: 13px;
-    color: var(--gray-light);
-    margin-bottom: 8px;
-}
-
-.subject-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-}
-
-.subject-tag {
-    padding: 4px 8px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 6px;
-    font-size: 12px;
-    color: var(--gray-lighter);
-}
-
-/* Empty States */
-.empty-state {
+.reports-intro {
     text-align: center;
-    padding: 60px 20px;
-    color: var(--gray-light);
+    padding: 40px 20px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius);
 }
 
-.empty-state i {
-    font-size: 64px;
-    margin-bottom: 20px;
-    opacity: 0.3;
+.reports-intro i {
+    color: var(--primary);
 }
 
-.empty-state h3 {
-    font-size: 20px;
+.reports-features {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-top: 30px;
+    flex-wrap: wrap;
+}
+
+.reports-features .feature {
+    max-width: 250px;
+}
+
+.reports-features .feature i {
+    font-size: 28px;
     margin-bottom: 10px;
-    color: var(--gray-lighter);
 }
 
-.empty-state p {
-    max-width: 400px;
-    margin: 0 auto;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .page-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .section-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .section-actions {
-        width: 100%;
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .level-navigation {
-        flex-direction: column;
-    }
-    
-    .classes-grid,
-    .subjects-grid,
-    .teachers-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .students-table {
-        font-size: 14px;
-    }
-}
-/* Enter Marks Section Styles */
-#enterMarksSection .section-actions {
+/* Mobile Tabs */
+.mobile-bottom-tabs {
+    display: none; /* Hidden on desktop */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 65px;
+    background: var(--darker);
+    border-top: 1px solid rgba(255,255,255,0.1);
     display: flex;
-    gap: 15px;
+    justify-content: space-around;
     align-items: center;
-    flex-wrap: wrap;
+    z-index: 1000;
 }
 
-#enterMarksClassFilter {
-    padding: 10px 15px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--border-radius-sm);
-    color: var(--light);
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-#enterMarksClassFilter:hover {
-    border-color: var(--primary);
-    background: rgba(67, 97, 238, 0.05);
-}
-
-#enterMarksClassFilter:focus {
-    outline: none;
-    border-color: var(--primary);
-    background: rgba(67, 97, 238, 0.1);
-}
-
-#enterMarksContainer {
-    padding: 30px;
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: var(--border-radius-sm);
-    border: 1px dashed rgba(255, 255, 255, 0.1);
-    text-align: center;
-    color: var(--gray-light);
-}
-
-#enterMarksBtn, #viewReportCardsBtn {
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-#enterMarksBtn:hover, #viewReportCardsBtn:hover {
-    transform: translateY(-2px);
-}
-
-#enterMarksBtn:active, #viewReportCardsBtn:active {
-    transform: translateY(0);
-}
-/* Report Card Section Styles */
-#reportCardSection .section-actions {
+.mobile-tab {
     display: flex;
-    gap: 15px;
+    flex-direction: column;
     align-items: center;
-    flex-wrap: wrap;
-}
-
-#reportCardClassFilter {
-    padding: 10px 15px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--border-radius-sm);
-    color: var(--light);
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-#reportCardClassFilter:hover {
-    border-color: var(--primary);
-    background: rgba(67, 97, 238, 0.05);
-}
-
-#reportCardClassFilter:focus {
-    outline: none;
-    border-color: var(--primary);
-    background: rgba(67, 97, 238, 0.1);
-}
-
-#reportCardContainer {
-    padding: 30px;
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: var(--border-radius-sm);
-    border: 1px dashed rgba(255, 255, 255, 0.1);
-    text-align: center;
+    justify-content: center;
+    background: none;
+    border: none;
     color: var(--gray-light);
+    font-size: 12px;
+    gap: 4px;
+    flex: 1;
+    height: 100%;
 }
 
-#viewReportCardBtn, #downloadReportCardBtn {
-    cursor: pointer;
-    transition: var(--transition);
+.mobile-tab i {
+    font-size: 20px;
 }
 
-/* Mobile Responsive Design */
+.mobile-tab.active {
+    color: var(--primary-light);
+}
+
 @media (max-width: 768px) {
+    .desktop-tabs {
+        display: none;
+    }
+
+    .mobile-bottom-tabs {
+        display: flex;
+    }
+
     .school-page {
-        padding-bottom: 100px;
-        padding: 10px;
-    }
-    
-    .page-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 15px;
-        margin-bottom: 20px;
-        padding-bottom: 15px;
+        padding: 15px;
+        padding-bottom: 80px; 
     }
 
-    .header-content h1 {
-        font-size: 22px;
-        margin-bottom: 8px;
-    }
-
-    .school-info-badge {
-        width: 100%;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
+    .page-header h1 {
+        font-size: 24px;
     }
 
     .header-actions {
-        width: 100%;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-
-    .header-actions .btn {
-        flex: 1;
-        min-width: 120px;
-        padding: 10px 12px;
-        font-size: 13px;
-    }
-
-    /* FIXED: Use flex layout for bottom tab bar on mobile */
-    .content-tabs {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        width: 100%;
-        background: rgba(15, 23, 42, 0.98);
-        backdrop-filter: blur(10px);
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        border-bottom: none;
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-around;
-        align-items: center;
-        z-index: 999;
-        padding: 8px 0;
-        gap: 0;
-        box-sizing: border-box;
-    }
-
-    .content-tab {
-        flex: 1;
-        min-width: 60px;
-        padding: 8px 10px !important;
-        font-size: 11px !important;
-        text-align: center;
-        border: none;
-        border-radius: 0;
-        margin: 0;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .content-tab i {
-        font-size: 16px;
-    }
-
-    .level-navigation {
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 20px;
-        padding: 8px;
-    }
-
-    .level-btn {
-        padding: 10px 12px;
-        font-size: 12px;
-    }
-
-    .school-content {
-        padding: 0;
-    }
-
-    .section-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-        margin-bottom: 15px;
-    }
-
-    .section-actions {
-        width: 100%;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .section-actions .btn {
-        width: 100%;
-        padding: 10px;
-        font-size: 13px;
-    }
-
-    .classes-grid,
-    .subjects-grid,
-    .teachers-grid,
-    .students-table-container {
-        padding: 0;
-    }
-
-    .card {
-        padding: 15px;
-        margin-bottom: 12px;
-    }
-
-    .card h3 {
-        font-size: 16px;
-        margin-bottom: 8px;
-    }
-
-    .card p {
-        font-size: 13px;
-        line-height: 1.4;
+        gap: 10px;
     }
 
     .fixed-exit-btn {
         bottom: 20px;
-        right: 20px;
-        padding: 12px 16px;
-        font-size: 13px;
-        gap: 6px;
     }
-
-    .fixed-exit-btn i {
-        font-size: 14px;
-    }
-}
-
-/* Delete button styling */
-.btn-delete {
-    background: #ff4757 !important;
-    color: white !important;
-    border: none !important;
-    padding: 5px 10px !important;
-    border-radius: 4px !important;
-    cursor: pointer !important;
-    font-size: 12px !important;
-    transition: background 0.3s ease !important;
-}
-
-.btn-delete:hover {
-    background: #ff3838 !important;
-}
-
-.btn-delete i {
-    margin-right: 4px;
 }

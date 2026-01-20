@@ -3,64 +3,87 @@
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('School Page: DOMContentLoaded - Starting initialization process.');
     
-    // Track if we've already initialized to prevent duplicate calls
+    // Track initialization state
     let pageInitialized = false;
     let schoolDataLoaded = false;
     let listenersSetup = false;
-    // Ensure UI is interactive immediately, even before data loads
-    setupEventListeners();
+    
+    // Performance optimization: Debounce function
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
     
     // Single source of truth for page loading state
     const pageLoadingState = {
         isShowing: false,
+        currentMessage: ''
     };
     
     // Show loading with specific ID for school page
     function showPageLoading(message = 'Loading school portal...') {
-        // Always update the loading message if possible
         if (typeof showLoading === 'function') {
             showLoading(message);
             pageLoadingState.isShowing = true;
+            pageLoadingState.currentMessage = message;
         }
     }
     
     // Hide loading for school page
     function hidePageLoading() {
-        // Always try to hide
         if (typeof hideLoading === 'function') {
             hideLoading();
         }
         pageLoadingState.isShowing = false;
+        pageLoadingState.currentMessage = '';
     }
     
-    // Show loading immediately as the page starts to initialize
-    // showPageLoading('Preparing school portal...');
+    // Show toast notification wrapper
+    function showToast(message, type = 'info', duration = 3000) {
+        if (typeof window.showToast === 'function') {
+            window.showToast(message, type, duration);
+        } else {
+            console.log(`${type.toUpperCase()}: ${message}`);
+        }
+    }
     
-    // Listen for the app to be initialized, which means AppState is ready
+    // Helper function to get initials from name
+    function getInitials(name) {
+        if (!name) return '??';
+        return name.split(' ')
+            .map(word => word.charAt(0).toUpperCase())
+            .join('')
+            .substring(0, 2);
+    }
+    
+    // Listen for the app to be initialized
     document.addEventListener('app:initialized', async () => {
         console.log('School Page: app:initialized event received.');
         
-        // Prevent duplicate initialization
         if (pageInitialized) {
             console.log('School Page: Already initialized, skipping.');
             return;
         }
         
-        // Now AppState should be populated
         if (window.AppState && window.AppState.currentSchool) {
-            console.log('School Page: app:initialized - AppState.currentSchool is available. Calling initializeAndLoad().');
+            console.log('School Page: app:initialized - AppState.currentSchool is available.');
             pageInitialized = true;
             await initializeAndLoad();
         } else {
-            // If app is initialized but no currentSchool, it means user likely has no schools
-            console.warn('School Page: app:initialized - AppState.currentSchool is NOT available. Hiding loading.');
+            console.warn('School Page: app:initialized - AppState.currentSchool is NOT available.');
             hidePageLoading();
-            if (typeof showToast === 'function') showToast('No school assigned or loaded. Please contact support.', 'warning');
-            // Optionally redirect or show setup UI
+            showToast('No school assigned or loaded. Please contact support.', 'warning');
         }
     });
     
-    // Also listen for school changes in case it's set later or changed
+    // Listen for school changes
     document.addEventListener('school:changed', async () => {
         console.log('School Page: school:changed event received.');
         if (pageInitialized && !schoolDataLoaded) {
@@ -69,26 +92,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
     
-    document.addEventListener('academic-level:changed', (e) => {
+    // Listen for academic level changes
+    document.addEventListener('academic-level:changed', debounce(async (e) => {
         console.log(`School Page: academic-level:changed event received. Loading data for level: ${e.detail.level}.`);
         if (pageInitialized && schoolDataLoaded) {
-            loadDataForLevel(e.detail.level);
+            await loadDataForLevel(e.detail.level);
         }
-    });
+    }, 300));
     
-    // If app was already initialized (e.g., navigating back to page without full reload)
+    // If app was already initialized
     if (window.appInitialized) {
         console.log('School Page: DOMContentLoaded - window.appInitialized is true.');
         if (window.AppState && window.AppState.currentSchool) {
-            console.log('School Page: DOMContentLoaded - AppState.currentSchool available (app already initialized).');
+            console.log('School Page: DOMContentLoaded - AppState.currentSchool available.');
             if (!pageInitialized) {
                 pageInitialized = true;
                 await initializeAndLoad();
             }
         } else {
-            console.warn('School Page: DOMContentLoaded - App already initialized but no current school found for user.');
+            console.warn('School Page: DOMContentLoaded - App already initialized but no current school found.');
             hidePageLoading();
-            if (typeof showToast === 'function') showToast('No school assigned or loaded. Please contact support.', 'warning');
+            showToast('No school assigned or loaded. Please contact support.', 'warning');
         }
     } else {
         console.log('School Page: DOMContentLoaded - window.appInitialized is false. Waiting for app:initialized event.');
@@ -100,10 +124,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.warn('School Page: Safety timeout - hiding loading indicator.');
             hidePageLoading();
             if (!pageInitialized) {
-                if (typeof showToast === 'function') showToast('Page initialization taking longer than expected.', 'warning');
+                showToast('Page initialization taking longer than expected.', 'warning');
             }
         }
-    }, 10000); // 10 second safety timeout
+    }, 10000);
 
     /**
      * Main function to set up the page once school data is available.
@@ -111,11 +135,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function initializeAndLoad() {
         console.log('School Page: initializeAndLoad() - Starting initialization...');
         
-        // Ensure loading is showing during initialization
         showPageLoading('Loading school data...');
         
         try {
-            // Setup listeners first to ensure interactivity even if rendering has partial issues
             setupEventListeners();
             await initializePage();
             await loadInitialData();
@@ -128,9 +150,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             
         } catch (error) {
             console.error("School Page: initializeAndLoad() - Error during school page initialization:", error);
-            if (typeof showToast === 'function') showToast("Failed to initialize school portal. Please refresh the page.", "error");
+            showToast("Failed to initialize school portal. Please refresh the page.", "error");
         } finally {
-            // Always hide loading when done
             hidePageLoading();
             console.log('School Page: initializeAndLoad() - Hiding loading indicator.');
         }
@@ -152,25 +173,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (titleEl) {
             titleEl.textContent = `${school.name} Portal`;
             
-            // Inject Exit Portal button
-            if (!document.getElementById('exitPortalBtn')) {
+            // Create or update Exit Portal button
+            let exitBtn = document.getElementById('exitPortalBtn');
+            if (!exitBtn) {
                 const headerContainer = titleEl.parentElement;
                 if (headerContainer) {
-                    // Ensure container is flex for proper alignment
-                    headerContainer.style.display = 'flex';
-                    headerContainer.style.justifyContent = 'space-between';
-                    headerContainer.style.alignItems = 'center';
-                    headerContainer.style.flexWrap = 'wrap';
-                    
-                    const exitBtn = document.createElement('button');
+                    exitBtn = document.createElement('button');
                     exitBtn.id = 'exitPortalBtn';
                     exitBtn.className = 'btn btn-secondary btn-sm';
                     exitBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Exit Portal';
                     exitBtn.style.marginLeft = 'auto';
+                    exitBtn.style.flexShrink = '0';
                     exitBtn.addEventListener('click', () => {
-                        window.navigateTo('dashboard');
+                        if (typeof window.navigateTo === 'function') {
+                            window.navigateTo('dashboard');
+                        }
                     });
                     
+                    headerContainer.style.display = 'flex';
+                    headerContainer.style.justifyContent = 'space-between';
+                    headerContainer.style.alignItems = 'center';
+                    headerContainer.style.flexWrap = 'wrap';
                     headerContainer.appendChild(exitBtn);
                 }
             }
@@ -179,9 +202,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const codeEl = document.getElementById('currentSchoolCode');
         if (codeEl) codeEl.textContent = school.code || 'N/A';
         
-        // Update school level badge
-        const levelBadge = document.getElementById('schoolLevelBadge');
-        if (levelBadge) {
+        // Create school level badge if not exists
+        let levelBadge = document.getElementById('schoolLevelBadge');
+        if (!levelBadge) {
+            const schoolInfoBadge = document.querySelector('.school-info-badge');
+            if (schoolInfoBadge) {
+                levelBadge = document.createElement('span');
+                levelBadge.id = 'schoolLevelBadge';
+                levelBadge.className = `school-level-badge ${school.level}`;
+                levelBadge.textContent = school.level === 'primary' ? 'Primary School' : 'Secondary School';
+                schoolInfoBadge.insertBefore(levelBadge, codeEl);
+            }
+        } else {
             levelBadge.textContent = school.level === 'primary' ? 'Primary School' : 'Secondary School';
             levelBadge.className = `school-level-badge ${school.level}`;
         }
@@ -193,34 +225,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             settingsBtn.style.display = isAdmin ? 'inline-flex' : 'none';
         }
         
-        // Inject Reports Tab into the tabs bar
-        const firstTab = document.querySelector('.content-tab');
-        if (firstTab && firstTab.parentElement && !document.getElementById('reportsTabBtn')) {
-            console.log('School Page: Injecting Report Cards tab');
-            const reportsTab = document.createElement('button');
-            reportsTab.className = 'content-tab';
-            reportsTab.id = 'reportsTabBtn';
-            reportsTab.innerHTML = '<i class="fas fa-chart-bar"></i> Report Cards';
-            reportsTab.addEventListener('click', (e) => {
-                e.stopImmediatePropagation();
-                window.navigateTo('reports');
-            });
-            firstTab.parentElement.appendChild(reportsTab);
-            
-            // Resize tabs to fit
-            const tabsContainer = firstTab.parentElement;
-            tabsContainer.style.display = 'flex';
-            tabsContainer.style.overflowX = 'auto';
-            
-            const allTabs = tabsContainer.querySelectorAll('.content-tab');
-            allTabs.forEach(tab => {
-                tab.style.padding = '10px 4px';
-                tab.style.fontSize = '0.85rem';
-                tab.style.flex = '1';
-                tab.style.minWidth = 'auto';
-                tab.style.whiteSpace = 'nowrap';
-            });
-        }
+
         
         // Initialize level navigation
         await initializeLevelNavigation();
@@ -237,33 +242,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (!school || !levelNav) return;
         
+        let levels = [];
         if (school.level === 'primary') {
-            levelNav.innerHTML = `
-                <button class="level-nav-btn ${AppState.currentAcademicLevel === 'lower-primary' ? 'active' : ''}" 
-                        data-level="lower-primary">
-                    Lower Primary (P1-P3)
-                </button>
-                <button class="level-nav-btn ${AppState.currentAcademicLevel === 'upper-primary' ? 'active' : ''}" 
-                        data-level="upper-primary">
-                    Upper Primary (P4-P7)
-                </button>
-            `;
+            levels = [
+                { value: 'lower-primary', label: 'Lower Primary (P1-P3)' },
+                { value: 'upper-primary', label: 'Upper Primary (P4-P7)' }
+            ];
         } else {
-            levelNav.innerHTML = `
-                <button class="level-nav-btn ${AppState.currentAcademicLevel === 'olevel' ? 'active' : ''}" 
-                        data-level="olevel">
-                    O-Level (S1-S4)
-                </button>
-                <button class="level-nav-btn ${AppState.currentAcademicLevel === 'alevel' ? 'active' : ''}" 
-                        data-level="alevel">
-                    A-Level (S5-S6)
-                </button>
-            `;
+            levels = [
+                { value: 'olevel', label: 'O-Level (S1-S4)' },
+                { value: 'alevel', label: 'A-Level (S5-S6)' }
+            ];
         }
+        
+        levelNav.innerHTML = levels.map(level => `
+            <button class="level-nav-btn ${AppState.currentAcademicLevel === level.value ? 'active' : ''}" 
+                    data-level="${level.value}">
+                ${level.label}
+            </button>
+        `).join('');
         
         // Set default academic level if not set
         if (!AppState.currentAcademicLevel) {
-            const defaultLevel = school.level === 'primary' ? 'lower-primary' : 'olevel';
+            const defaultLevel = levels[0].value;
             AppState.currentAcademicLevel = defaultLevel;
             
             // Update UI to show active level
@@ -287,15 +288,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.body.addEventListener('click', async (e) => {
             const target = e.target;
             
-            // Handle Content Tabs (safe checks)
-            const tab = target.closest('.content-tab');
+            // Handle Content Tabs (Desktop & Mobile)
+            const tab = target.closest('.content-tab, .mobile-tab');
             if (tab) {
-                console.log('School Page: Tab clicked:', tab.dataset.section);
-                // If it's the injected reports tab, let its own listener handle navigation
-                if (tab.id === 'reportsTabBtn') return;
                 const section = tab.dataset.section;
                 if (section) {
-                    console.log('School Page: Switching to section:', section);
+                    console.log(`School Page: Tab clicked (section: ${section})`);
                     switchTab(section);
                 }
                 return;
@@ -308,7 +306,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.querySelectorAll('.level-nav-btn').forEach(b => b.classList.remove('active'));
                 levelBtn.classList.add('active');
                 AppState.currentAcademicLevel = level;
-                loadDataForLevel(level);
+                await loadDataForLevel(level);
                 document.dispatchEvent(new CustomEvent('academic-level:changed', { detail: { level } }));
                 return;
             }
@@ -338,7 +336,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     break;
                 case 'refreshSchoolData':
                     e.preventDefault();
-                    if (typeof showToast === 'function') showToast('Refreshing school data...', 'info');
+                    showToast('Refreshing school data...', 'info');
                     await loadInitialData();
                     break;
                 case 'switchLevelBtn':
@@ -346,36 +344,33 @@ document.addEventListener('DOMContentLoaded', async () => {
                     try {
                         const selectedLevel = await showLevelSelection(AppState.currentSchool && AppState.currentSchool.level);
                         if (selectedLevel) {
-                            setAcademicLevel(selectedLevel);
-                            loadDataForLevel(selectedLevel);
+                            AppState.currentAcademicLevel = selectedLevel;
+                            await loadDataForLevel(selectedLevel);
                         }
                     } catch (error) {
                         console.error('Error switching level:', error);
-                        if (typeof showToast === 'function') showToast('Failed to switch level', 'error');
+                        showToast('Failed to switch level', 'error');
                     }
                     break;
                 case 'settingsTabBtn':
                     e.preventDefault();
                     switchTab('settings');
                     break;
+                case 'exitSchoolBtn':
+                    e.preventDefault();
+                    showToast('Exiting school portal...', 'info');
+                    if (typeof window.navigateTo === 'function') {
+                        window.navigateTo('dashboard');
+                    }
+                    break;
             }
         });
-        listenersSetup = true;
-        console.log('School Page: setupEventListeners() - Event listeners set up via delegation.');
-        
-        // Setup exit button
-        const exitBtn = document.getElementById('exitSchoolBtn');
-        if (exitBtn) {
-            exitBtn.addEventListener('click', () => {
-                if (typeof showToast === 'function') showToast('Exiting school portal...', 'info');
-                if (typeof window.navigateTo === 'function') {
-                    window.navigateTo('dashboard');
-                }
-            });
-        }
         
         // Setup Excel file upload handler for students
         setupExcelUpload();
+        
+        listenersSetup = true;
+        console.log('School Page: setupEventListeners() - Event listeners set up via delegation.');
     }
     
     /**
@@ -432,69 +427,68 @@ document.addEventListener('DOMContentLoaded', async () => {
         showPageLoading('Processing Excel file...');
         
         try {
-            // Read the Excel file
             const reader = new FileReader();
             reader.onload = async (e) => {
-                // Get the binary data
-                const data = new Uint8Array(e.target.result);
-                
-                const students = parseExcelData(data);
-                
-                if (students.length === 0) {
-                    showToast('No students found in the Excel file or the file is empty.', 'warning');
-                    hidePageLoading();
-                    return;
-                }
-                
-                // Get selected class
-                const classFilter = document.getElementById('classFilter');
-                const selectedClassId = classFilter ? classFilter.value : '';
-                
-                if (!selectedClassId) {
-                    showToast('Please select a class before importing students.', 'warning');
-                    hidePageLoading();
-                    return;
-                }
-                
-                // Find the class name
-                const constraints = [
-                    { field: 'id', op: '==', value: selectedClassId }
-                ];
-                const classData = await Firebase.db.query('classes', constraints);
-                const className = classData.length > 0 ? classData[0].name : 'Unknown Class';
-                
-                // Add each student to Firebase
-                let addedCount = 0;
-                let errorCount = 0;
-                for (const student of students) {
-                    try {
-                        await Firebase.db.addDoc('students', {
-                            name: student.name,
-                            classId: selectedClassId,
-                            schoolId: AppState.currentSchool.id,
-                            category: AppState.currentAcademicLevel
-                        });
-                        addedCount++;
-                    } catch (error) {
-                        console.error('Error adding student:', error);
-                        errorCount++;
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const students = parseExcelData(data);
+                    
+                    if (students.length === 0) {
+                        showToast('No students found in the Excel file or the file is empty.', 'warning');
+                        return;
                     }
+                    
+                    // Get selected class
+                    const classFilter = document.getElementById('classFilter');
+                    const selectedClassId = classFilter ? classFilter.value : '';
+                    
+                    if (!selectedClassId) {
+                        showToast('Please select a class before importing students.', 'warning');
+                        return;
+                    }
+                    
+                    // Find the class name
+                    const classDoc = await Firebase.db.getDoc('classes', selectedClassId);
+                    const className = classDoc.exists() ? classDoc.data().name : 'Unknown Class';
+                    
+                    // Add each student to Firebase
+                    let addedCount = 0;
+                    let errorCount = 0;
+                    
+                    for (const student of students) {
+                        try {
+                            await Firebase.db.addDoc('students', {
+                                name: student.name,
+                                classId: selectedClassId,
+                                schoolId: AppState.currentSchool.id,
+                                category: AppState.currentAcademicLevel,
+                                createdAt: new Date().toISOString()
+                            });
+                            addedCount++;
+                        } catch (error) {
+                            console.error('Error adding student:', error);
+                            errorCount++;
+                        }
+                    }
+                    
+                    if (addedCount > 0) {
+                        showToast(`Successfully imported ${addedCount} students to ${className}.`, 'success');
+                    }
+                    if (errorCount > 0) {
+                        showToast(`${errorCount} students could not be imported due to an error.`, 'error');
+                    }
+                    
+                    // Refresh students list
+                    await loadStudents(AppState.currentAcademicLevel);
+                    
+                    // Clear file input
+                    event.target.value = '';
+                } catch (error) {
+                    console.error('Error processing Excel file:', error);
+                    showToast('An error occurred while processing the student file.', 'error');
+                } finally {
+                    hidePageLoading();
                 }
-                
-                if (addedCount > 0) {
-                    showToast(`Successfully imported ${addedCount} students to ${className}.`, 'success');
-                }
-                if (errorCount > 0) {
-                    showToast(`${errorCount} students could not be imported due to an error.`, 'error');
-                }
-                
-                // Refresh students list
-                await loadStudents(AppState.currentAcademicLevel);
-                
-                // Clear file input
-                event.target.value = '';
-                
-                hidePageLoading();
             };
             
             reader.readAsArrayBuffer(file);
@@ -508,16 +502,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     /**
      * Parse Excel data using SheetJS library
-     * Expected column: Name (only one column needed, others are ignored)
-     * The function will focus on the Name column and ignore Gender or other columns
      */
     function parseExcelData(data) {
         try {
             if (typeof XLSX === 'undefined') {
                 console.error('SheetJS library not loaded');
-                if (typeof showToast === 'function') {
-                    showToast('A required library for Excel parsing is missing.', 'error');
-                }
+                showToast('A required library for Excel parsing is missing.', 'error');
                 return [];
             }
             
@@ -525,25 +515,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             const sheetName = workbook.SheetNames[0];
             const sheet = workbook.Sheets[sheetName];
             
-            // Convert sheet to an array of arrays, ignoring headers.
-            // Each inner array represents a row.
+            // Convert sheet to JSON
             const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
             
-            if (rows.length === 0) {
+            if (rows.length <= 1) {
                 return [];
             }
             
-            // Treat every row as a potential student, taking the name from the first column.
-            const students = rows.map(row => ({
-                name: String(row[0] || '').trim()
-            })).filter(student => student.name.length > 0);
+            // Find the name column (assume first column is names)
+            const students = [];
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const name = String(row[0] || '').trim();
+                if (name && name.length > 0) {
+                    students.push({ name });
+                }
+            }
             
             return students;
         } catch (error) {
             console.error('Error parsing Excel file:', error);
-            if (typeof showToast === 'function') {
-                showToast('Could not read the Excel file. It might be corrupted or in an unsupported format.', 'error');
-            }
+            showToast('Could not read the Excel file. It might be corrupted or in an unsupported format.', 'error');
             return [];
         }
     }
@@ -553,8 +545,9 @@ document.addEventListener('DOMContentLoaded', async () => {
      */
     function switchTab(section) {
         console.log(`School Page: switchTab() called with section: ${section}`);
-        // Update tab buttons
-        document.querySelectorAll('.content-tab').forEach(tab => {
+        
+        // Update tab buttons for both desktop and mobile
+        document.querySelectorAll('.content-tab, .mobile-tab').forEach(tab => {
             tab.classList.toggle('active', tab.dataset.section === section);
         });
         
@@ -565,17 +558,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             sectionEl.classList.toggle('active', isActive);
             if (isActive) {
                 console.log(`School Page: Showing section: ${sectionId}`);
+                
+                // Load specific data when switching to certain tabs
+                if (section === 'classes' && schoolDataLoaded) {
+                    loadClasses(AppState.currentAcademicLevel);
+                } else if (section === 'students' && schoolDataLoaded) {
+                    loadStudents(AppState.currentAcademicLevel);
+                } else if (section === 'subjects' && schoolDataLoaded) {
+                    loadSubjects(AppState.currentAcademicLevel);
+                } else if (section === 'teachers' && schoolDataLoaded) {
+                    loadTeachers();
+                }
             }
         });
-        
-        // Show level selection modal when switching to Classes or Students tab
-        if (section === 'classes') {
-            console.log('School Page: Classes tab clicked - showing level selection modal');
-            showLevelSelectionForClasses();
-        } else if (section === 'students') {
-            console.log('School Page: Students tab clicked - showing level selection modal');
-            showLevelSelectionForStudents();
-        }
     }
     
     /**
@@ -602,11 +597,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (!level || !AppState.currentSchool) return;
         
-        // Show loading for data fetch
         showPageLoading(`Loading ${level.replace('-', ' ')} data...`);
         
         try {
-            // Load classes, students, subjects, teachers for this level
             await Promise.all([
                 loadClasses(level),
                 loadStudents(level),
@@ -618,7 +611,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
         } catch (error) {
             console.error(`School Page: loadDataForLevel() - Error loading data for level ${level}:`, error);
-            if (typeof showToast === 'function') showToast(`Failed to load data for ${level}`, 'error');
+            showToast(`Failed to load data for ${level}`, 'error');
         } finally {
             hidePageLoading();
         }
@@ -630,8 +623,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function loadClasses(level) {
         console.log(`Loading classes for level: ${level}`);
         
+        const classesList = document.getElementById('classesGrid');
+        const emptyState = document.getElementById('classesEmpty');
+        
+        if (classesList) {
+            classesList.innerHTML = '<div class="loading-spinner"></div>';
+        }
+        
         try {
-            // Query classes for this school and level category
             const constraints = [
                 { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
                 { field: 'category', op: '==', value: level }
@@ -641,8 +640,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderClasses(classes);
         } catch (error) {
             console.error('Error loading classes:', error);
-            const classesList = document.getElementById('classesGrid') || document.getElementById('classesList');
-            if (classesList) classesList.innerHTML = '<p class="error-message">Failed to load classes.</p>';
+            if (classesList) {
+                classesList.innerHTML = '<p class="error-message">Failed to load classes.</p>';
+            }
+            if (emptyState) {
+                emptyState.style.display = 'flex';
+            }
         }
     }
 
@@ -650,7 +653,7 @@ document.addEventListener('DOMContentLoaded', async () => {
      * Render classes list
      */
     function renderClasses(classes) {
-        const classesList = document.getElementById('classesGrid') || document.getElementById('classesList');
+        const classesList = document.getElementById('classesGrid');
         const emptyState = document.getElementById('classesEmpty');
         
         if (!classesList) return; 
@@ -666,15 +669,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (emptyState) emptyState.style.display = 'none';
         
         classesList.innerHTML = classes.map(cls => `
-            <div class="class-card" data-id="${cls.id}" style="cursor: pointer; position: relative;">
+            <div class="class-card" data-id="${cls.id}">
                 <div style="flex: 1;">
-                    <h3>${cls.name}</h3>
-                    <p>${cls.studentsCount || 0} Students</p>
-                    <div class="card-actions" style="margin-top: 10px;">
-                        <span style="color: var(--primary); font-size: 0.9rem;">View Details <i class="fas fa-arrow-right"></i></span>
+                    <h3 class="class-name">${cls.name}</h3>
+                    <p style="color: var(--gray-light); font-size: 0.9rem; margin: 5px 0;">${cls.studentsCount || 0} Students</p>
+                    <span class="class-category">${cls.category || cls.level || 'General'}</span>
+                    <div class="card-actions" style="margin-top: 15px;">
+                        <span style="color: var(--primary); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+                            View Details <i class="fas fa-arrow-right"></i>
+                        </span>
                     </div>
                 </div>
-                <button class="btn-delete" data-class-id="${cls.id}" style="position: absolute; top: 10px; right: 10px; background: #ff4757; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                <button class="btn-delete" data-class-id="${cls.id}">
                     <i class="fas fa-trash"></i> Delete
                 </button>
             </div>
@@ -685,7 +691,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             card.addEventListener('click', (e) => {
                 if (e.target.closest('.btn-delete')) return;
                 const className = card.querySelector('h3').textContent;
-                if (typeof showToast === 'function') showToast(`Opening class: ${className}`, 'info');
+                showToast(`Opening class: ${className}`, 'info');
+                // TODO: Navigate to class details page
             });
         });
         
@@ -724,11 +731,13 @@ document.addEventListener('DOMContentLoaded', async () => {
      */
     async function loadStudents(level) {
         console.log(`Loading students for level: ${level}`);
-        const studentsList = document.querySelector('#studentsTable tbody') || document.getElementById('studentsList');
-        if (studentsList) studentsList.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;"><div class="loading-spinner"></div></td></tr>'; 
+        const studentsList = document.querySelector('#studentsTable tbody');
+        
+        if (studentsList) {
+            studentsList.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;"><div class="loading-spinner"></div></td></tr>';
+        }
         
         try {
-            // Query students for this school and level category
             const constraints = [
                 { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
                 { field: 'category', op: '==', value: level }
@@ -736,7 +745,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const students = await Firebase.db.query('students', constraints);
             
-            // Fetch classes to create a lookup
+            // Fetch classes for lookup
             const classConstraints = [
                 { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
                 { field: 'category', op: '==', value: level }
@@ -748,9 +757,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             
             renderStudents(students, classMap);
+            
+            // Update class filter dropdown
+            const classFilter = document.getElementById('classFilter');
+            if (classFilter) {
+                classFilter.innerHTML = '<option value="">All Classes</option>';
+                classes.forEach(cls => {
+                    const option = document.createElement('option');
+                    option.value = cls.id;
+                    option.textContent = cls.name;
+                    classFilter.appendChild(option);
+                });
+                
+                // Add event listener for filtering
+                classFilter.addEventListener('change', debounce(async (e) => {
+                    const selectedClassId = e.target.value;
+                    if (!selectedClassId) {
+                        await loadStudents(level);
+                    } else {
+                        const filteredStudents = students.filter(student => student.classId === selectedClassId);
+                        renderStudents(filteredStudents, classMap);
+                    }
+                }, 300));
+            }
+            
         } catch (error) {
             console.error('Error loading students:', error);
-            if (studentsList) studentsList.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;"><p class="error-message">Failed to load students.</p></td></tr>';
+            if (studentsList) {
+                studentsList.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;"><p class="error-message">Failed to load students.</p></td></tr>';
+            }
         }
     }
 
@@ -758,7 +793,7 @@ document.addEventListener('DOMContentLoaded', async () => {
      * Render students list
      */
     function renderStudents(students, classMap = {}) {
-        const studentsList = document.querySelector('#studentsTable tbody') || document.getElementById('studentsList');
+        const studentsList = document.querySelector('#studentsTable tbody');
         if (!studentsList) return; 
         
         if (!students || students.length === 0) {
@@ -770,9 +805,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             <tr data-student-id="${student.id}">
                 <td>${student.name}</td>
                 <td>${classMap[student.classId] || 'N/A'}</td>
-                <td>${student.category || 'N/A'}</td>
+                <td><span class="class-category" style="font-size: 0.8rem;">${student.category || 'N/A'}</span></td>
                 <td>
-                    <button class="btn-delete" data-student-id="${student.id}" style="background: #ff4757; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">
+                    <button class="btn-delete" data-student-id="${student.id}">
                         <i class="fas fa-trash"></i> Delete
                     </button>
                 </td>
@@ -815,6 +850,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function loadSubjects(level) {
         console.log(`Loading subjects for level: ${level}`);
         
+        const subjectsList = document.getElementById('subjectsGrid');
+        const emptyState = document.getElementById('subjectsEmpty');
+        
+        if (subjectsList) {
+            subjectsList.innerHTML = '<div class="loading-spinner"></div>';
+        }
+        
         try {
             const constraints = [
                 { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
@@ -824,13 +866,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderSubjects(subjects);
         } catch (error) {
             console.error('Error loading subjects:', error);
-            const subjectsList = document.getElementById('subjectsGrid') || document.getElementById('subjectsList');
-            if (subjectsList) subjectsList.innerHTML = '<p class="error-message">Failed to load subjects.</p>';
+            if (subjectsList) {
+                subjectsList.innerHTML = '<p class="error-message">Failed to load subjects.</p>';
+            }
+            if (emptyState) {
+                emptyState.style.display = 'flex';
+            }
         }
     }
 
     function renderSubjects(subjects) {
-        const subjectsList = document.getElementById('subjectsGrid') || document.getElementById('subjectsList');
+        const subjectsList = document.getElementById('subjectsGrid');
         const emptyState = document.getElementById('subjectsEmpty');
         
         if (!subjectsList) return; 
@@ -844,18 +890,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         if (emptyState) emptyState.style.display = 'none';
-        subjectsList.style.display = 'grid';
         
         subjectsList.innerHTML = subjects.map(subject => `
-            <div class="subject-card" data-subject-id="${subject.id}" style="position: relative;">
+            <div class="subject-card" data-subject-id="${subject.id}">
                 <div style="flex: 1;">
                     <div class="subject-icon"><i class="fas fa-book"></i></div>
                     <div class="subject-info">
-                        <h4>${subject.name}</h4>
-                        <p>${subject.code || ''}</p>
+                        <h4 class="subject-name">${subject.name}</h4>
+                        <p style="color: var(--gray-light); font-size: 0.85rem; margin: 0;">${subject.code || 'No code'}</p>
                     </div>
                 </div>
-                <button class="btn-delete" data-subject-id="${subject.id}" style="position: absolute; top: 10px; right: 10px; background: #ff4757; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                <button class="btn-delete" data-subject-id="${subject.id}">
                     <i class="fas fa-trash"></i> Delete
                 </button>
             </div>
@@ -896,11 +941,14 @@ document.addEventListener('DOMContentLoaded', async () => {
      */
     async function loadTeachers() {
         console.log('Loading teachers');
-        const teachersList = document.getElementById('teachersGrid') || document.getElementById('teachersList');
-        if (teachersList) teachersList.innerHTML = '<div class="loading-spinner"></div>'; 
+        const teachersList = document.getElementById('teachersGrid');
+        const emptyState = document.getElementById('teachersEmpty');
+        
+        if (teachersList) {
+            teachersList.innerHTML = '<div class="loading-spinner"></div>';
+        }
         
         try {
-            // Fetch users belonging to this school
             const constraints = [
                 { field: 'schoolId', op: '==', value: AppState.currentSchool.id }
             ];
@@ -908,33 +956,44 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderTeachers(users);
         } catch (error) {
             console.error('Error loading teachers:', error);
-            if (teachersList) teachersList.innerHTML = '<p class="error-message">Failed to load teachers.</p>';
+            if (teachersList) {
+                teachersList.innerHTML = '<p class="error-message">Failed to load teachers.</p>';
+            }
+            if (emptyState) {
+                emptyState.style.display = 'flex';
+            }
         }
     }
 
     function renderTeachers(teachers) {
-        const teachersList = document.getElementById('teachersGrid') || document.getElementById('teachersList');
+        const teachersList = document.getElementById('teachersGrid');
+        const emptyState = document.getElementById('teachersEmpty');
+        
         if (!teachersList) return; 
         
         if (!teachers || teachers.length === 0) {
-            teachersList.innerHTML = '<div class="empty-state"><p>No teachers found.</p></div>';
+            if (emptyState) {
+                emptyState.style.display = 'flex';
+                teachersList.innerHTML = '';
+            }
             return;
         }
+        
+        if (emptyState) emptyState.style.display = 'none';
         
         teachersList.innerHTML = teachers.map(teacher => `
             <div class="teacher-card">
                 <div class="teacher-avatar">
                     ${teacher.profileUrl 
-                        ? `<img src="${teacher.profileUrl}" alt="${teacher.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` 
+                        ? `<img src="${teacher.profileUrl}" alt="${teacher.name}" onerror="this.style.display='none'">` 
                         : ''}
                     <span style="${teacher.profileUrl ? 'display:none' : ''}">${getInitials(teacher.name)}</span>
                 </div>
                 <div class="teacher-info">
                     <h4>${teacher.name}</h4>
-                    <p>${teacher.email}</p>
+                    <p class="teacher-email">${teacher.email}</p>
                     <span class="role-badge ${teacher.role || 'teacher'}">${teacher.role || 'Teacher'}</span>
                 </div>
-                <button class="btn-icon"><i class="fas fa-ellipsis-v"></i></button>
             </div>
         `).join('');
     }
@@ -945,143 +1004,81 @@ document.addEventListener('DOMContentLoaded', async () => {
     function setupSchoolSettings() {
         console.log('School Page: setupSchoolSettings() - Setting up school settings...');
         
-        // School badge upload
         const badgeInput = document.getElementById('schoolBadgeInput');
         const uploadBtn = document.getElementById('uploadSchoolBadgeBtn');
         const badgePreview = document.getElementById('schoolBadgePreview');
+        const uploadStatus = document.getElementById('uploadBadgeStatus');
         
-        if (badgeInput && uploadBtn && badgePreview) {
-            // Update preview when file is selected
+        if (badgeInput && uploadBtn && badgePreview && uploadStatus) {
             badgeInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) {
+                    // Validate file type
+                    const validTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/jpg'];
+                    if (!validTypes.includes(file.type)) {
+                        uploadStatus.textContent = 'Please select a valid image file (PNG, JPEG, GIF).';
+                        uploadStatus.className = 'alert alert-error';
+                        uploadStatus.style.display = 'block';
+                        uploadBtn.disabled = true;
+                        return;
+                    }
+                    
+                    // Validate file size (max 5MB)
+                    if (file.size > 5 * 1024 * 1024) {
+                        uploadStatus.textContent = 'Image size should be less than 5MB.';
+                        uploadStatus.className = 'alert alert-error';
+                        uploadStatus.style.display = 'block';
+                        uploadBtn.disabled = true;
+                        return;
+                    }
+                    
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         badgePreview.src = event.target.result;
                         uploadBtn.disabled = false;
+                        uploadStatus.style.display = 'none';
                     };
                     reader.readAsDataURL(file);
                 }
             });
             
-            // Handle upload
             uploadBtn.addEventListener('click', async () => {
                 const file = badgeInput.files[0];
                 if (!file) return;
                 
-                // Implementation for uploading badge would go here
-                if (typeof showToast === 'function') showToast('Uploading school badge...', 'info');
+                showPageLoading('Uploading school badge...');
                 
-                // Simulate upload
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                if (typeof showToast === 'function') showToast('School badge uploaded successfully!', 'success');
-                uploadBtn.disabled = true;
-                badgeInput.value = '';
+                try {
+                    // TODO: Implement actual file upload to Firebase Storage
+                    // For now, simulate upload
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    
+                    uploadStatus.textContent = 'School badge uploaded successfully!';
+                    uploadStatus.className = 'alert alert-success';
+                    uploadStatus.style.display = 'block';
+                    showToast('School badge uploaded successfully!', 'success');
+                    
+                    uploadBtn.disabled = true;
+                    badgeInput.value = '';
+                    
+                    // Hide success message after 3 seconds
+                    setTimeout(() => {
+                        uploadStatus.style.display = 'none';
+                    }, 3000);
+                    
+                } catch (error) {
+                    console.error('Error uploading badge:', error);
+                    uploadStatus.textContent = 'Error uploading badge. Please try again.';
+                    uploadStatus.className = 'alert alert-error';
+                    uploadStatus.style.display = 'block';
+                    showToast('Error uploading badge', 'error');
+                } finally {
+                    hidePageLoading();
+                }
             });
         }
         
         console.log('School Page: setupSchoolSettings() - School settings set up.');
-    }
-
-    /**
-     * Show level selection modal when switching to Classes tab
-     */
-    function showLevelSelectionForClasses() {
-        const school = AppState.currentSchool;
-        
-        // Get available levels based on school type
-        let levels = [];
-        if (school.level === 'primary') {
-            levels = [
-                { value: 'lower-primary', label: 'Lower Primary (P1-P3)' },
-                { value: 'upper-primary', label: 'Upper Primary (P4-P7)' }
-            ];
-        } else {
-            levels = [
-                { value: 'olevel', label: 'O-Level (S1-S4)' },
-                { value: 'alevel', label: 'A-Level (S5-S6)' }
-            ];
-        }
-        
-        // Show level selection modal
-        ui.form([
-            { name: 'level', label: 'Select Level', type: 'select', options: levels, required: true, value: AppState.currentAcademicLevel }
-        ], 'Select Academic Level', 'Continue', async (levelData) => {
-            const selectedLevel = levelData.level;
-            AppState.currentAcademicLevel = selectedLevel;
-            
-            // Update active level button
-            document.querySelectorAll('.level-nav-btn').forEach(b => {
-                b.classList.toggle('active', b.dataset.level === selectedLevel);
-            });
-            
-            // Load classes for selected level
-            await loadClasses(selectedLevel);
-            return true;
-        });
-    }
-
-    /**
-     * Show level selection modal when switching to Students tab
-     */
-    function showLevelSelectionForStudents() {
-        const school = AppState.currentSchool;
-        
-        // Get available levels based on school type
-        let levels = [];
-        if (school.level === 'primary') {
-            levels = [
-                { value: 'lower-primary', label: 'Lower Primary (P1-P3)' },
-                { value: 'upper-primary', label: 'Upper Primary (P4-P7)' }
-            ];
-        } else {
-            levels = [
-                { value: 'olevel', label: 'O-Level (S1-S4)' },
-                { value: 'alevel', label: 'A-Level (S5-S6)' }
-            ];
-        }
-        
-        // Show level selection modal
-        ui.form([
-            { name: 'level', label: 'Select Level', type: 'select', options: levels, required: true, value: AppState.currentAcademicLevel }
-        ], 'Select Academic Level', 'Continue', async (levelData) => {
-            const selectedLevel = levelData.level;
-            AppState.currentAcademicLevel = selectedLevel;
-            
-            // Update active level button
-            document.querySelectorAll('.level-nav-btn').forEach(b => {
-                b.classList.toggle('active', b.dataset.level === selectedLevel);
-            });
-            
-            // Load students and classes for selected level
-            await Promise.all([
-                loadStudents(selectedLevel),
-                loadClasses(selectedLevel)
-            ]);
-            
-            // Populate the class filter dropdown with all classes
-            const classFilter = document.getElementById('classFilter');
-            if (classFilter) {
-                const constraints = [
-                    { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-                    { field: 'category', op: '==', value: selectedLevel }
-                ];
-                try {
-                    const classes = await Firebase.db.query('classes', constraints);
-                    classFilter.innerHTML = '<option value="">All Classes</option>';
-                    classes.forEach(cls => {
-                        const option = document.createElement('option');
-                        option.value = cls.id;
-                        option.textContent = cls.name;
-                        classFilter.appendChild(option);
-                    });
-                } catch (error) {
-                    console.error('Error loading classes for filter:', error);
-                }
-            }
-            
-            return true;
-        });
     }
 
     /**
@@ -1090,13 +1087,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     function showAddClassModal() {
         const currentLevel = AppState.currentAcademicLevel;
         
+        if (typeof ui === 'undefined' || typeof ui.form !== 'function') {
+            showToast('UI components not loaded. Please refresh the page.', 'error');
+            return;
+        }
+        
         ui.form([
-            { name: 'name', label: 'Class Name', type: 'text', placeholder: 'e.g. P1, S1', required: true },
-            { name: 'stream', label: 'Stream (Optional)', type: 'text', placeholder: 'e.g. Blue, North' }
+            { 
+                name: 'name', 
+                label: 'Class Name', 
+                type: 'text', 
+                placeholder: 'e.g. P1, S1', 
+                required: true 
+            },
+            { 
+                name: 'stream', 
+                label: 'Stream (Optional)', 
+                type: 'text', 
+                placeholder: 'e.g. Blue, North' 
+            }
         ], 'Add New Class', 'Create Class', async (formData) => {
             showPageLoading('Creating class...');
             try {
-                // Create class name with stream if provided
                 const fullName = formData.stream ? `${formData.name} ${formData.stream}` : formData.name;
                 
                 await Firebase.db.addDoc('classes', {
@@ -1105,11 +1117,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     schoolId: AppState.currentSchool.id,
                     level: AppState.currentSchool.level,
                     category: currentLevel,
-                    studentsCount: 0
+                    studentsCount: 0,
+                    createdAt: new Date().toISOString()
                 });
                 
                 showToast('Class created successfully', 'success');
-                loadClasses(currentLevel);
+                await loadClasses(currentLevel);
                 return true;
             } catch(e) {
                 console.error(e);
@@ -1127,45 +1140,80 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function showAddStudentModal() {
         const currentLevel = AppState.currentAcademicLevel;
         
-        // Fetch classes for dropdown
-        const constraints = [
-            { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-            { field: 'category', op: '==', value: currentLevel }
-        ];
-        const classes = await Firebase.db.query('classes', constraints);
-        
-        if (classes.length === 0) {
-            showToast('Please create a class first', 'warning');
+        if (typeof ui === 'undefined' || typeof ui.form !== 'function') {
+            showToast('UI components not loaded. Please refresh the page.', 'error');
             return;
         }
         
-        const classOptions = classes.map(c => ({ value: c.id, label: c.name }));
-        
-        ui.form([
-            { name: 'name', label: 'Student Name', type: 'text', required: true },
-            { name: 'gender', label: 'Gender', type: 'select', options: [{value:'Male', label:'Male'}, {value:'Female', label:'Female'}], required: true },
-            { name: 'classId', label: 'Class', type: 'select', options: classOptions, required: true }
-        ], 'Add New Student', 'Add Student', async (formData) => {
-             showPageLoading('Adding student...');
-             try {
-                 await Firebase.db.addDoc('students', {
-                     name: formData.name,
-                     gender: formData.gender,
-                     classId: formData.classId,
-                     schoolId: AppState.currentSchool.id,
-                     category: currentLevel
-                 });
-                 showToast('Student added successfully', 'success');
-                 loadStudents(currentLevel);
-                 return true;
-             } catch(e) {
-                 console.error(e);
-                 showToast('Error adding student', 'error');
-                 throw e;
-             } finally {
-                 hidePageLoading();
-             }
-        });
+        // Fetch classes for dropdown
+        showPageLoading('Loading classes...');
+        try {
+            const constraints = [
+                { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
+                { field: 'category', op: '==', value: currentLevel }
+            ];
+            const classes = await Firebase.db.query('classes', constraints);
+            hidePageLoading();
+            
+            if (classes.length === 0) {
+                showToast('Please create a class first', 'warning');
+                return;
+            }
+            
+            const classOptions = classes.map(c => ({ value: c.id, label: c.name }));
+            
+            ui.form([
+                { 
+                    name: 'name', 
+                    label: 'Student Name', 
+                    type: 'text', 
+                    required: true 
+                },
+                { 
+                    name: 'gender', 
+                    label: 'Gender', 
+                    type: 'select', 
+                    options: [
+                        {value:'Male', label:'Male'}, 
+                        {value:'Female', label:'Female'},
+                        {value:'Other', label:'Other'}
+                    ], 
+                    required: true 
+                },
+                { 
+                    name: 'classId', 
+                    label: 'Class', 
+                    type: 'select', 
+                    options: classOptions, 
+                    required: true 
+                }
+            ], 'Add New Student', 'Add Student', async (formData) => {
+                showPageLoading('Adding student...');
+                try {
+                    await Firebase.db.addDoc('students', {
+                        name: formData.name,
+                        gender: formData.gender,
+                        classId: formData.classId,
+                        schoolId: AppState.currentSchool.id,
+                        category: currentLevel,
+                        createdAt: new Date().toISOString()
+                    });
+                    showToast('Student added successfully', 'success');
+                    await loadStudents(currentLevel);
+                    return true;
+                } catch(e) {
+                    console.error(e);
+                    showToast('Error adding student', 'error');
+                    throw e;
+                } finally {
+                    hidePageLoading();
+                }
+            });
+        } catch (error) {
+            hidePageLoading();
+            console.error('Error loading classes for student modal:', error);
+            showToast('Error loading classes. Please try again.', 'error');
+        }
     }
 
     /**
@@ -1173,9 +1221,25 @@ document.addEventListener('DOMContentLoaded', async () => {
      */
     function showAddSubjectModal() {
         const currentLevel = AppState.currentAcademicLevel;
+        
+        if (typeof ui === 'undefined' || typeof ui.form !== 'function') {
+            showToast('UI components not loaded. Please refresh the page.', 'error');
+            return;
+        }
+        
         ui.form([
-            { name: 'name', label: 'Subject Name', type: 'text', required: true },
-            { name: 'code', label: 'Subject Code (Optional)', type: 'text' }
+            { 
+                name: 'name', 
+                label: 'Subject Name', 
+                type: 'text', 
+                required: true 
+            },
+            { 
+                name: 'code', 
+                label: 'Subject Code (Optional)', 
+                type: 'text',
+                placeholder: 'e.g. MAT, ENG, SCI'
+            }
         ], 'Add New Subject', 'Add Subject', async (formData) => {
             showPageLoading('Adding subject...');
             try {
@@ -1184,10 +1248,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     code: formData.code || '',
                     schoolId: AppState.currentSchool.id,
                     level: AppState.currentSchool.level,
-                    category: currentLevel
+                    category: currentLevel,
+                    createdAt: new Date().toISOString()
                 });
                 showToast('Subject added successfully', 'success');
-                loadSubjects(currentLevel);
+                await loadSubjects(currentLevel);
                 return true;
             } catch(e) {
                 console.error(e);
@@ -1203,13 +1268,40 @@ document.addEventListener('DOMContentLoaded', async () => {
      * Show modal to invite a teacher
      */
     function showAddTeacherModal() {
+        if (typeof ui === 'undefined' || typeof ui.form !== 'function') {
+            showToast('UI components not loaded. Please refresh the page.', 'error');
+            return;
+        }
+        
         ui.form([
-            { name: 'email', label: 'Teacher Email', type: 'email', required: true },
-            { name: 'name', label: 'Teacher Name', type: 'text', required: true }
+            { 
+                name: 'email', 
+                label: 'Teacher Email', 
+                type: 'email', 
+                required: true,
+                placeholder: 'teacher@example.com'
+            },
+            { 
+                name: 'name', 
+                label: 'Teacher Name', 
+                type: 'text', 
+                required: true,
+                placeholder: 'John Doe'
+            }
         ], 'Invite Teacher', 'Send Invitation', async (formData) => {
-             // Simulation of invite
-             showToast(`Invitation sent to ${formData.email}`, 'success');
-             return true;
+            showPageLoading('Sending invitation...');
+            try {
+                // TODO: Implement actual teacher invitation
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                showToast(`Invitation sent to ${formData.email}`, 'success');
+                return true;
+            } catch (error) {
+                console.error('Error sending invitation:', error);
+                showToast('Error sending invitation', 'error');
+                throw error;
+            } finally {
+                hidePageLoading();
+            }
         });
     }
 
@@ -1225,10 +1317,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             enterMarksBtn.addEventListener('click', async () => {
                 const selectedClass = enterMarksClassFilter ? enterMarksClassFilter.value : '';
                 if (!selectedClass) {
-                    if (typeof showToast === 'function') showToast('Please select a class first', 'warning');
+                    showToast('Please select a class first', 'warning');
                     return;
                 }
-                if (typeof showToast === 'function') showToast('Opening marks entry for selected class...', 'info');
+                
+                // Get the selected class name for better user feedback
+                let className = 'Selected Class';
+                if (enterMarksClassFilter) {
+                    const selectedOption = enterMarksClassFilter.options[enterMarksClassFilter.selectedIndex];
+                    className = selectedOption.textContent;
+                }
+                
+                showToast(`Opening marks entry for ${className}...`, 'info');
+                
+                // Store the selected class in AppState for the marks page
+                if (window.AppState) {
+                    AppState.selectedClassForMarks = selectedClass;
+                }
+                
                 if (typeof window.navigateTo === 'function') {
                     window.navigateTo('marks');
                 }
@@ -1237,11 +1343,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (viewReportCardsBtn) {
             viewReportCardsBtn.addEventListener('click', () => {
-                if (typeof showToast === 'function') showToast('Opening report cards...', 'info');
-                if (typeof window.navigateTo === 'function') {
-                    window.navigateTo('reports');
-                }
+                // Switch to reports tab instead of navigating away
+                switchTab('reports');
+                if (typeof showToast === 'function') showToast('Switched to Reports tab', 'info');
             });
+        }
+        
+        // Update level filter for enter marks section
+        const enterMarksLevelFilter = document.getElementById('enterMarksLevelFilter');
+        if (enterMarksLevelFilter && AppState.currentAcademicLevel) {
+            enterMarksLevelFilter.textContent = AppState.currentAcademicLevel.replace('-', ' ').toUpperCase();
         }
     }
 
@@ -1252,6 +1363,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const classFilter = document.getElementById('enterMarksClassFilter');
         if (!classFilter || !AppState.currentSchool) return;
         
+        showPageLoading('Loading classes...');
         try {
             const constraints = [
                 { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
@@ -1266,8 +1378,77 @@ document.addEventListener('DOMContentLoaded', async () => {
                 option.textContent = cls.name;
                 classFilter.appendChild(option);
             });
+            
+            // Add event listener to filter classes when level changes
+            document.addEventListener('academic-level:changed', async (e) => {
+                if (classFilter) {
+                    const level = e.detail.level;
+                    const constraints = [
+                        { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
+                        { field: 'category', op: '==', value: level }
+                    ];
+                    const classes = await Firebase.db.query('classes', constraints);
+                    
+                    classFilter.innerHTML = '<option value="">Select Class</option>';
+                    classes.forEach(cls => {
+                        const option = document.createElement('option');
+                        option.value = cls.id;
+                        option.textContent = cls.name;
+                        classFilter.appendChild(option);
+                    });
+                    
+                    // Update level filter text
+                    const enterMarksLevelFilter = document.getElementById('enterMarksLevelFilter');
+                    if (enterMarksLevelFilter) {
+                        enterMarksLevelFilter.textContent = level.replace('-', ' ').toUpperCase();
+                    }
+                }
+            });
+            
         } catch (error) {
             console.error('Error populating class filter:', error);
+            showToast('Error loading classes for marks entry', 'error');
+        } finally {
+            hidePageLoading();
         }
+    }
+    
+    /**
+     * Show level selection modal (generic)
+     */
+    async function showLevelSelection(schoolLevel) {
+        return new Promise((resolve) => {
+            let levels = [];
+            if (schoolLevel === 'primary') {
+                levels = [
+                    { value: 'lower-primary', label: 'Lower Primary (P1-P3)' },
+                    { value: 'upper-primary', label: 'Upper Primary (P4-P7)' }
+                ];
+            } else {
+                levels = [
+                    { value: 'olevel', label: 'O-Level (S1-S4)' },
+                    { value: 'alevel', label: 'A-Level (S5-S6)' }
+                ];
+            }
+            
+            if (typeof ui === 'undefined' || typeof ui.form !== 'function') {
+                resolve(levels[0].value);
+                return;
+            }
+            
+            ui.form([
+                { 
+                    name: 'level', 
+                    label: 'Select Level', 
+                    type: 'select', 
+                    options: levels, 
+                    required: true, 
+                    value: AppState.currentAcademicLevel 
+                }
+            ], 'Select Academic Level', 'Continue', async (levelData) => {
+                resolve(levelData.level);
+                return true;
+            });
+        });
     }
 });
