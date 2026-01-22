@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile Card</title>
+    <link rel="stylesheet" href="../../shared/css/base.css">
+    <link rel="stylesheet" href="../../shared/css/components.css">
+    <style>
+        .profile-card {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 25px;
+            border-radius: var(--border-radius);
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            max-width: 400px; /* Adjust as needed */
+            margin: 20px auto; /* Center the card for demonstration */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .profile-picture-container {
+            flex-shrink: 0;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 3px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--dark);
+        }
+
+        .profile-picture {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            color: var(--light);
+        }
+
+        .user-details .role {
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .user-details .name {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .user-details .email {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .profile-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px; /* Space between details and options */
+        }
+
+        .profile-options .btn {
+            flex: 1; /* Make buttons take equal width */
+            padding: 10px 15px;
+            font-size: 14px;
+        }
+
+        .logout-section {
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .logout-section .btn-logout {
+            width: 100%;
+            background: var(--error);
+            color: white;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: var(--border-radius-sm);
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            border: none;
+            display: block; /* Ensure it spans the width */
+            text-decoration: none; /* If it's an anchor */
+        }
+
+        .logout-section .btn-logout:hover {
+            background: #dc2626; /* Slightly darker red */
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-card">
+        <div class="profile-header">
+            <div class="user-details">
+                <span class="role">Admin</span>
+                <span class="name">John Doe</span>
+                <span class="email">johndoe@gmail.com</span>
+            </div>
+            <div class="profile-picture-container">
+                <img src="../../assets/icons/skore-icon-192.png" alt="User Profile Picture" class="profile-picture">
+            </div>
+        </div>
+
+        <div class="profile-options">
+            <a href="#" class="btn btn-primary">My Profile</a>
+            <a href="#" class="btn btn-primary">Settings</a>
+        </div>
+
+        <div class="logout-section">
+            <a href="#" class="btn-logout">Log Out</a>
+        </div>
+    </div>
+</body>
+</html>

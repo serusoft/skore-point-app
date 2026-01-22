@@ -211,7 +211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 levelBadge.id = 'schoolLevelBadge';
                 levelBadge.className = `school-level-badge ${school.level}`;
                 levelBadge.textContent = school.level === 'primary' ? 'Primary School' : 'Secondary School';
-                schoolInfoBadge.insertBefore(levelBadge, codeEl);
+                schoolInfoBadge.insertBefore(levelBadge, codeEl.parentElement);
             }
         } else {
             levelBadge.textContent = school.level === 'primary' ? 'Primary School' : 'Secondary School';
@@ -949,11 +949,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         try {
-            const constraints = [
+            const teacherConstraints = [
                 { field: 'schoolId', op: '==', value: AppState.currentSchool.id }
             ];
-            const users = await Firebase.db.query('users', constraints);
-            renderTeachers(users);
+            const teachers = await Firebase.db.query('users', teacherConstraints);
+
+            const subjectConstraints = [
+                { field: 'schoolId', op: '==', value: AppState.currentSchool.id }
+            ];
+            const allSubjects = await Firebase.db.query('subjects', subjectConstraints);
+            const subjectMap = new Map(allSubjects.map(s => [s.id, s.name]));
+
+            renderTeachers(teachers, subjectMap);
         } catch (error) {
             console.error('Error loading teachers:', error);
             if (teachersList) {
@@ -965,7 +972,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    function renderTeachers(teachers) {
+    function renderTeachers(teachers, subjectMap) {
         const teachersList = document.getElementById('teachersGrid');
         const emptyState = document.getElementById('teachersEmpty');
         
@@ -981,21 +988,71 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (emptyState) emptyState.style.display = 'none';
         
-        teachersList.innerHTML = teachers.map(teacher => `
-            <div class="teacher-card">
-                <div class="teacher-avatar">
-                    ${teacher.profileUrl 
-                        ? `<img src="${teacher.profileUrl}" alt="${teacher.name}" onerror="this.style.display='none'">` 
-                        : ''}
-                    <span style="${teacher.profileUrl ? 'display:none' : ''}">${getInitials(teacher.name)}</span>
+        const currentSchoolAdmins = AppState.currentSchool.admins || [];
+
+        teachersList.innerHTML = teachers.map(teacher => {
+            const assignedSubjectNames = (teacher.assignedSubjects || [])
+                .map(subjectId => subjectMap.get(subjectId))
+                .filter(name => name) // Filter out undefined names if subjectId not found
+                .join(', ');
+
+            const isTeacherAdmin = teacher.role === 'admin';
+            const isCurrentUser = teacher.id === AppState.currentUser.uid;
+            const canDemote = isTeacherAdmin && currentSchoolAdmins.length > 1; // Can demote if not the only admin
+            const showAdminButton = !isCurrentUser || (isCurrentUser && isTeacherAdmin && currentSchoolAdmins.length > 1);
+
+            return `
+                <div class="teacher-card" data-teacher-id="${teacher.id}">
+                    <div class="teacher-avatar">
+                        ${teacher.profileUrl 
+                            ? `<img src="${teacher.profileUrl}" alt="${teacher.name}" onerror="this.style.display='none'">` 
+                            : ''}
+                        <span style="${teacher.profileUrl ? 'display:none' : ''}">${getInitials(teacher.name)}</span>
+                    </div>
+                    <div class="teacher-info">
+                        <h4>${teacher.name}</h4>
+                        <p class="teacher-email">${teacher.email}</p>
+                        <p class="teacher-subjects">Subjects: ${assignedSubjectNames || 'No subjects assigned'}</p>
+                        <span class="role-badge ${teacher.role || 'teacher'}">${teacher.role || 'Teacher'}</span>
+                    </div>
+                    <div class="teacher-actions">
+                        ${!isTeacherAdmin ? `
+                            <button class="btn btn-sm btn-secondary assign-subjects-btn" data-teacher-id="${teacher.id}">
+                                <i class="fas fa-book"></i> Assign Subjects
+                            </button>
+                        ` : ''}
+                        ${showAdminButton ? `
+                            <button class="btn btn-sm ${isTeacherAdmin ? 'btn-warning' : 'btn-primary'} toggle-admin-btn" 
+                                    data-teacher-id="${teacher.id}" 
+                                    data-is-admin="${isTeacherAdmin}">
+                                <i class="fas ${isTeacherAdmin ? 'fa-user-minus' : 'fa-user-plus'}"></i> 
+                                ${isTeacherAdmin ? (canDemote ? 'Demote from Admin' : 'Admin (Cannot Demote)') : 'Promote to Admin'}
+                            </button>
+                        ` : ''}
+                    </div>
                 </div>
-                <div class="teacher-info">
-                    <h4>${teacher.name}</h4>
-                    <p class="teacher-email">${teacher.email}</p>
-                    <span class="role-badge ${teacher.role || 'teacher'}">${teacher.role || 'Teacher'}</span>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
+
+        // Add event listeners for the new buttons
+        teachersList.querySelectorAll('.assign-subjects-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const teacherId = e.currentTarget.dataset.teacherId;
+                assignSubjectsToTeacher(teacherId);
+            });
+        });
+
+        teachersList.querySelectorAll('.toggle-admin-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const teacherId = e.currentTarget.dataset.teacherId;
+                const isAdmin = e.currentTarget.dataset.isAdmin === 'true';
+                if (isAdmin && !canDemote) {
+                    showToast('Cannot demote the only admin of the school.', 'error');
+                    return;
+                }
+                toggleTeacherAdminStatus(teacherId, isAdmin);
+            });
+        });
     }
     
     /**
@@ -1450,5 +1507,122 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return true;
             });
         });
+    }
+
+    /**
+     * Show modal to assign subjects to a teacher
+     */
+    async function assignSubjectsToTeacher(teacherId) {
+        showPageLoading('Loading subjects...');
+        try {
+            const allSubjects = await Firebase.db.query('subjects', [
+                { field: 'schoolId', op: '==', value: AppState.currentSchool.id }
+            ]);
+            const teacherDoc = await Firebase.db.getDoc('users', teacherId);
+            const teacher = teacherDoc.exists() ? teacherDoc.data() : null;
+
+            if (!teacher) {
+                showToast('Teacher not found.', 'error');
+                return;
+            }
+
+            const currentAssignedSubjectIds = teacher.assignedSubjects || [];
+            const subjectOptions = allSubjects.map(s => ({
+                value: s.id,
+                label: s.name,
+                selected: currentAssignedSubjectIds.includes(s.id)
+            }));
+
+            hidePageLoading();
+
+            const selectedSubjectIds = await ui.form(
+                [
+                    {
+                        name: 'subjects',
+                        label: `Assign Subjects to ${teacher.name}`,
+                        type: 'multiselect', // Assuming a custom multiselect type for UI.form
+                        options: subjectOptions,
+                        value: currentAssignedSubjectIds
+                    }
+                ],
+                `Assign Subjects to ${teacher.name}`,
+                'Assign',
+                async (formData) => {
+                    showPageLoading('Updating assigned subjects...');
+                    await Firebase.db.updateDoc('users', teacherId, {
+                        assignedSubjects: formData.subjects || []
+                    });
+                    showToast('Subjects assigned successfully.', 'success');
+                    await loadTeachers(); // Reload teachers to reflect changes
+                    return true;
+                }
+            );
+
+        } catch (error) {
+            console.error('Error assigning subjects:', error);
+            showToast('Failed to assign subjects.', 'error');
+        } finally {
+            hidePageLoading();
+        }
+    }
+
+    /**
+     * Toggle teacher admin status (promote/demote)
+     */
+    async function toggleTeacherAdminStatus(teacherId, isAdmin) {
+        const action = isAdmin ? 'demote' : 'promote';
+        const confirmationMessage = `Are you sure you want to ${action} this teacher?`;
+        
+        const confirmed = await ui.confirm(confirmationMessage, `${action === 'demote' ? 'Demote' : 'Promote'} Teacher`);
+        if (!confirmed) return;
+
+        showPageLoading(`${isAdmin ? 'Demoting' : 'Promoting'} teacher...`);
+        try {
+            const schoolDocRef = Firebase.db.doc('schools', AppState.currentSchool.id);
+            const schoolDoc = await Firebase.db.getDoc('schools', AppState.currentSchool.id); // Re-fetch for latest state
+            const school = schoolDoc.exists() ? schoolDoc.data() : null;
+
+            if (!school) {
+                showToast('School data not found.', 'error');
+                return;
+            }
+
+            let updatedAdmins = school.admins || [];
+            let teacherNewRole = isAdmin ? 'teacher' : 'admin';
+
+            if (action === 'promote') {
+                if (!updatedAdmins.includes(teacherId)) {
+                    updatedAdmins.push(teacherId);
+                }
+            } else { // demote
+                if (updatedAdmins.length === 1 && updatedAdmins[0] === teacherId) {
+                    showToast('Cannot demote the only admin of the school.', 'error');
+                    hidePageLoading();
+                    return;
+                }
+                updatedAdmins = updatedAdmins.filter(id => id !== teacherId);
+            }
+
+            // Update school document
+            await Firebase.db.updateDoc('schools', AppState.currentSchool.id, {
+                admins: updatedAdmins
+            });
+
+            // Update teacher's user document role
+            await Firebase.db.updateDoc('users', teacherId, {
+                role: teacherNewRole
+            });
+            
+            // Update AppState.currentSchool to reflect admin changes immediately
+            AppState.currentSchool.admins = updatedAdmins;
+
+            showToast(`Teacher ${action === 'demote' ? 'demoted' : 'promoted'} successfully.`, 'success');
+            await loadTeachers(); // Reload teachers to reflect changes
+        } catch (error) {
+            console.error(`Error ${action} teacher:`, error);
+            showToast(`Failed to ${action} teacher.`, 'error');
+        } finally {
+            hidePageLoading();
+        }
     }
 });

@@ -7,7 +7,7 @@
 .dashboard-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start; /* Changed to flex-start */
     margin-bottom: 40px;
     flex-wrap: wrap;
     gap: 20px;
@@ -20,6 +20,9 @@
     background-clip: text;
     color: transparent;
     font-weight: 800;
+    /* Allow heading to shrink */
+    flex-shrink: 1;
+    min-width: 0; /* Important for flex items with long text */
 }
 
 /* Professional dashboard card styling (copied from old version look) */
@@ -85,111 +88,67 @@
 }
 
 
-/* Independent user info card (matches old version layout) */
-.user-info {
-    display: flex;
-    align-items: flex-start;
-    gap: 20px;
-    flex-wrap: wrap;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 20px;
-    border-radius: var(--border-radius-sm);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    width: 100%;
-    max-width: 420px;
-}
-
-/* Stronger scoping to avoid global conflicts: ensure left image, right vertical stack */
-#dashboardSection .user-info {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: flex-start !important;
-    gap: 20px !important;
-    flex-wrap: nowrap !important;
-    width: 100%;
-}
-
-#dashboardSection .user-profile-img {
-    width: 80px !important;
-    height: 80px !important;
-    flex-shrink: 0 !important;
-}
-
-#dashboardSection .user-details {
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: flex-start !important;
-    gap: 6px !important;
-}
-
-.user-profile-img {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    border: 3px solid var(--primary);
-    overflow: hidden;
-    flex-shrink: 0;
+/* New User Profile Section */
+.user-profile-section {
     display: flex;
     align-items: center;
-    justify-content: center;
-    background: var(--primary-light);
+    gap: 15px;
 }
 
-.user-profile-img img {
+.user-profile-section .profile-picture {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 2px solid var(--primary-light);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
+}
+
+.user-profile-section .profile-picture:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(var(--primary-rgb), 0.5);
+}
+
+.user-profile-section .profile-picture img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.user-details {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-/* Ensure vertical stack and top alignment to match old layout: role -> name -> email */
-.user-details { justify-content: flex-start; }
-.user-role { margin-bottom: 6px; }
-.user-name { margin-bottom: 2px; }
-
-.user-role {
-    font-weight: 700;
-    font-size: 12px;
-    padding: 4px 12px;
-    border-radius: 20px;
-    display: inline-block;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    align-self: flex-start;
-}
-
-.user-name {
-    font-weight: 600;
-    color: var(--light);
-    font-size: 18px;
-}
-
-.user-email {
+.user-profile-section .btn-icon {
+    background: transparent;
+    border: none;
     color: var(--gray-light);
-    font-size: 14px;
+    font-size: 22px;
+    cursor: pointer;
+    position: relative;
+    padding: 5px;
 }
 
-.user-info .logout-btn {
-    align-self: flex-start;
-    margin-top: 10px;
+.user-profile-section .btn-icon:hover {
+    color: var(--danger);
 }
 
-.user-profile-card {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: var(--border-radius);
-    padding: 15px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    min-width: 300px;
-    max-width: 400px;
+.user-profile-section .btn-icon::after {
+    content: 'Log Out';
+    position: absolute;
+    bottom: -25px;
+    right: 0;
+    background: var(--darker);
+    color: var(--light);
+    padding: 5px 10px;
+    border-radius: var(--border-radius-sm);
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.user-profile-section .btn-icon:hover::after {
+    opacity: 1;
+    visibility: visible;
 }
 
 .profile-picture {
@@ -200,210 +159,146 @@
     border: 2px solid var(--primary);
 }
 
-.username {
-    flex: 1;
-    font-weight: 600;
-    font-size: 16px;
-    color: var(--light);
+/* User Profile Card - New Location */
+.user-info-card {
+  display: flex;
+  flex-direction: column; /* Changed to column */
+  align-items: center; /* Center children horizontally */
+  /* gap: 20px; removed */
+  /* flex-wrap: wrap; removed */
+  background: rgba(255, 255, 255, 0.05);
+  padding: 20px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%; /* Changed to 100% */
+  max-width: 400px; /* Adjust as needed */
+  /* margin-bottom: 30px; */ /* Removed, now inside header */
+  flex-shrink: 0; /* Prevent shrinking when space is limited */
+  /* width: max-content; removed */
+  /* padding-bottom: 10px; removed, wrapper handles it */
 }
 
-#logoutBtn {
-    margin-left: auto;
-}
-
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 25px;
-}
-
-.dashboard-card {
-    background: var(--card-gradient);
-    border-radius: var(--border-radius);
-    padding: 30px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    transition: var(--transition);
-    cursor: pointer;
-}
-
-.dashboard-card:hover {
-    transform: translateY(-5px);
-    border-color: rgba(67, 97, 238, 0.3);
-    box-shadow: var(--shadow);
-}
-
-.card-icon {
-    font-size: 40px;
-    color: var(--primary-light);
-    margin-bottom: 20px;
-}
-
-.dashboard-card h3 {
-    font-size: 20px;
-    margin-bottom: 10px;
-    color: var(--light);
-}
-
-.dashboard-card p {
-    color: var(--gray-lighter);
-    font-size: 15px;
-    line-height: 1.6;
-}
-
-.school-info {
-    margin-top: 25px;
-    padding-top: 20px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.school-info h4 {
-    font-size: 18px;
-    margin-bottom: 10px;
-    color: var(--light);
-}
-
-.school-logo {
-    max-width: 100px;
-    max-height: 60px;
-    margin: 10px 0;
-    object-fit: contain;
-    background: white;
-    padding: 5px;
-    border-radius: 6px;
-}
-
-.card-actions {
-    margin-top: 20px;
-}
-
-.schools-list {
-    max-height: 200px;
-    overflow-y: auto;
-    margin-top: 20px;
-}
-
-.school-item {
-    padding: 12px;
-    border-radius: var(--border-radius-sm);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    margin-bottom: 8px;
-    transition: var(--transition);
-    cursor: pointer;
-}
-
-.school-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: var(--primary);
-}
-
-.school-item.active {
-    background: rgba(67, 97, 238, 0.1);
-    border-color: var(--primary);
-}
-
-.school-item h4 {
-    font-size: 15px;
-    color: var(--light);
-    margin-bottom: 5px;
-}
-
-.school-item p {
-    font-size: 13px;
-    color: var(--gray-light);
-}
-
-.updates-list {
-    margin-top: 20px;
-}
-
-.update-item {
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.update-item:last-child {
-    border-bottom: none;
-}
-
-/* User Profile Menu */
-.user-profile-menu {
-    position: relative;
-    display: inline-block;
-}
-
-.user-avatar-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: var(--border-radius);
-    padding: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+.user-profile-and-details-wrapper {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
-    transition: var(--transition);
+    flex-direction: row;
+    align-items: flex-start; /* Align items to the top */
+    gap: 20px; /* Space between profile img and details */
+    width: 100%; /* Span full width of parent */
+    margin-bottom: 20px; /* Space from the logout button */
 }
 
-.user-avatar-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+.user-profile-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 3px solid var(--primary);
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-light);
+  /* margin-bottom: 10px; removed */
 }
 
-.user-avatar-btn .profile-picture {
-    width: 40px;
-    height: 40px;
+.user-profile-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.user-dropdown {
-    display: none;
-    position: absolute;
-    top: calc(100% + 10px);
-    right: 0;
-    background: var(--darker);
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    width: 250px;
-    z-index: 100;
-    overflow: hidden;
-    animation: fadeIn 0.2s ease-out;
+.user-profile-img span { /* For initials */
+    font-size: 36px;
+    font-weight: bold;
+    color: white;
 }
 
-.user-profile-menu.active .user-dropdown {
-    display: block;
+.user-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* margin-bottom: 15px; removed */
+  /* align-items: center; removed, wrapper handles it */
+  text-align: left; /* Align text within details to the left */
 }
 
-.user-dropdown-header {
-    padding: 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.user-dropdown-header strong {
-    display: block;
-    font-size: 15px;
-    color: var(--light);
-}
-
-.user-dropdown-header small {
-    font-size: 13px;
-    color: var(--gray-light);
-}
-
-.user-dropdown-link {
+.user-card-actions {
     display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 15px;
-    color: var(--gray-lighter);
+    flex-direction: row; /* Changed to row */
+    flex-wrap: wrap; /* Added flex-wrap */
+    justify-content: space-around; /* Changed to space-around */
+    gap: 5px;
+    margin-top: 10px;
+    /* margin-bottom: 10px; removed */
+}
+
+.user-card-action-item {
+    color: var(--gray-light);
     text-decoration: none;
-    font-size: 14px;
+    padding: 5px 10px;
+    border-radius: var(--border-radius-sm);
     transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
 }
 
-.user-dropdown-link:hover {
+.user-card-action-item:hover {
     background: rgba(67, 97, 238, 0.1);
-    color: var(--primary-light);
+    color: var(--primary);
 }
 
-.user-dropdown-link i {
-    width: 16px;
-    text-align: center;
+.user-card-action-item i {
+    font-size: 16px;
+}
+
+.user-role {
+  font-weight: 700;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  /* align-self: flex-start; removed, parent handles centering */
+}
+
+.user-name {
+  font-weight: 600;
+  color: var(--light);
+  font-size: 18px;
+  /* text-align: center; removed, parent handles it, or explicit left */
+}
+
+.user-email {
+  color: var(--gray-light);
+  font-size: 14px;
+  /* text-align: center; removed, parent handles it, or explicit left */
+}
+
+.user-card-logout-btn { /* Specific style for logout button within the user card */
+    background: var(--error);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-weight: 600;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Center icon and text */
+    gap: 8px;
+    touch-action: manipulation;
+    /* align-self: center; removed */
+    width: 90%; /* Set width to 90% */
+    /* margin: 0 auto; removed */
+    margin-top: 15px; /* Added margin-top for spacing */
+}
+
+.user-card-logout-btn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
 }

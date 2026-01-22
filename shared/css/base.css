@@ -13,6 +13,13 @@ body {
     overflow-x: hidden;
 }
 
+/* Base image styling */
+img {
+    max-width: 100%;
+    height: auto;
+    display: block; /* Removes extra space below image */
+}
+
 /* Utility classes */
 .d-none { display: none !important; }
 .d-flex { display: flex !important; }

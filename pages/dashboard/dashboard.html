@@ -9,21 +9,6 @@
     <link rel="stylesheet" href="../../shared/css/components.css">
     <link rel="stylesheet" href="./dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .card-icon {
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .card-icon img {
-            width: 85%;
-            height: 85%;
-            object-fit: cover;
-            border-radius: 50%;
-        }
-    </style>
 </head>
 <body>
         <div id="navbar-container"></div>
@@ -32,10 +17,29 @@
             <div class="dashboard">
                 <div class="dashboard-header">
                     <h1>Dashboard</h1>
-                    <div class="user-info" id="userInfoCard">
-                        <!-- Profile picture and details will be loaded here -->
-                    </div>
-                </div>
+                                                    <div class="user-info-card" id="userDashboardDetails">
+                                                        <div class="user-profile-and-details-wrapper">
+                                                            <div class="user-profile-img" id="userDashboardProfileImg">
+                                                                <!-- Profile picture will be loaded here by dashboard.js -->
+                                                            </div>
+                                                            <div class="user-details">
+                                                                <span class="user-role" id="userDashboardRole"></span>
+                                                                <h3 class="user-name" id="userDashboardName"></h3>
+                                                                <p class="user-email" id="userDashboardEmail"></p>
+                                                                <div class="user-card-actions">
+                                                                    <a href="#profile" data-page="profile" class="user-card-action-item">
+                                                                        <i class="fas fa-user-circle"></i> My Profile
+                                                                    </a>
+                                                                    <a href="#settings" data-page="settings" class="user-card-action-item">
+                                                                        <i class="fas fa-cog"></i> Settings
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <button id="dashboardLogoutBtn" class="btn btn-icon logout-btn user-card-logout-btn">
+                                                            <i class="fas fa-sign-out-alt"></i> Logout
+                                                        </button>
+                                                    </div>                </div>
 
                 <div class="dashboard-cards">
                     <!-- School Portal Card (management) -->

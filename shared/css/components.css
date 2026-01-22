@@ -117,7 +117,7 @@
 .navbar {
     background: rgba(15, 23, 42, 0.95);
     backdrop-filter: blur(10px);
-    padding: 0 30px;
+    padding: 0 20px; /* Reduced padding */
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     justify-content: space-between;
@@ -127,61 +127,22 @@
     width: 100%;
     box-sizing: border-box;
     z-index: 1000;
-    height: 56px;
+    height: var(--navbar-height, 60px); /* Use CSS variable for height */
 }
 
 /* Navbar height variable used to offset page content to avoid overlap */
-.navbar { --navbar-height: 56px; }
-
-.navbar .container {
-    max-width: 1180px;
-    width: 100%;
-    margin: 0 auto;
-    padding: 0 30px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-
-/* Adjust navbar elements to fit within navbar height */
-.navbar .container .navbar-brand {
-    padding: 0;
-    margin: 0;
-}
-
-.navbar .container .navbar-brand span {
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
-    margin: 0;
-    padding: 0;
-}
-
-.navbar .container .navbar-nav {
-    padding: 0;
-    margin: 0;
-}
-
-.navbar .container > div {
-    display: flex;
-    align-items: center;
-}
+.navbar { --navbar-height: 60px; }
 
 /* When navbar is present add top offset to main containers to avoid overlap */
 .has-navbar .main-content,
 .has-navbar .container,
 .has-navbar .auth-page,
 .has-navbar .register-page,
-.has-navbar .login-page {
-    padding-top: calc(var(--navbar-height) + 18px) !important;
-}
-
-/* Ensure dashboard and dashboard-page get sufficient top offset when navbar is present */
+.has-navbar .login-page,
 .has-navbar #dashboardSection,
 .has-navbar .dashboard-page,
 .has-navbar .dashboard {
-    padding-top: calc(var(--navbar-height) + 18px) !important;
+    padding-top: calc(var(--navbar-height) + 20px) !important; /* Adjusted offset */
 }
 
 .navbar-brand {
@@ -207,11 +168,15 @@
     opacity: 0.8;
 }
 
-.navbar-brand i {
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    line-height: 1;
+.navbar-brand .brand-mark {
+    width: 36px; /* Smaller */
+    height: 36px; /* Smaller */
+    border-radius: 6px; /* Slightly smaller radius */
+    font-size: 16px; /* Smaller font */
+}
+.navbar-brand .brand-title {
+    margin-left: 8px; /* Adjusted margin */
+    font-size: 17px; /* Adjusted font size */
 }
 
 /* Navbar Links */
@@ -248,8 +213,6 @@
     background: var(--primary);
 }
 
-
-
 /* Navbar toggle (hamburger) for mobile */
 .navbar-toggle {
     background: transparent;
@@ -262,6 +225,7 @@
     justify-content: center;
     cursor: pointer;
     transition: var(--transition);
+    margin-left: 15px; /* Added margin to separate from profile toggle */
 }
 
 .navbar-toggle:hover {
@@ -271,7 +235,7 @@
 .mobile-nav {
     display: none;
     position: fixed;
-    top: 64px;
+    top: var(--navbar-height, 60px); /* Position below navbar */
     left: 0;
     right: 0;
     background: rgba(15, 23, 42, 0.98);
@@ -1801,5 +1765,84 @@ select option:checked {
 
 .skeleton-line.short {
     width: 60px;
+}
+
+/* Bottom Tab Bar for Mobile */
+.bottom-tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 65px; /* Standard iOS tab bar height */
+    background: rgba(15, 23, 42, 0.9); /* Slightly more transparent */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start; /* Align items to the top of the container */
+    padding-top: 8px; /* Padding for icons and text */
+    z-index: 1000;
+}
+
+.bottom-tab-bar .tab-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    font-size: 11px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.3s ease;
+    flex-grow: 1;
+    line-height: 1;
+}
+
+.bottom-tab-bar .tab-link:hover {
+    color: var(--light);
+}
+
+.bottom-tab-bar .tab-link.active {
+    color: var(--primary);
+}
+
+.bottom-tab-bar .tab-link i {
+    font-size: 20px;
+    margin-bottom: 2px; /* Space between icon and text */
+}
+
+/* Ensure the old mobile nav is always hidden */
+.mobile-nav {
+    display: none !important;
+}
+
+/* Override and refine mobile-only display */
+@media (max-width: 768px) {
+    .mobile-only {
+        display: flex !important; /* Use flex for the tab bar and other elements */
+    }
+
+    /* Add padding to body to prevent content from being hidden by the tab bar */
+    body.has-navbar {
+        padding-bottom: 65px !important; /* Match tab bar height */
+    }
+}
+
+/* Hide tab bar on desktop */
+@media (min-width: 769px) {
+    .bottom-tab-bar {
+        display: none !important;
+    }
+}
+
+/* Fix for potential overflow issues on main content containers */
+.main-content, .container, .auth-page, .dashboard-page {
+    width: 100%;
+    max-width: 100%; /* Ensure it does not exceed viewport */
+    overflow-x: hidden;
 }
 

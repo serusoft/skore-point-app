@@ -97,23 +97,60 @@ async function switchToSchool(schoolId) {
     }
 }
 
+function renderUserProfileCard() {
+    try {
+        const user = window.AppState.currentUser;
+        const userData = window.AppState.currentUserData || {};
+
+        const userDashboardDetails = document.getElementById('userDashboardDetails');
+        const profilePictureContainer = document.getElementById('userDashboardProfileImg');
+        const userNameElement = document.getElementById('userDashboardName');
+        const userRoleElement = document.getElementById('userDashboardRole');
+        const userEmailElement = document.getElementById('userDashboardEmail');
+        
+        if (!user || !userDashboardDetails || !profilePictureContainer || !userNameElement || !userRoleElement || !userEmailElement) {
+            console.warn('User data or dashboard elements not found for rendering user profile card.');
+            // Optionally hide the card if essential elements are missing
+            if (userDashboardDetails) userDashboardDetails.style.display = 'none';
+            return;
+        }
+
+        // Populate profile picture
+        if (userData.profileUrl) {
+            profilePictureContainer.innerHTML = `<img src="${userData.profileUrl}" alt="${userData.name || 'Profile'}">`;
+        } else {
+            profilePictureContainer.innerHTML = `<span>${getInitials(userData.name)}</span>`;
+            profilePictureContainer.className = 'user-profile-img initials'; // Use new class name
+        }
+
+        // Populate name, role, and email
+        userNameElement.textContent = userData.name || user.displayName || user.email.split('@')[0];
+        const userRole = userData.role || 'teacher';
+        userRoleElement.textContent = userRole.toUpperCase();
+        userRoleElement.className = `user-role ${userRole}`; // Add role-specific class for styling
+        userEmailElement.textContent = user.email;
+
+        // Ensure the card is visible (if it was hidden initially)
+        userDashboardDetails.style.display = 'flex'; // Assuming flex display for the card
+
+    } catch (error) {
+        console.error('Error rendering user profile card:', error);
+    }
+}
+
 // --- REFACTORED: Initialization and Event Listeners ---
 function initDashboard() {
-    // Remove user profile menu from dashboard header since it's now in navbar
-    const dashboardHeader = document.querySelector('.dashboard-header');
-    if (dashboardHeader) {
-        const existingUserProfile = dashboardHeader.querySelector('.user-profile-menu');
-        if (existingUserProfile) {
-            existingUserProfile.remove();
-        }
-    }
+    // The user profile menu is now handled as a separate card below the dashboard header.
+    // No need to remove it from the dashboard header.
 
     renderDashboard(); // Initial render with data from AppState
+    renderUserProfileCard();
     setupEventListeners();
 
     // Listen for state changes from the core app script
     document.addEventListener('schools:loaded', renderDashboard);
     document.addEventListener('school:changed', renderDashboard);
+    document.addEventListener('user:loaded', renderUserProfileCard);
 }
 
 function setupEventListeners() {
@@ -149,6 +186,18 @@ function setupEventListeners() {
     // Switch School button
     document.getElementById('switchSchoolBtn')?.addEventListener('click', () => {
         showSchoolSwitchModal();
+    });
+
+    // Logout button
+    document.getElementById('dashboardLogoutBtn')?.addEventListener('click', async () => {
+        try {
+            await window.Firebase.auth.signOut();
+            window.AppState.clear();
+            window.navigateTo('login');
+        } catch (error) {
+            console.error('Error logging out:', error);
+            window.showToast('Error logging out', 'error');
+        }
     });
 }
 

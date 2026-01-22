@@ -145,6 +145,8 @@ class AppUI {
                 // Setup event listeners when injected into a container
                 this.setupGlobalNavbarEvents();
                 
+
+
                 // Populate user info if authenticated
                 if (isAuthenticated && AppState.currentUser) {
                     setTimeout(() => {
@@ -171,6 +173,8 @@ class AppUI {
             document.body.classList.add('has-navbar');
             console.log('UI.injectNavbar() - Added has-navbar class to body');
 
+
+
             // Setup event listeners
             setTimeout(() => {
                 this.setupGlobalNavbarEvents();
@@ -185,6 +189,8 @@ class AppUI {
             console.error('UI.injectNavbar() - Failed to inject navbar', e);
         }
     }
+    
+
 
     // createAuthenticatedNavbar - FIXED VERSION
     createAuthenticatedNavbar() {
@@ -195,43 +201,29 @@ class AppUI {
                     <span class="brand-title">Skore Point</span>
                 </a>
 
-                <div class="navbar-nav desktop-only">
-                    <a href="#dashboard" data-page="dashboard" class="nav-link">
-                        <i class="fas fa-home"></i> Dashboard
-                    </a>
-                    <a href="#school" data-page="school" class="nav-link">
-                        <i class="fas fa-school"></i> School
-                    </a>
-                    
-                    <div class="navbar-user" id="navbarUser">
-                        <!-- User profile will be injected here -->
-                    </div>
-                    
-                    <button class="logout-btn desktop-only" id="desktop-logout" title="Logout">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </button>
+                <div class="navbar-right-menu desktop-only">
+                    <!-- My Profile and Settings links are now handled by a separate profile card outside the nav -->
                 </div>
 
-                <button class="navbar-toggle mobile-only" id="navbar-toggle" aria-label="Open menu">
-                    <i class="fas fa-bars"></i>
-                </button>
+                <!-- Hamburger menu removed for mobile -->
             </nav>
 
-            <div class="mobile-nav" id="navbar-mobile-nav" aria-hidden="true">
-                <a href="#dashboard" data-page="dashboard" class="nav-link">
-                    <i class="fas fa-home"></i> Dashboard
+            <div class="bottom-tab-bar mobile-only">
+                <a href="#dashboard" data-page="dashboard" class="tab-link">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
                 </a>
-                <a href="#school" data-page="school" class="nav-link">
-                    <i class="fas fa-school"></i> School
+                <a href="#profile" data-page="profile" class="tab-link">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
                 </a>
-                <a href="#profile" data-page="profile" class="nav-link">
-                    <i class="fas fa-user"></i> Profile
+                <a href="#settings" data-page="settings" class="tab-link">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
                 </a>
-                <a href="#settings" data-page="settings" class="nav-link">
-                    <i class="fas fa-cog"></i> Settings
-                </a>
-                <button class="nav-link logout-btn-mobile">
-                    <i class="fas fa-sign-out-alt"></i> Logout
+                <button class="tab-link logout-btn-mobile">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
                 </button>
             </div>
         `;
@@ -263,228 +255,52 @@ class AppUI {
     }
 
     setupGlobalNavbarEvents() {
-        const navbar = document.getElementById('main-navbar');
-        if (!navbar) return;
+        // The old mobile menu toggle logic is removed.
 
-        // Mobile menu toggle
-        const toggleBtn = navbar.querySelector('#navbar-toggle');
-        const mobileNav = navbar.querySelector('#navbar-mobile-nav') || navbar.querySelector('.mobile-nav');
-        
-        if (toggleBtn && mobileNav) {
-            // Clone to remove old listeners
-            const newToggle = toggleBtn.cloneNode(true);
-            toggleBtn.parentNode.replaceChild(newToggle, toggleBtn);
-            
-            newToggle.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const isActive = mobileNav.classList.toggle('active');
-                mobileNav.setAttribute('aria-hidden', !isActive);
+        // Handle logout from the new bottom tab bar
+        const bottomTabBar = document.querySelector('.bottom-tab-bar');
+        if (bottomTabBar) {
+            const logoutBtn = bottomTabBar.querySelector('.logout-btn-mobile');
+            if (logoutBtn) {
+                // Clone to remove old listeners
+                const newLogoutBtn = logoutBtn.cloneNode(true);
+                logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
 
-                const icon = newToggle.querySelector('i');
-                if (icon) {
-                    icon.className = isActive ? 'fas fa-times' : 'fas fa-bars';
-                }
-            });
+                newLogoutBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    console.log('Bottom tab bar logout clicked');
+                    try {
+                        // Assuming AppState and navigateTo are globally available
+                        // or part of a larger app instance.
+                        if (window.Firebase && window.Firebase.auth) {
+                             await window.Firebase.auth.signOut();
+                        }
+                        if (window.AppState) {
+                            window.AppState.clear();
+                        }
+                        if (window.navigateTo) {
+                            window.navigateTo('login');
+                        } else {
+                            window.location.hash = '#login';
+                        }
+                        
+                        this.showToast('You have been logged out.', 'info');
 
-            // Close when clicking outside
-            document.addEventListener('click', (e) => {
-                if (mobileNav.classList.contains('active') && 
-                    !mobileNav.contains(e.target) && 
-                    !newToggle.contains(e.target)) {
-                    mobileNav.classList.remove('active');
-                    mobileNav.setAttribute('aria-hidden', 'true');
-                    const icon = newToggle.querySelector('i');
-                    if (icon) icon.className = 'fas fa-bars';
-                }
-            });
-            
-            // Handle mobile logout
-            mobileNav.querySelector('.logout-btn-mobile')?.addEventListener('click', async (e) => {
-                e.preventDefault();
-                try {
-                    await Firebase.auth.signOut();
-                    AppState.clear();
-                    navigateTo('login');
-                } catch (error) {
-                    console.error('Logout error:', error);
-                    this.showToast('Error logging out', 'error');
-                }
-            });
+                    } catch (error) {
+                        console.error('Logout error:', error);
+                        this.showToast('Error logging out', 'error');
+                    }
+                });
+            }
         }
-
-        // Handle desktop logout button
-        const desktopLogoutBtn = document.getElementById('desktop-logout');
-        if (desktopLogoutBtn) {
-            desktopLogoutBtn.addEventListener('click', async (e) => {
-                e.preventDefault();
-                try {
-                    await Firebase.auth.signOut();
-                    AppState.clear();
-                    navigateTo('login');
-                } catch (error) {
-                    console.error('Logout error:', error);
-                    this.showToast('Error logging out', 'error');
-                }
-            });
-        }
-
-        // The authenticated user profile menu dropdown logic is handled by loadUserProfileInNavbar
-        // No specific event listeners needed here anymore for globalUserProfileMenu
     }
 
     // loadUserProfileInNavbar - FIXED VERSION (removed inline styles)
     async loadUserProfileInNavbar() {
-        const navbarUser = document.getElementById('navbarUser');
-        if (!navbarUser || !AppState.currentUser) {
-            console.log('No navbarUser element or no current user');
-            return;
-        }
-        
-        try {
-            const user = AppState.currentUser;
-            const userData = AppState.currentUserData || {};
-            
-            console.log('Loading user profile for navbar:', user.email);
-            
-            // Create user profile element with CSS classes
-            navbarUser.innerHTML = `
-                <div class="user-profile" id="userProfile">
-                    <div class="profile-image" id="profileImage">
-                        ${userData.profileUrl 
-                            ? `<img src="${userData.profileUrl}" alt="${userData.name || 'User'}" onerror="this.onerror=null; this.style.display='none'; this.parentElement.innerHTML='${getInitials(userData.name || '')}'">`
-                            : getInitials(userData.name || '')
-                        }
-                    </div>
-                    <div class="user-info desktop-only">
-                        <span class="user-name">${userData.name || user.email || 'User'}</span>
-                        <span class="user-role">${(userData.role || 'teacher').toUpperCase()}</span>
-                    </div>
-                    
-                    <!-- Desktop Dropdown -->
-                    <div class="dropdown-menu desktop-only" id="userDropdownMenu">
-                        <a href="#profile" class="dropdown-item" data-page="profile">
-                            <i class="fas fa-user"></i> My Profile
-                        </a>
-                        <a href="#settings" class="dropdown-item" data-page="settings">
-                            <i class="fas fa-cog"></i> Settings
-                        </a>
-                        <div class="dropdown-divider"></div>
-                        <button class="dropdown-item logout-btn-dropdown">
-                            <i class="fas fa-sign-out-alt"></i> Logout
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            // Add dropdown functionality
-            const profileImage = document.getElementById('profileImage');
-            const userProfile = document.getElementById('userProfile');
-            const dropdownMenu = document.getElementById('userDropdownMenu');
-            
-            if (profileImage && dropdownMenu) {
-                userProfile.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    dropdownMenu.classList.toggle('show');
-                });
-                
-                // Close dropdown when clicking outside
-                document.addEventListener('click', (e) => {
-                    if (!userProfile.contains(e.target) && !dropdownMenu.contains(e.target)) {
-                        dropdownMenu.classList.remove('show');
-                    }
-                });
-            }
-            
-            // Handle dropdown logout
-            const dropdownLogoutBtn = document.querySelector('.logout-btn-dropdown');
-            if (dropdownLogoutBtn) {
-                dropdownLogoutBtn.addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    try {
-                        await Firebase.auth.signOut();
-                        AppState.clear();
-                        navigateTo('login');
-                    } catch (error) {
-                        console.error('Logout error:', error);
-                        this.showToast('Error logging out', 'error');
-                    }
-                });
-            }
-
-            // Handle desktop logout button
-            const desktopLogoutBtn = document.getElementById('desktop-logout');
-            if (desktopLogoutBtn) {
-                desktopLogoutBtn.addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    try {
-                        await Firebase.auth.signOut();
-                        AppState.clear();
-                        navigateTo('login');
-                    } catch (error) {
-                        console.error('Logout error:', error);
-                        this.showToast('Error logging out', 'error');
-                    }
-                });
-            }
-
-            // Also populate independent user profile card on pages (e.g., dashboard)
-            const userInfoCard = document.getElementById('userInfoCard');
-            if (userInfoCard) {
-                const initials = getInitials(userData.name || 'U');
-                const profileUrl = userData.profileUrl || '';
-                const name = userData.name || user.email || 'User';
-                const email = user.email || '';
-                const role = (userData.role || 'teacher');
-
-                userInfoCard.innerHTML = `
-                    <div class="user-profile-img">
-                        ${profileUrl && profileUrl.startsWith('data:image')
-                            ? `<img src="${profileUrl}" alt="${name}" onerror="this.parentElement.innerHTML='${initials}'">`
-                            : `${profileUrl ? `<img src="${profileUrl}" alt="${name}" onerror="this.parentElement.innerHTML='${initials}'">` : `<div class="profile-initials">${initials}</div>`}`
-                        }
-                    </div>
-                    <div class="user-details">
-                        <span class="user-role ${role}">${role.toUpperCase()}</span>
-                        <span class="user-name">${name}</span>
-                        <span class="user-email">${email}</span>
-                        <button class="logout-btn mobile-only" id="mobileLogoutBtn">
-                          <i class="fas fa-sign-out-alt"></i> Logout
-                        </button>
-                    </div>
-                `;
-
-                const mobileLogoutBtn = document.getElementById('mobileLogoutBtn');
-                if (mobileLogoutBtn) {
-                    mobileLogoutBtn.addEventListener('click', async (e) => {
-                        e.preventDefault();
-                        try {
-                            await Firebase.auth.signOut();
-                            AppState.clear();
-                            navigateTo('login');
-                        } catch (error) {
-                            console.error('Logout error:', error);
-                            this.showToast('Error logging out', 'error');
-                        }
-                    });
-                }
-            }
-            
-        } catch (error) {
-            console.error('Error loading user profile in navbar:', error);
-            // Fallback to basic user info
-            if (navbarUser) {
-                navbarUser.innerHTML = `
-                    <div class="user-profile">
-                        <div class="profile-image">${getInitials('User')}</div>
-                        <div class="user-info desktop-only">
-                            <span class="user-name">User</span>
-                            <span class="user-role">TEACHER</span>
-                        </div>
-                    </div>
-                `;
-            }
-        }
+        return; // Disabled as per user request to move profile below nav
     }
+
+    // populateGlobalUserInfo will now simply call loadUserProfileInNavbar
     
     // populateGlobalUserInfo will now simply call loadUserProfileInNavbar
     populateGlobalUserInfo() {

@@ -283,53 +283,8 @@ function handlePostAuthNavigation(user) {
 
 // Update navbar with user info
 function updateNavbarUserInfo() {
-    const user = AppState.currentUser;
-    const userData = AppState.currentUserData;
-    
-    if (!user || !userData) {
-        // Clear user info if no user
-        document.dispatchEvent(new CustomEvent('user-info:updated', {
-            detail: { user: null, userData: null }
-        }));
-        return;
-    }
-    
-    // Update user profile elements if they exist
-    const profilePicture = document.getElementById('globalProfilePicture');
-    const username = document.getElementById('globalUsername');
-    const dropdownUsername = document.getElementById('globalDropdownUsername');
-    const dropdownUserEmail = document.getElementById('globalDropdownUserEmail');
-    
-    if (profilePicture) {
-        profilePicture.src = userData.profileUrl || 'https://placehold.co/40x40.png';
-        profilePicture.alt = userData.name || user.email;
-    }
-    
-    if (username) {
-        username.textContent = userData.name || user.displayName || user.email.split('@')[0];
-    }
-    
-    if (dropdownUsername) {
-        dropdownUsername.textContent = userData.name || user.displayName || user.email.split('@')[0];
-    }
-    
-    if (dropdownUserEmail) {
-        dropdownUserEmail.textContent = user.email;
-    }
-    
-    // Dispatch event for UI components - CRITICAL for navbar update
-    document.dispatchEvent(new CustomEvent('user-info:updated', {
-        detail: { user, userData }
-    }));
-    
-    // Also dispatch auth state change event for immediate navbar re-render
-    document.dispatchEvent(new CustomEvent('auth:state-changed', {
-        detail: { 
-            isAuthenticated: true,
-            user: user,
-            userData: userData
-        }
-    }));
+    // This function is disabled as user profile info is now handled by the user-info-card on the dashboard
+    return;
 }
 
 // Load user data from Firestore
@@ -651,8 +606,8 @@ function navigateTo(page, params = {}) {
         'marks': '../marks/marks.html',
         'reports': '../reports/reports.html',
         'analytics': '../analytics/analytics.html',
-        'profile': '../profile/profile.html',
-        'settings': '../settings/settings.html'
+        'settings': '../settings/settings.html',
+        'profile': '../profile/profile.html'
     };
     
     if (pages[page]) {

@@ -33,7 +33,12 @@
         
         <div class="profile-container">
             <div class="profile-card">
-                <div class="profile-picture-section">
+                <div class="user-profile-display-section">
+                    <div class="user-details-left">
+                        <span class="user-role" id="profileUserRole"></span>
+                        <h2 id="profileUserName"></h2>
+                        <p class="user-email" id="profileUserEmail"></p>
+                    </div>
                     <div class="profile-picture-container" id="profilePictureContainer">
                         <div class="profile-picture" id="currentProfilePicture">
                             <!-- Profile picture will be loaded here -->
@@ -42,9 +47,15 @@
                             <i class="fas fa-camera"></i>
                         </button>
                     </div>
-                    <h2 id="profileUserName"></h2>
-                    <p class="user-email" id="profileUserEmail"></p>
-                    <span class="user-role" id="profileUserRole"></span>
+                </div>
+
+                <div class="profile-options-container">
+                    <a href="#" class="btn btn-primary btn-sm">My Profile</a>
+                    <a href="#" class="btn btn-primary btn-sm">Settings</a>
+                </div>
+
+                <div class="logout-container">
+                    <a href="#" class="btn btn-danger btn-block">Log Out</a>
                 </div>
                 
                 <div class="profile-form">
