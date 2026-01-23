@@ -28,32 +28,34 @@
 /* Professional dashboard card styling (copied from old version look) */
 .dashboard-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 350px));
     gap: 25px;
+    justify-content: center;
     margin-bottom: 40px;
 }
 
 .dashboard-cards .card {
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    background: linear-gradient(135deg, rgba(67, 97, 238, 0.08) 0%, rgba(114, 9, 183, 0.08) 100%);
     border-radius: var(--border-radius);
-    padding: 28px 26px;
-    box-shadow: 0 6px 20px rgba(8,10,20,0.35);
-    border: 1px solid rgba(255,255,255,0.04);
-    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+    padding: 30px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
     cursor: pointer;
+    position: relative;
     overflow: hidden;
 }
 
 .dashboard-cards .card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 16px 40px rgba(8,10,20,0.45);
-    border-color: rgba(67,97,238,0.22);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    border-color: rgba(67, 97, 238, 0.3);
 }
 
 .dashboard-cards .card i {
     font-size: 42px;
     margin-bottom: 18px;
-    color: rgba(67,97,238,0.95);
+    color: var(--primary-light);
 }
 
 .dashboard-cards .card h3 {

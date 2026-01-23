@@ -173,29 +173,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (titleEl) {
             titleEl.textContent = `${school.name} Portal`;
             
-            // Create or update Exit Portal button
-            let exitBtn = document.getElementById('exitPortalBtn');
-            if (!exitBtn) {
-                const headerContainer = titleEl.parentElement;
-                if (headerContainer) {
-                    exitBtn = document.createElement('button');
-                    exitBtn.id = 'exitPortalBtn';
-                    exitBtn.className = 'btn btn-secondary btn-sm';
-                    exitBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Exit Portal';
-                    exitBtn.style.marginLeft = 'auto';
-                    exitBtn.style.flexShrink = '0';
-                    exitBtn.addEventListener('click', () => {
-                        if (typeof window.navigateTo === 'function') {
-                            window.navigateTo('dashboard');
-                        }
-                    });
-                    
-                    headerContainer.style.display = 'flex';
-                    headerContainer.style.justifyContent = 'space-between';
-                    headerContainer.style.alignItems = 'center';
-                    headerContainer.style.flexWrap = 'wrap';
-                    headerContainer.appendChild(exitBtn);
-                }
+            // Create fixed Exit Portal button if it doesn't exist
+            let fixedExitBtn = document.getElementById('exitSchoolBtn');
+            if (!fixedExitBtn) {
+                fixedExitBtn = document.createElement('button');
+                fixedExitBtn.id = 'exitSchoolBtn';
+                fixedExitBtn.className = 'fixed-exit-btn';
+                fixedExitBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Exit Portal';
+                document.body.appendChild(fixedExitBtn);
             }
         }
         
@@ -680,7 +665,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </span>
                     </div>
                 </div>
-                <button class="btn-delete" data-class-id="${cls.id}">
+                <button class="btn btn-sm btn-danger" data-class-id="${cls.id}">
                     <i class="fas fa-trash"></i> Delete
                 </button>
             </div>
@@ -807,7 +792,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${classMap[student.classId] || 'N/A'}</td>
                 <td><span class="class-category" style="font-size: 0.8rem;">${student.category || 'N/A'}</span></td>
                 <td>
-                    <button class="btn-delete" data-student-id="${student.id}">
+                    <button class="btn btn-sm btn-danger" data-student-id="${student.id}">
                         <i class="fas fa-trash"></i> Delete
                     </button>
                 </td>
@@ -900,7 +885,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p style="color: var(--gray-light); font-size: 0.85rem; margin: 0;">${subject.code || 'No code'}</p>
                     </div>
                 </div>
-                <button class="btn-delete" data-subject-id="${subject.id}">
+                <button class="btn btn-sm btn-danger" data-subject-id="${subject.id}">
                     <i class="fas fa-trash"></i> Delete
                 </button>
             </div>
@@ -1616,8 +1601,37 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Update AppState.currentSchool to reflect admin changes immediately
             AppState.currentSchool.admins = updatedAdmins;
 
+            // Manually update the UI for the specific teacher card
+            const teacherCard = document.querySelector(`.teacher-card[data-teacher-id="${teacherId}"]`);
+            if (teacherCard) {
+                // Update Role Badge
+                const roleBadge = teacherCard.querySelector('.role-badge');
+                if (roleBadge) {
+                    roleBadge.textContent = teacherNewRole === 'admin' ? 'Admin' : 'Teacher';
+                    roleBadge.className = `role-badge ${teacherNewRole}`;
+                }
+
+                // Update Toggle Button
+                const toggleBtn = teacherCard.querySelector('.toggle-admin-btn');
+                if (toggleBtn) {
+                    const isNowAdmin = teacherNewRole === 'admin';
+                    toggleBtn.dataset.isAdmin = isNowAdmin.toString();
+                    
+                    // Update classes
+                    toggleBtn.classList.remove('btn-primary', 'btn-warning');
+                    toggleBtn.classList.add(isNowAdmin ? 'btn-warning' : 'btn-primary');
+                    
+                    // Update content
+                    const iconClass = isNowAdmin ? 'fa-user-minus' : 'fa-user-plus';
+                    const canDemoteNow = isNowAdmin && updatedAdmins.length > 1;
+                    const btnText = isNowAdmin ? (canDemoteNow ? 'Demote from Admin' : 'Admin (Cannot Demote)') : 'Promote to Admin';
+                    
+                    toggleBtn.innerHTML = `<i class="fas ${iconClass}"></i> ${btnText}`;
+                }
+            }
+
             showToast(`Teacher ${action === 'demote' ? 'demoted' : 'promoted'} successfully.`, 'success');
-            await loadTeachers(); // Reload teachers to reflect changes
+            // await loadTeachers(); // Removed to prevent overwriting manual UI updates
         } catch (error) {
             console.error(`Error ${action} teacher:`, error);
             showToast(`Failed to ${action} teacher.`, 'error');

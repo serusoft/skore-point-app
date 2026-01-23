@@ -41,6 +41,12 @@
     gap: 15px;
 }
 
+#refreshSchoolData,
+#settingsTabBtn {
+    padding: 8px 16px;
+    font-size: 14px;
+}
+
 .content-tabs {
     display: flex;
     gap: 10px;
@@ -161,6 +167,12 @@
     border-color: rgba(67, 97, 238, 0.3);
 }
 
+.subject-card .btn-danger {
+    width: 40%;
+    align-self: center;
+    margin-top: 15px;
+}
+
 .card-header {
     display: flex;
     justify-content: space-between;
@@ -270,7 +282,7 @@
     bottom: 20px; /* Consistent with mobile media query */
     right: 20px;
     z-index: 999;
-    background-color: var(--error);
+    background-color: var(--primary);
     color: var(--light);
     padding: 10px 20px;
     border-radius: var(--border-radius);
@@ -285,7 +297,7 @@
 }
 
 .fixed-exit-btn:hover {
-    background-color: var(--error-rgb); /* Use RGB for potential darker shade on hover if needed */
+    background-color: var(--primary-dark);
     filter: brightness(0.9);
 }
 
@@ -478,6 +490,11 @@
         display: flex;
     }
 
+    /* Hide the generic global bottom tab bar on the school page */
+    .bottom-tab-bar {
+        display: none !important;
+    }
+
     .school-page {
         padding: 15px;
         padding-bottom: 80px; 
@@ -492,6 +509,33 @@
     }
 
     .fixed-exit-btn {
-        bottom: 20px;
+        bottom: 90px;
     }
+
+    .teacher-card {
+        flex-direction: column; /* Stack teacher card content on smaller screens */
+        align-items: flex-start; /* Align to the start */
+    }
+
+    .teacher-avatar {
+        width: 80px;
+        height: 80px;
+        font-size: 30px; /* Adjust font size for smaller avatar */
+    }
+}
+
+/* Styles for delete buttons */
+.btn-danger {
+    background-color: var(--error);
+    color: var(--light);
+    border: none;
+}
+
+.btn-danger:hover {
+    background-color: var(--error-dark);
+}
+
+/* Make mobile tabs more prominent */
+.mobile-bottom-tabs {
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
 }

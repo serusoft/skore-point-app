@@ -543,7 +543,7 @@ class AppUI {
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3 class="modal-title">${title}</h3>
-                        <button class="modal-close" onclick="ui.closeModal('${modalId}'); resolve(false)">
+                        <button class="modal-close" id="${modalId}-close">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -551,10 +551,10 @@ class AppUI {
                         <p>${message}</p>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-secondary" onclick="ui.closeModal('${modalId}'); resolve(false)">
+                        <button class="btn btn-secondary" id="${modalId}-cancel">
                             Cancel
                         </button>
-                        <button class="btn btn-primary" onclick="ui.closeModal('${modalId}'); resolve(true)">
+                        <button class="btn btn-primary" id="${modalId}-confirm">
                             Confirm
                         </button>
                     </div>
@@ -563,6 +563,24 @@ class AppUI {
             
             document.body.appendChild(modal);
             this.showModal(modalId);
+
+            const cleanup = () => {
+                this.closeModal(modalId);
+                setTimeout(() => modal.remove(), 300);
+            };
+
+            modal.querySelector(`#${modalId}-close`).addEventListener('click', () => {
+                cleanup();
+                resolve(false);
+            });
+            modal.querySelector(`#${modalId}-cancel`).addEventListener('click', () => {
+                cleanup();
+                resolve(false);
+            });
+            modal.querySelector(`#${modalId}-confirm`).addEventListener('click', () => {
+                cleanup();
+                resolve(true);
+            });
         });
     }
     
@@ -577,7 +595,7 @@ class AppUI {
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3 class="modal-title">${title}</h3>
-                        <button class="modal-close" onclick="ui.closeModal('${modalId}'); resolve()">
+                        <button class="modal-close" id="${modalId}-close">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -585,7 +603,7 @@ class AppUI {
                         <p>${message}</p>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-primary" onclick="ui.closeModal('${modalId}'); resolve()">
+                        <button class="btn btn-primary" id="${modalId}-ok">
                             OK
                         </button>
                     </div>
@@ -594,6 +612,20 @@ class AppUI {
             
             document.body.appendChild(modal);
             this.showModal(modalId);
+
+            const cleanup = () => {
+                this.closeModal(modalId);
+                setTimeout(() => modal.remove(), 300);
+            };
+
+            modal.querySelector(`#${modalId}-close`).addEventListener('click', () => {
+                cleanup();
+                resolve();
+            });
+            modal.querySelector(`#${modalId}-ok`).addEventListener('click', () => {
+                cleanup();
+                resolve();
+            });
         });
     }
     
@@ -608,7 +640,7 @@ class AppUI {
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3 class="modal-title">${title}</h3>
-                        <button class="modal-close" onclick="ui.closeModal('${modalId}'); resolve(null)">
+                        <button class="modal-close" id="${modalId}-close">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -617,10 +649,10 @@ class AppUI {
                         <input type="text" class="form-control" id="${modalId}-input" value="${defaultValue}">
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-secondary" onclick="ui.closeModal('${modalId}'); resolve(null)">
+                        <button class="btn btn-secondary" id="${modalId}-cancel">
                             Cancel
                         </button>
-                        <button class="btn btn-primary" onclick="ui.closeModal('${modalId}'); resolve(document.getElementById('${modalId}-input').value)">
+                        <button class="btn btn-primary" id="${modalId}-ok">
                             OK
                         </button>
                     </div>
@@ -629,6 +661,25 @@ class AppUI {
             
             document.body.appendChild(modal);
             this.showModal(modalId);
+
+            const cleanup = () => {
+                this.closeModal(modalId);
+                setTimeout(() => modal.remove(), 300);
+            };
+
+            modal.querySelector(`#${modalId}-close`).addEventListener('click', () => {
+                cleanup();
+                resolve(null);
+            });
+            modal.querySelector(`#${modalId}-cancel`).addEventListener('click', () => {
+                cleanup();
+                resolve(null);
+            });
+            modal.querySelector(`#${modalId}-ok`).addEventListener('click', () => {
+                const val = document.getElementById(`${modalId}-input`).value;
+                cleanup();
+                resolve(val);
+            });
             
             // Focus input
             setTimeout(() => {
@@ -652,7 +703,7 @@ class AppUI {
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3 class="modal-title">${title}</h3>
-                        <button class="modal-close" onclick="ui.closeModal('${modalId}'); resolve(null)">
+                        <button class="modal-close" id="${modalId}-close">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -667,10 +718,10 @@ class AppUI {
                         </select>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-secondary" onclick="ui.closeModal('${modalId}'); resolve(null)">
+                        <button class="btn btn-secondary" id="${modalId}-cancel">
                             Cancel
                         </button>
-                        <button class="btn btn-primary" onclick="ui.closeModal('${modalId}'); resolve(document.getElementById('${modalId}-select').value)">
+                        <button class="btn btn-primary" id="${modalId}-ok">
                             OK
                         </button>
                     </div>
@@ -679,6 +730,25 @@ class AppUI {
             
             document.body.appendChild(modal);
             this.showModal(modalId);
+
+            const cleanup = () => {
+                this.closeModal(modalId);
+                setTimeout(() => modal.remove(), 300);
+            };
+
+            modal.querySelector(`#${modalId}-close`).addEventListener('click', () => {
+                cleanup();
+                resolve(null);
+            });
+            modal.querySelector(`#${modalId}-cancel`).addEventListener('click', () => {
+                cleanup();
+                resolve(null);
+            });
+            modal.querySelector(`#${modalId}-ok`).addEventListener('click', () => {
+                const val = document.getElementById(`${modalId}-select`).value;
+                cleanup();
+                resolve(val);
+            });
         });
     }
     
@@ -711,6 +781,19 @@ class AppUI {
                 } else if (field.type === 'display') {
                     inputHtml = `
                         <div class="form-control-static" id="${fieldId}">${field.value || ''}</div>
+                    `;
+                } else if (field.type === 'multiselect') {
+                    inputHtml = `
+                        <div class="multiselect-container" id="${fieldId}-container" style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 4px; background: rgba(0,0,0,0.2);">
+                            ${field.options.map(opt => `
+                                <div class="checkbox-item" style="margin-bottom: 8px; display: flex; align-items: center;">
+                                    <input type="checkbox" id="${fieldId}-${opt.value}" name="${field.name}[]" value="${opt.value}" 
+                                           ${(Array.isArray(field.value) && field.value.includes(opt.value)) || opt.selected ? 'checked' : ''}
+                                           style="margin-right: 10px; width: auto; height: 16px;">
+                                    <label for="${fieldId}-${opt.value}" style="margin-bottom: 0; cursor: pointer;">${opt.label}</label>
+                                </div>
+                            `).join('')}
+                        </div>
                     `;
                 } else {
                     inputHtml = `
@@ -767,9 +850,14 @@ class AppUI {
                 
                 const formData = {};
                 fields.forEach(field => {
-                    const element = modal.querySelector(`#${modalId}-${field.name}`);
-                    if (element && field.type !== 'display') { // Don't include display fields in formData
-                        formData[field.name] = element.value;
+                    if (field.type === 'multiselect') {
+                        const checkboxes = modal.querySelectorAll(`input[name="${field.name}[]"]:checked`);
+                        formData[field.name] = Array.from(checkboxes).map(cb => cb.value);
+                    } else if (field.type !== 'display') {
+                        const element = modal.querySelector(`#${modalId}-${field.name}`);
+                        if (element) {
+                            formData[field.name] = element.value;
+                        }
                     }
                 });
 
