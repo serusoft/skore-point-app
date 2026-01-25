@@ -167,9 +167,10 @@
     border-color: rgba(67, 97, 238, 0.3);
 }
 
-.subject-card .btn-danger {
-    width: 40%;
-    align-self: center;
+
+.class-card .btn-delete,
+.subject-card .btn-delete {
+    width: 100%;
     margin-top: 15px;
 }
 
@@ -521,6 +522,17 @@
         width: 80px;
         height: 80px;
         font-size: 30px; /* Adjust font size for smaller avatar */
+    }
+
+    .class-card .btn-delete,
+    .subject-card .btn-delete {
+        width: 45%;
+        align-self: center;
+    }
+
+    .level-nav-btn {
+        padding: 6px 12px;
+        font-size: 12px;
     }
 }
 

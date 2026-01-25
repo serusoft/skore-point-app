@@ -215,6 +215,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize level navigation
         await initializeLevelNavigation();
         
+        let fixedExitBtn = document.getElementById('exitSchoolBtn');
+        if (fixedExitBtn) {
+            setTimeout(() => {
+                const styles = window.getComputedStyle(fixedExitBtn);
+                console.log('exitSchoolBtn display:', styles.display);
+            }, 1000);
+        }
+
         console.log('School Page: initializePage() - Page elements initialized.');
     }
     
@@ -665,7 +673,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </span>
                     </div>
                 </div>
-                <button class="btn btn-sm btn-danger" data-class-id="${cls.id}">
+                <button class="btn btn-sm btn-danger btn-delete" data-class-id="${cls.id}">
                     <i class="fas fa-trash"></i> Delete
                 </button>
             </div>
@@ -695,9 +703,8 @@ document.addEventListener('DOMContentLoaded', async () => {
      * Delete a class
      */
     async function deleteClass(classId) {
-        const confirmed = confirm('Are you sure you want to delete this class? This action cannot be undone.');
-        if (!confirmed) return;
-        
+        const confirmed = await ui.confirm('Are you sure you want to delete this class? This action cannot be undone.');
+        if (!confirmed) return;        
         showPageLoading('Deleting class...');
         try {
             await Firebase.db.deleteDoc('classes', classId);
@@ -813,9 +820,8 @@ document.addEventListener('DOMContentLoaded', async () => {
      * Delete a student
      */
     async function deleteStudent(studentId) {
-        const confirmed = confirm('Are you sure you want to delete this student? This action cannot be undone.');
-        if (!confirmed) return;
-        
+        const confirmed = await ui.confirm('Are you sure you want to delete this student? This action cannot be undone.');
+        if (!confirmed) return;        
         showPageLoading('Deleting student...');
         try {
             await Firebase.db.deleteDoc('students', studentId);
@@ -885,7 +891,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p style="color: var(--gray-light); font-size: 0.85rem; margin: 0;">${subject.code || 'No code'}</p>
                     </div>
                 </div>
-                <button class="btn btn-sm btn-danger" data-subject-id="${subject.id}">
+                <button class="btn btn-sm btn-danger btn-delete" data-subject-id="${subject.id}">
                     <i class="fas fa-trash"></i> Delete
                 </button>
             </div>
@@ -905,9 +911,8 @@ document.addEventListener('DOMContentLoaded', async () => {
      * Delete a subject
      */
     async function deleteSubject(subjectId) {
-        const confirmed = confirm('Are you sure you want to delete this subject? This action cannot be undone.');
-        if (!confirmed) return;
-        
+        const confirmed = await ui.confirm('Are you sure you want to delete this subject? This action cannot be undone.');
+        if (!confirmed) return;        
         showPageLoading('Deleting subject...');
         try {
             await Firebase.db.deleteDoc('subjects', subjectId);

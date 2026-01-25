@@ -4,6 +4,11 @@
     margin: 0 auto;
 }
 
+/* Reduce gap between navbar and dashboard content */
+body.has-navbar .dashboard-page {
+    padding-top: 70px !important;
+}
+
 .dashboard-header {
     display: flex;
     justify-content: space-between;

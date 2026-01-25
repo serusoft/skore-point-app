@@ -143,7 +143,6 @@ class AppUI {
                 console.log('UI.injectNavbar() - Added has-navbar class to body');
                 
                 // Setup event listeners when injected into a container
-                this.setupGlobalNavbarEvents();
                 
 
 
@@ -192,8 +191,18 @@ class AppUI {
     
 
 
-    // createAuthenticatedNavbar - FIXED VERSION
     createAuthenticatedNavbar() {
+        // Determine if the "How to Use" button should be shown
+        const currentPageFromHash = window.location.hash.substring(1).split('/')[0];
+        const currentPageFromPath = window.location.pathname.split('/').pop().replace('.html', '');
+        const currentPage = currentPageFromHash || currentPageFromPath;
+        const showHowToUse = ['dashboard', 'school'].includes(currentPage);
+        const howToUseButtonDesktop = `
+            <a href="#how-to-use" class="btn btn-outline-primary how-to-use-link-desktop ${showHowToUse ? '' : 'hidden'}">
+                <i class="fas fa-play-circle"></i> Learn how to use Skore Point
+            </a>
+        `;
+
         return `
             <nav class="navbar" id="main-navbar" role="navigation" aria-label="Main navigation">
                 <a href="#dashboard" class="navbar-brand">
@@ -202,7 +211,7 @@ class AppUI {
                 </a>
 
                 <div class="navbar-right-menu desktop-only">
-                    <!-- My Profile and Settings links are now handled by a separate profile card outside the nav -->
+                    ${howToUseButtonDesktop}
                 </div>
 
                 <!-- Hamburger menu removed for mobile -->
@@ -217,14 +226,10 @@ class AppUI {
                     <i class="fas fa-user"></i>
                     <span>Profile</span>
                 </a>
-                <a href="#settings" data-page="settings" class="tab-link">
-                    <i class="fas fa-cog"></i>
-                    <span>Settings</span>
+                <a href="#how-to-use" class="tab-link how-to-use-link">
+                    <i class="fas fa-play-circle"></i>
+                    <span>How to Use Skore Point</span>
                 </a>
-                <button class="tab-link logout-btn-mobile">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
-                </button>
             </div>
         `;
     }
@@ -252,47 +257,6 @@ class AppUI {
                 </div>
             </nav>
         `;
-    }
-
-    setupGlobalNavbarEvents() {
-        // The old mobile menu toggle logic is removed.
-
-        // Handle logout from the new bottom tab bar
-        const bottomTabBar = document.querySelector('.bottom-tab-bar');
-        if (bottomTabBar) {
-            const logoutBtn = bottomTabBar.querySelector('.logout-btn-mobile');
-            if (logoutBtn) {
-                // Clone to remove old listeners
-                const newLogoutBtn = logoutBtn.cloneNode(true);
-                logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
-
-                newLogoutBtn.addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    console.log('Bottom tab bar logout clicked');
-                    try {
-                        // Assuming AppState and navigateTo are globally available
-                        // or part of a larger app instance.
-                        if (window.Firebase && window.Firebase.auth) {
-                             await window.Firebase.auth.signOut();
-                        }
-                        if (window.AppState) {
-                            window.AppState.clear();
-                        }
-                        if (window.navigateTo) {
-                            window.navigateTo('login');
-                        } else {
-                            window.location.hash = '#login';
-                        }
-                        
-                        this.showToast('You have been logged out.', 'info');
-
-                    } catch (error) {
-                        console.error('Logout error:', error);
-                        this.showToast('Error logging out', 'error');
-                    }
-                });
-            }
-        }
     }
 
     // loadUserProfileInNavbar - FIXED VERSION (removed inline styles)

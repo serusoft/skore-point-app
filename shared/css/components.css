@@ -1846,3 +1846,10 @@ select option:checked {
     overflow-x: hidden;
 }
 
+.how-to-use-link {
+    flex-grow: 2; /* Make it take up more space */
+}
+
+.how-to-use-link-desktop.hidden {
+    display: none !important;
+}
