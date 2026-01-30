@@ -661,6 +661,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (emptyState) emptyState.style.display = 'none';
         
+        const isAdmin = AppState.currentSchool && AppState.currentSchool.admins && AppState.currentSchool.admins.includes(AppState.currentUser.uid);
+
         classesList.innerHTML = classes.map(cls => `
             <div class="class-card" data-id="${cls.id}">
                 <div style="flex: 1;">
@@ -673,9 +675,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </span>
                     </div>
                 </div>
-                <button class="btn btn-sm btn-danger btn-delete" data-class-id="${cls.id}">
+                ${isAdmin ? `<button class="btn btn-sm btn-danger btn-delete" data-class-id="${cls.id}">
                     <i class="fas fa-trash"></i> Delete
-                </button>
+                </button>` : ''}
             </div>
         `).join('');
         
@@ -703,16 +705,28 @@ document.addEventListener('DOMContentLoaded', async () => {
      * Delete a class
      */
     async function deleteClass(classId) {
-        const confirmed = await ui.confirm('Are you sure you want to delete this class? This action cannot be undone.');
+        const confirmed = await ui.confirm('Are you sure you want to delete this class? All students in this class will also be deleted. This action cannot be undone.');
         if (!confirmed) return;        
-        showPageLoading('Deleting class...');
+        showPageLoading('Deleting class and associated students...');
         try {
+            // Delete all students in this class first
+            const students = await Firebase.db.query('students', [
+                { field: 'classId', op: '==', value: classId },
+                { field: 'schoolId', op: '==', value: AppState.currentSchool.id }
+            ]);
+            
+            if (students.length > 0) {
+                await Promise.all(students.map(student => 
+                    Firebase.db.deleteDoc('students', student.id)
+                ));
+            }
+
             await Firebase.db.deleteDoc('classes', classId);
-            showToast('Class deleted successfully', 'success');
+            showToast('Class and associated students deleted successfully', 'success');
             await loadClasses(AppState.currentAcademicLevel);
         } catch (error) {
             console.error('Error deleting class:', error);
-            showToast('Error deleting class', 'error');
+            showToast('Error deleting class: ' + (error.message || 'Permission denied'), 'error');
         } finally {
             hidePageLoading();
         }
@@ -793,15 +807,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         
+        const isAdmin = AppState.currentSchool && AppState.currentSchool.admins && AppState.currentSchool.admins.includes(AppState.currentUser.uid);
+
         studentsList.innerHTML = students.map(student => `
             <tr data-student-id="${student.id}">
                 <td>${student.name}</td>
                 <td>${classMap[student.classId] || 'N/A'}</td>
                 <td><span class="class-category" style="font-size: 0.8rem;">${student.category || 'N/A'}</span></td>
                 <td>
-                    <button class="btn btn-sm btn-danger" data-student-id="${student.id}">
+                    ${isAdmin ? `<button class="btn btn-sm btn-danger btn-delete" data-student-id="${student.id}">
                         <i class="fas fa-trash"></i> Delete
-                    </button>
+                    </button>` : ''}
                 </td>
             </tr>
         `).join('');
@@ -882,6 +898,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (emptyState) emptyState.style.display = 'none';
         
+        const isAdmin = AppState.currentSchool && AppState.currentSchool.admins && AppState.currentSchool.admins.includes(AppState.currentUser.uid);
+
         subjectsList.innerHTML = subjects.map(subject => `
             <div class="subject-card" data-subject-id="${subject.id}">
                 <div style="flex: 1;">
@@ -891,9 +909,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p style="color: var(--gray-light); font-size: 0.85rem; margin: 0;">${subject.code || 'No code'}</p>
                     </div>
                 </div>
-                <button class="btn btn-sm btn-danger btn-delete" data-subject-id="${subject.id}">
+                ${isAdmin ? `<button class="btn btn-sm btn-danger btn-delete" data-subject-id="${subject.id}">
                     <i class="fas fa-trash"></i> Delete
-                </button>
+                </button>` : ''}
             </div>
         `).join('');
         
@@ -979,6 +997,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (emptyState) emptyState.style.display = 'none';
         
         const currentSchoolAdmins = AppState.currentSchool.admins || [];
+        const schoolCreator = AppState.currentSchool.createdBy;
 
         teachersList.innerHTML = teachers.map(teacher => {
             const assignedSubjectNames = (teacher.assignedSubjects || [])
@@ -988,8 +1007,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const isTeacherAdmin = teacher.role === 'admin';
             const isCurrentUser = teacher.id === AppState.currentUser.uid;
-            const canDemote = isTeacherAdmin && currentSchoolAdmins.length > 1; // Can demote if not the only admin
-            const showAdminButton = !isCurrentUser || (isCurrentUser && isTeacherAdmin && currentSchoolAdmins.length > 1);
+            const isCreator = schoolCreator && teacher.id === schoolCreator;
+            const canDemote = isTeacherAdmin && currentSchoolAdmins.length > 1 && !isCreator;
+            const showAdminButton = !isCreator && !isCurrentUser;
 
             return `
                 <div class="teacher-card" data-teacher-id="${teacher.id}">
@@ -1005,18 +1025,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <p class="teacher-subjects">Subjects: ${assignedSubjectNames || 'No subjects assigned'}</p>
                         <span class="role-badge ${teacher.role || 'teacher'}">${teacher.role || 'Teacher'}</span>
                     </div>
-                    <div class="teacher-actions">
+                    <div class="teacher-actions" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 15px;">
                         ${!isTeacherAdmin ? `
-                            <button class="btn btn-sm btn-secondary assign-subjects-btn" data-teacher-id="${teacher.id}">
+                            <button class="btn btn-sm btn-secondary assign-subjects-btn" style="width: 100%; justify-content: center; white-space: normal;" data-teacher-id="${teacher.id}">
                                 <i class="fas fa-book"></i> Assign Subjects
                             </button>
                         ` : ''}
                         ${showAdminButton ? `
                             <button class="btn btn-sm ${isTeacherAdmin ? 'btn-warning' : 'btn-primary'} toggle-admin-btn" 
+                                    style="width: 100%; justify-content: center; white-space: normal;"
                                     data-teacher-id="${teacher.id}" 
-                                    data-is-admin="${isTeacherAdmin}">
+                                    data-is-admin="${isTeacherAdmin}"
+                                    data-can-demote="${canDemote}">
                                 <i class="fas ${isTeacherAdmin ? 'fa-user-minus' : 'fa-user-plus'}"></i> 
-                                ${isTeacherAdmin ? (canDemote ? 'Demote from Admin' : 'Admin (Cannot Demote)') : 'Promote to Admin'}
+                                ${isTeacherAdmin ? (canDemote ? 'Demote Admin' : 'Admin (Locked)') : 'Make Admin'}
                             </button>
                         ` : ''}
                     </div>
@@ -1036,8 +1058,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             button.addEventListener('click', (e) => {
                 const teacherId = e.currentTarget.dataset.teacherId;
                 const isAdmin = e.currentTarget.dataset.isAdmin === 'true';
+                const canDemote = e.currentTarget.dataset.canDemote === 'true';
                 if (isAdmin && !canDemote) {
-                    showToast('Cannot demote the only admin of the school.', 'error');
+                    showToast('Cannot demote this admin.', 'error');
                     return;
                 }
                 toggleTeacherAdminStatus(teacherId, isAdmin);
@@ -1358,32 +1381,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     function setupEnterMarksHandlers() {
         const enterMarksBtn = document.getElementById('enterMarksBtn');
         const viewReportCardsBtn = document.getElementById('viewReportCardsBtn');
-        const enterMarksClassFilter = document.getElementById('enterMarksClassFilter');
         
         if (enterMarksBtn) {
             enterMarksBtn.addEventListener('click', async () => {
-                const selectedClass = enterMarksClassFilter ? enterMarksClassFilter.value : '';
-                if (!selectedClass) {
-                    showToast('Please select a class first', 'warning');
-                    return;
-                }
-                
-                // Get the selected class name for better user feedback
-                let className = 'Selected Class';
-                if (enterMarksClassFilter) {
-                    const selectedOption = enterMarksClassFilter.options[enterMarksClassFilter.selectedIndex];
-                    className = selectedOption.textContent;
-                }
-                
-                showToast(`Opening marks entry for ${className}...`, 'info');
-                
-                // Store the selected class in AppState for the marks page
-                if (window.AppState) {
-                    AppState.selectedClassForMarks = selectedClass;
-                }
+                showToast('Opening marks entry...', 'info');
                 
                 if (typeof window.navigateTo === 'function') {
-                    window.navigateTo('marks');
+                    window.navigateTo('marks', {
+                        level: AppState.currentAcademicLevel
+                    });
                 }
             });
         }
@@ -1590,6 +1596,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     hidePageLoading();
                     return;
                 }
+                
+                const schoolCreator = school.createdBy;
+                if (schoolCreator && teacherId === schoolCreator) {
+                    showToast('Cannot demote the school creator.', 'error');
+                    hidePageLoading();
+                    return;
+                }
+
                 updatedAdmins = updatedAdmins.filter(id => id !== teacherId);
             }
 
@@ -1628,10 +1642,42 @@ document.addEventListener('DOMContentLoaded', async () => {
                     
                     // Update content
                     const iconClass = isNowAdmin ? 'fa-user-minus' : 'fa-user-plus';
-                    const canDemoteNow = isNowAdmin && updatedAdmins.length > 1;
-                    const btnText = isNowAdmin ? (canDemoteNow ? 'Demote from Admin' : 'Admin (Cannot Demote)') : 'Promote to Admin';
+                    const canDemoteNow = isNowAdmin && updatedAdmins.length > 1 && (!school.createdBy || teacherId !== school.createdBy);
+                    toggleBtn.dataset.canDemote = canDemoteNow.toString();
+                    const btnText = isNowAdmin ? (canDemoteNow ? 'Demote Admin' : 'Admin (Locked)') : 'Make Admin';
                     
                     toggleBtn.innerHTML = `<i class="fas ${iconClass}"></i> ${btnText}`;
+                }
+
+                // Update Actions (Add/Remove Assign Subjects button)
+                const actionsContainer = teacherCard.querySelector('.teacher-actions');
+                if (actionsContainer) {
+                    const existingAssignBtn = actionsContainer.querySelector('.assign-subjects-btn');
+                    
+                    if (teacherNewRole === 'teacher') {
+                        // Demoted: Add button if not exists
+                        if (!existingAssignBtn) {
+                            const assignBtn = document.createElement('button');
+                            assignBtn.className = 'btn btn-sm btn-secondary assign-subjects-btn';
+                            assignBtn.style.cssText = 'width: 100%; justify-content: center; white-space: normal;';
+                            assignBtn.dataset.teacherId = teacherId;
+                            assignBtn.innerHTML = '<i class="fas fa-book"></i> Assign Subjects';
+                            
+                            // Add event listener
+                            assignBtn.addEventListener('click', (e) => {
+                                const tId = e.currentTarget.dataset.teacherId;
+                                assignSubjectsToTeacher(tId);
+                            });
+
+                            // Insert as first child
+                            actionsContainer.insertBefore(assignBtn, actionsContainer.firstChild);
+                        }
+                    } else {
+                        // Promoted: Remove button if exists
+                        if (existingAssignBtn) {
+                            existingAssignBtn.remove();
+                        }
+                    }
                 }
             }
 

@@ -247,6 +247,12 @@ function showJoinSchoolModal() {
                     <input type="text" id="joinSchoolCode" placeholder="6-digit code" required maxlength="6" 
                            oninput="this.value = this.value.toUpperCase()">
                 </div>
+                <div class="form-group">
+                    <label for="joinSchoolSubject">
+                        <i class="fas fa-book"></i> Teaching Subject (Optional)
+                    </label>
+                    <input type="text" id="joinSchoolSubject" placeholder="e.g. Mathematics">
+                </div>
                 <button type="submit" class="btn btn-primary btn-block">
                     <i class="fas fa-sign-in-alt"></i> Join School
                 </button>
@@ -313,6 +319,7 @@ function showJoinSchoolModal() {
         
         const schoolName = schoolNameInput.value.trim();
         const schoolCode = modal.querySelector('#joinSchoolCode').value.trim().toUpperCase();
+        const subjectName = modal.querySelector('#joinSchoolSubject').value.trim();
         
         if (!schoolName || !schoolCode) {
             showJoinError('Please enter both school name and code');
@@ -357,9 +364,29 @@ function showJoinSchoolModal() {
                 teachers: Firebase.db.arrayUnion(AppState.currentUser.uid)
             });
             
+            // Find and assign subject if provided
+            let assignedSubjects = [];
+            if (subjectName) {
+                try {
+                    // Fetch all subjects for the school to do a case-insensitive match
+                    const allSubjects = await Firebase.db.query('subjects', [
+                        { field: 'schoolId', op: '==', value: school.id }
+                    ]);
+                    
+                    const matchedSubjects = allSubjects.filter(s => 
+                        s.name.toLowerCase() === subjectName.toLowerCase()
+                    );
+                    
+                    assignedSubjects = matchedSubjects.map(s => s.id);
+                } catch (err) {
+                    console.warn('Error matching subject during join:', err);
+                }
+            }
+
             // Update user document
             await Firebase.db.updateDoc('users', AppState.currentUser.uid, {
-                schoolId: school.id
+                schoolId: school.id,
+                assignedSubjects: assignedSubjects
             });
             
             // Update app state
@@ -547,6 +574,7 @@ function showRegisterSchoolModal() {
                 level: level,
                 code: code,
                 logoUrl: logoUrl,
+                createdBy: AppState.currentUser.uid,
                 admins: [AppState.currentUser.uid],
                 teachers: [AppState.currentUser.uid],
                 createdAt: Firebase.db.serverTimestamp()

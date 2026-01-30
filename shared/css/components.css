@@ -272,6 +272,11 @@
     .desktop-only { 
         display: none !important; 
     }
+
+    .how-to-use-link-desktop,
+    .navbar-right-menu {
+        display: none !important;
+    }
     
     .mobile-only { 
         display: inline-flex !important; 
@@ -1015,7 +1020,9 @@ select option:checked {
 .d-grid { display: grid !important; }
 
 .mobile-only { display: none !important; }
-.desktop-only { display: flex !important; }
+@media (min-width: 769px) {
+    .desktop-only { display: flex !important; }
+}
 
 .flex-column { flex-direction: column; }
 .flex-row { flex-direction: row; }

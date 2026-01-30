@@ -7,18 +7,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const getStartedBtn = document.getElementById('getStartedBtn');
     const installAppBtn = document.getElementById('installAppBtn');
     
-    // Check if user is already authenticated
-    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+    // Function to update UI based on auth state
+    const updateAuthUI = (isAuth) => {
+        if (isAuth && getStartedBtn) {
+            getStartedBtn.innerHTML = '<i class="fas fa-tachometer-alt"></i> Go to Dashboard';
+        } else if (getStartedBtn) {
+            getStartedBtn.innerHTML = '<i class="fas fa-rocket"></i> Get Started';
+        }
+    };
+
+    // Check initial auth state
+    updateAuthUI(localStorage.getItem('isAuthenticated') === 'true');
     
-    // Update button text if user is authenticated
-    if (isAuthenticated && getStartedBtn) {
-        getStartedBtn.innerHTML = '<i class="fas fa-tachometer-alt"></i> Go to Dashboard';
-    }
+    // Listen for auth state changes
+    document.addEventListener('auth:state-changed', (e) => {
+        updateAuthUI(e.detail.isAuthenticated);
+    });
     
     // Add event listeners
     if (getStartedBtn) {
         getStartedBtn.addEventListener('click', function() {
-                if (isAuthenticated) {
+            const isAuth = localStorage.getItem('isAuthenticated') === 'true';
+            if (isAuth) {
                 window.location.href = '../dashboard/dashboard.html';
             } else {
                 window.location.href = '../auth/login.html';
@@ -31,14 +41,22 @@ document.addEventListener('DOMContentLoaded', function() {
             if (AppState.deferredPrompt) {
                 installPWA();
             } else {
-                ui.alert('To install the app, look for the "Add to Home Screen" option in your browser menu.', 'Install App');
+                if (typeof showToast === 'function') {
+                    showToast('To install the app, look for the "Add to Home Screen" option in your browser menu.', 'info');
+                } else {
+                    alert('To install the app, look for the "Add to Home Screen" option in your browser menu.');
+                }
             }
         });
         
         // Hide install button if app is already installed
-        if (AppState.isAppInstalled) {
-            installAppBtn.style.display = 'none';
-        }
+        const checkInstallState = () => {
+            if (AppState.isAppInstalled) {
+                installAppBtn.style.display = 'none';
+            }
+        };
+        checkInstallState();
+        document.addEventListener('app:initialized', checkInstallState);
     }
     
     // Simulate loading progress

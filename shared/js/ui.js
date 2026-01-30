@@ -198,7 +198,7 @@ class AppUI {
         const currentPage = currentPageFromHash || currentPageFromPath;
         const showHowToUse = ['dashboard', 'school'].includes(currentPage);
         const howToUseButtonDesktop = `
-            <a href="#how-to-use" class="btn btn-outline-primary how-to-use-link-desktop ${showHowToUse ? '' : 'hidden'}">
+            <a href="../marks/tutorials.html" data-page="tutorials" class="btn btn-outline-primary how-to-use-link-desktop desktop-only ${showHowToUse ? '' : 'd-none'}">
                 <i class="fas fa-play-circle"></i> Learn how to use Skore Point
             </a>
         `;
@@ -226,7 +226,7 @@ class AppUI {
                     <i class="fas fa-user"></i>
                     <span>Profile</span>
                 </a>
-                <a href="#how-to-use" class="tab-link how-to-use-link">
+                <a href="../marks/tutorials.html" data-page="tutorials" class="tab-link how-to-use-link">
                     <i class="fas fa-play-circle"></i>
                     <span>How to Use Skore Point</span>
                 </a>

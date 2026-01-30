@@ -1,18 +1,33 @@
 // Marks entry page functionality
 document.addEventListener('DOMContentLoaded', () => {
-    initMarksPage();
+    if (window.appInitialized) {
+        initMarksPage();
+    } else {
+        document.addEventListener('app:initialized', initMarksPage);
+    }
 });
 
 async function initMarksPage() {
     // Check if user has access to a school
     if (!AppState.currentSchool) {
-        UI.showToast('Please join or create a school first', 'warning');
-        Router.navigateTo('dashboard');
+        showToast('Please join or create a school first', 'warning');
+        if (typeof window.navigateTo === 'function') {
+            window.navigateTo('dashboard');
+        }
         return;
     }
     
+    // Get params from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const levelParam = urlParams.get('level');
+    
+    // Set level if provided in URL
+    if (levelParam) {
+        AppState.currentAcademicLevel = levelParam;
+    }
+    
     // Check if level is selected
-    const currentLevel = Router.getCurrentLevel();
+    const currentLevel = AppState.currentAcademicLevel;
     if (!currentLevel) {
         showLevelSelection();
         return;
@@ -25,6 +40,9 @@ async function initMarksPage() {
 function showLevelSelection() {
     const prompt = document.getElementById('levelSelectionPrompt');
     const options = document.getElementById('marksLevelOptions');
+    
+    if (!prompt || !options) return;
+    
     const school = AppState.currentSchool;
     
     if (!school) return;
@@ -53,20 +71,28 @@ function showLevelSelection() {
     options.querySelectorAll('.level-option').forEach(option => {
         option.addEventListener('click', () => {
             const level = option.dataset.level;
-            Router.navigateTo('marks', level);
+            AppState.currentAcademicLevel = level;
+            // Re-initialize with selected level
+            initializeMarksPage(level);
         });
     });
 }
 
 async function initializeMarksPage(level) {
     // Hide level selection
-    document.getElementById('levelSelectionPrompt').style.display = 'none';
+    const prompt = document.getElementById('levelSelectionPrompt');
+    if (prompt) prompt.style.display = 'none';
     
     // Show marks interface
-    document.getElementById('marksInterface').style.display = 'block';
+    const marksInterface = document.getElementById('marksInterface');
+    if (marksInterface) marksInterface.style.display = 'block';
     
     // Update level badge
-    document.getElementById('marksLevelBadge').textContent = getLevelDisplayName(level);
+    const badge = document.getElementById('marksLevelBadge');
+    if (badge) badge.textContent = getLevelDisplayName(level);
+    
+    // Populate level filter
+    populateLevelFilter(level);
     
     // Setup event listeners
     setupMarksEventListeners();
@@ -76,6 +102,27 @@ async function initializeMarksPage(level) {
 }
 
 function setupMarksEventListeners() {
+    // Back to School
+    document.getElementById('backToSchoolBtn')?.addEventListener('click', () => {
+        if (typeof window.navigateTo === 'function') {
+            window.navigateTo('school');
+        } else {
+            window.location.href = '../school/school.html';
+        }
+    });
+
+    // Level selection
+    document.getElementById('marksLevel')?.addEventListener('change', async (e) => {
+        const level = e.target.value;
+        if (level) {
+            AppState.currentAcademicLevel = level;
+            const badge = document.getElementById('marksLevelBadge');
+            if (badge) badge.textContent = getLevelDisplayName(level);
+            clearMarksForm();
+            await loadMarksData(level);
+        }
+    });
+
     // Class selection
     document.getElementById('marksClass')?.addEventListener('change', async (e) => {
         await handleClassSelection(e.target.value);
@@ -133,9 +180,32 @@ async function loadMarksData(level) {
         // Set current term
         updateTermDisplay();
         
+        // Check for pre-selected values from URL or AppState
+        const urlParams = new URLSearchParams(window.location.search);
+        const classIdParam = urlParams.get('classId') || (window.AppState && window.AppState.selectedClassForMarks);
+        const termParam = urlParams.get('term') || (window.AppState && window.AppState.selectedTermForMarks);
+
+        if (classIdParam) {
+            const classSelect = document.getElementById('marksClass');
+            if (classSelect) {
+                classSelect.value = classIdParam;
+                await handleClassSelection(classIdParam);
+                window.AppState.selectedClassForMarks = null;
+            }
+        }
+        
+        if (termParam) {
+            const termSelect = document.getElementById('marksTerm');
+            if (termSelect) {
+                termSelect.value = termParam;
+                await handleTermSelection(termParam);
+                window.AppState.selectedTermForMarks = null;
+            }
+        }
+        
     } catch (error) {
         console.error('Error loading marks data:', error);
-        UI.showToast('Error loading data', 'error');
+        showToast('Error loading data', 'error');
     }
 }
 
@@ -198,6 +268,7 @@ async function handleClassSelection(classId) {
     try {
         // Load students for this class
         await loadStudentsForClass(classId);
+        showToast('Class loaded. Search for a student to enter marks.', 'info');
         
         // Show marks form if we have a selected student
         const selectedStudent = getSelectedStudent();
@@ -207,7 +278,7 @@ async function handleClassSelection(classId) {
         
     } catch (error) {
         console.error('Error handling class selection:', error);
-        UI.showToast('Error loading class data', 'error');
+        showToast('Error loading class data', 'error');
     }
 }
 
@@ -343,7 +414,7 @@ async function showMarksForm(subjectId, existingMarks = null) {
         if (subject) subjects = [subject];
     } else {
         // All subjects for current level
-        const level = Router.getCurrentLevel();
+        const level = AppState.currentAcademicLevel;
         subjects = await Firebase.db.query('subjects', [
             { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
             { field: 'category', op: '==', value: level }
@@ -535,13 +606,13 @@ function updateMarksSummary() {
 async function saveMarks() {
     const selectedStudent = window.selectedStudent;
     if (!selectedStudent) {
-        UI.showToast('Please select a student first', 'error');
+        showToast('Please select a student first', 'error');
         return;
     }
     
     const term = document.getElementById('marksTerm').value;
     if (!term) {
-        UI.showToast('Please select a term', 'error');
+        showToast('Please select a term', 'error');
         return;
     }
     
@@ -606,12 +677,12 @@ async function saveMarks() {
     });
     
     if (!hasMarks) {
-        UI.showToast('Please enter at least one mark', 'warning');
+        showToast('Please enter at least one mark', 'warning');
         return;
     }
     
     try {
-        UI.showLoading('Saving marks...');
+        showLoading('Saving marks...');
         
         // Get teacher initials
         const teacherName = AppState.currentUserData.name || '';
@@ -622,7 +693,7 @@ async function saveMarks() {
             studentId: selectedStudent.id,
             schoolId: AppState.currentSchool.id,
             classId: selectedStudent.classId,
-            level: Router.getCurrentLevel(),
+            level: AppState.currentAcademicLevel,
             term: term,
             ...marks,
             enteredBy: AppState.currentUser.uid,
@@ -633,16 +704,16 @@ async function saveMarks() {
         // Save to Firestore
         await Firebase.db.setDoc('marks', `${selectedStudent.id}_${term}`, marksData);
         
-        UI.hideLoading();
-        UI.showToast('Marks saved successfully!', 'success');
+        hideLoading();
+        showToast('Marks saved successfully!', 'success');
         
         // Update summary
         updateMarksSummary();
         
     } catch (error) {
-        UI.hideLoading();
+        hideLoading();
         console.error('Error saving marks:', error);
-        UI.showToast('Error saving marks', 'error');
+        showToast('Error saving marks', 'error');
     }
 }
 
@@ -690,7 +761,12 @@ function updateTermDisplay(term) {
 
 function getClassFromId(classId) {
     // This should look up class name from stored classes
-    return 'Class';
+    const select = document.getElementById('marksClass');
+    if (select) {
+        const option = select.querySelector(`option[value="${classId}"]`);
+        if (option) return option.textContent;
+    }
+    return 'Unknown Class';
 }
 
 function getSelectedStudent() {
@@ -700,6 +776,36 @@ function getSelectedStudent() {
 function getTeacherInitials(name) {
     if (!name) return 'T';
     return name.split(' ').map(n => n[0]).toUpperCase().join('').substring(0, 3);
+}
+
+function getLevelDisplayName(level) {
+    const levels = {
+        'lower-primary': 'Lower Primary (P1-P3)',
+        'upper-primary': 'Upper Primary (P4-P7)',
+        'olevel': 'O-Level (S1-S4)',
+        'alevel': 'A-Level (S5-S6)'
+    };
+    return levels[level] || level;
+}
+
+function populateLevelFilter(currentLevel) {
+    const select = document.getElementById('marksLevel');
+    if (!select || !AppState.currentSchool) return;
+    
+    const isPrimary = AppState.currentSchool.level === 'primary';
+    const options = isPrimary 
+        ? [
+            { value: 'lower-primary', label: 'Lower Primary (P1-P3)' },
+            { value: 'upper-primary', label: 'Upper Primary (P4-P7)' }
+        ]
+        : [
+            { value: 'olevel', label: 'O-Level (S1-S4)' },
+            { value: 'alevel', label: 'A-Level (S5-S6)' }
+        ];
+        
+    select.innerHTML = options.map(opt => 
+        `<option value="${opt.value}" ${opt.value === currentLevel ? 'selected' : ''}>${opt.label}</option>`
+    ).join('');
 }
 
 function debounce(func, wait) {

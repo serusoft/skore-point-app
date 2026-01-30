@@ -33,6 +33,9 @@ async function initializeApp() {
     console.log('App: initializeApp() - Start');
     
     try {
+        // Initialize PWA
+        initializePWA();
+
         // Initialize Firebase
         console.log('App: initializeApp() - Initializing Firebase...');
         const firebaseInitialized = await initializeFirebase();
@@ -46,9 +49,6 @@ async function initializeApp() {
         console.log('App: initializeApp() - Checking auth state...');
         await checkAuthState();
         console.log('App: initializeApp() - Auth state check completed.');
-        
-        // Initialize PWA
-        initializePWA();
         
         // Initialize offline detection
         initializeOfflineDetection();
@@ -216,8 +216,8 @@ async function checkAuthState() {
 
                     // Handle initial navigation now that data is loaded
                     if (window.location.pathname.endsWith('/') || window.location.pathname.endsWith('/index.html')) {
-                        console.log('App: onAuthStateChanged() - Redirecting authenticated user from root to dashboard.');
-                        window.location.href = 'pages/dashboard/dashboard.html';
+                        console.log('App: onAuthStateChanged() - Redirecting authenticated user from root to launch page.');
+                        window.location.href = 'pages/launch/launch.html';
                     }
                     
                 } catch (error) {
@@ -266,7 +266,7 @@ function handlePostAuthNavigation(user) {
     const isAuthPage = currentPage.includes('login.html') || currentPage.includes('register.html');
     const isLaunchPage = currentPage.includes('launch.html');
 
-    if (user && (isAuthPage || isLaunchPage)) {
+    if (user && isAuthPage) {
         window.location.href = '../dashboard/dashboard.html';
     } else if (!user && !isAuthPage && !isLaunchPage) {
         const path = window.location.pathname;
@@ -607,7 +607,8 @@ function navigateTo(page, params = {}) {
         'reports': '../reports/reports.html',
         'analytics': '../analytics/analytics.html',
         'settings': '../settings/settings.html',
-        'profile': '../profile/profile.html'
+        'profile': '../profile/profile.html',
+        'tutorials': '../marks/tutorials.html'
     };
     
     if (pages[page]) {

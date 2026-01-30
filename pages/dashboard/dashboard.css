@@ -4,16 +4,27 @@
     margin: 0 auto;
 }
 
+/* Use .dashboard to match older layout wrapper */
+.dashboard {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
 /* Reduce gap between navbar and dashboard content */
-body.has-navbar .dashboard-page {
-    padding-top: 70px !important;
+/* More specific override to halve the global navbar offset for this page */
+.has-navbar #dashboardSection,
+.has-navbar .dashboard {
+    padding-top: calc((var(--navbar-height) + 20px) / 2) !important;
 }
 
 .dashboard-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start; /* Changed to flex-start */
-    margin-bottom: 40px;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     flex-wrap: wrap;
     gap: 20px;
 }
@@ -33,22 +44,33 @@ body.has-navbar .dashboard-page {
 /* Professional dashboard card styling (copied from old version look) */
 .dashboard-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 350px));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 25px;
-    justify-content: center;
     margin-bottom: 40px;
 }
 
+/* Ensure all cards in a row are the same height */
+.dashboard-cards {
+    grid-auto-rows: 1fr;
+}
+
 .dashboard-cards .card {
-    background: linear-gradient(135deg, rgba(67, 97, 238, 0.08) 0%, rgba(114, 9, 183, 0.08) 100%);
+    background: var(--card-gradient);
     border-radius: var(--border-radius);
     padding: 30px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-light);
     border: 1px solid rgba(255, 255, 255, 0.05);
-    transition: all 0.3s ease;
+    transition: var(--transition);
     cursor: pointer;
     position: relative;
     overflow: hidden;
+}
+
+/* Make card contents flow vertically and allow footer to stick to bottom */
+.dashboard-cards .card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .dashboard-cards .card:hover {
@@ -58,8 +80,8 @@ body.has-navbar .dashboard-page {
 }
 
 .dashboard-cards .card i {
-    font-size: 42px;
-    margin-bottom: 18px;
+    font-size: 40px;
+    margin-bottom: 20px;
     color: var(--primary-light);
 }
 
@@ -75,15 +97,20 @@ body.has-navbar .dashboard-page {
     line-height: 1.6;
 }
 
+/* Helper: push actions/buttons to the bottom so cards align visually */
+.dashboard-cards .card .mt-20 {
+    margin-top: auto;
+}
+
 .school-logo {
     max-width: 150px;
     max-height: 100px;
-    margin: 12px 0 6px 0;
+    margin: 15px 0;
     object-fit: contain;
     background: white;
-    padding: 8px;
+    padding: 10px;
     border-radius: 8px;
-    border: 1px solid rgba(200,200,200,0.14);
+    border: 1px solid var(--gray-lighter);
 }
 
 .mt-20 { margin-top: 20px; }
@@ -168,21 +195,16 @@ body.has-navbar .dashboard-page {
 
 /* User Profile Card - New Location */
 .user-info-card {
-  display: flex;
-  flex-direction: column; /* Changed to column */
-  align-items: center; /* Center children horizontally */
-  /* gap: 20px; removed */
-  /* flex-wrap: wrap; removed */
-  background: rgba(255, 255, 255, 0.05);
-  padding: 20px;
-  border-radius: var(--border-radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  width: 100%; /* Changed to 100% */
-  max-width: 400px; /* Adjust as needed */
-  /* margin-bottom: 30px; */ /* Removed, now inside header */
-  flex-shrink: 0; /* Prevent shrinking when space is limited */
-  /* width: max-content; removed */
-  /* padding-bottom: 10px; removed, wrapper handles it */
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    flex-wrap: wrap;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 18px;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    width: 100%;
+    max-width: 400px;
 }
 
 .user-profile-and-details-wrapper {
@@ -192,20 +214,20 @@ body.has-navbar .dashboard-page {
     gap: 20px; /* Space between profile img and details */
     width: 100%; /* Span full width of parent */
     margin-bottom: 20px; /* Space from the logout button */
+
 }
 
 .user-profile-img {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  border: 3px solid var(--primary);
-  overflow: hidden;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--primary-light);
-  /* margin-bottom: 10px; removed */
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: 3px solid var(--primary);
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-light);
 }
 
 .user-profile-img img {
@@ -215,7 +237,7 @@ body.has-navbar .dashboard-page {
 }
 
 .user-profile-img span { /* For initials */
-    font-size: 36px;
+    font-size: 32px;
     font-weight: bold;
     color: white;
 }
@@ -262,10 +284,10 @@ body.has-navbar .dashboard-page {
 }
 
 .user-role {
-  font-weight: 700;
-  font-size: 12px;
-  padding: 4px 12px;
-  border-radius: 20px;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 18px;
   display: inline-block;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -273,16 +295,14 @@ body.has-navbar .dashboard-page {
 }
 
 .user-name {
-  font-weight: 600;
-  color: var(--light);
-  font-size: 18px;
-  /* text-align: center; removed, parent handles it, or explicit left */
+    font-weight: 600;
+    color: var(--light);
+    font-size: 16px;
 }
 
 .user-email {
-  color: var(--gray-light);
-  font-size: 14px;
-  /* text-align: center; removed, parent handles it, or explicit left */
+    color: var(--gray-light);
+    font-size: 13px;
 }
 
 .user-card-logout-btn { /* Specific style for logout button within the user card */
@@ -299,13 +319,47 @@ body.has-navbar .dashboard-page {
     justify-content: center; /* Center icon and text */
     gap: 8px;
     touch-action: manipulation;
-    /* align-self: center; removed */
-    width: 90%; /* Set width to 90% */
-    /* margin: 0 auto; removed */
-    margin-top: 15px; /* Added margin-top for spacing */
+    align-self: flex-start;
+    margin-top: 8px;
 }
 
 .user-card-logout-btn:hover {
   background: #dc2626;
   transform: translateY(-1px);
+}
+
+/* Responsive: stack profile card on narrow screens */
+@media (max-width: 600px) {
+    .user-info-card {
+        flex-direction: column;
+        align-items: center;
+        padding: 16px;
+        gap: 12px;
+        max-width: 100%;
+    }
+
+    .user-profile-and-details-wrapper {
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .user-profile-img {
+        width: 64px;
+        height: 64px;
+    }
+
+    .user-profile-img span {
+        font-size: 28px;
+    }
+
+    .user-details {
+        text-align: center;
+    }
+
+    .user-card-logout-btn {
+        width: 100%;
+        align-self: center;
+    }
 }
