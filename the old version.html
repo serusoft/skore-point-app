@@ -2999,6 +2999,7 @@
                 <div class="student-search-wrapper">
                   <i class="fas fa-search student-search-icon"></i>
                   <input type="text" id="studentSearch" class="student-search-input" placeholder="Type student name to search...">
+                  <input type="text" id="studentSearch" class="student-search-input" placeholder="Type student name to search..." autocomplete="off">
                   <button type="button" class="student-search-clear" id="studentSearchClear">
                     <i class="fas fa-times"></i>
                   </button>
@@ -5587,12 +5588,14 @@
     }
     
     if (!classId || searchTerm.length < 2) {
+    if (!classId || searchTerm.length === 0) {
       document.getElementById('studentSuggestions').style.display = 'none';
       return;
     }
     
     const filteredStudents = currentStudents.filter(student => 
       student.name.toLowerCase().includes(searchTerm)
+      student.name && student.name.toLowerCase().includes(searchTerm)
     );
     
     const suggestions = document.getElementById('studentSuggestions');
