@@ -319,7 +319,7 @@ function showJoinSchoolModal() {
         
         const schoolName = schoolNameInput.value.trim();
         const schoolCode = modal.querySelector('#joinSchoolCode').value.trim().toUpperCase();
-        const subjectName = modal.querySelector('#joinSchoolSubject').value.trim();
+        let subjectName = modal.querySelector('#joinSchoolSubject').value.trim();
         
         if (!schoolName || !schoolCode) {
             showJoinError('Please enter both school name and code');
@@ -339,6 +339,11 @@ function showJoinSchoolModal() {
             }
 
             showLoading('Joining school...');
+            
+            // If subject not specified, use the teacher's registered subject
+            if (!subjectName && AppState.currentUserData && AppState.currentUserData.subject) {
+                subjectName = AppState.currentUserData.subject;
+            }
             
             // Search for school in cache
             // Use schoolsCache populated from Firebase.db.getAll('schools')
@@ -378,12 +383,16 @@ function showJoinSchoolModal() {
                     );
                     
                     assignedSubjects = matchedSubjects.map(s => s.id);
+                    
+                    if (assignedSubjects.length === 0) {
+                        console.warn(`Subject "${subjectName}" not found in school. Teacher will need to be assigned subjects by admin.`);
+                    }
                 } catch (err) {
                     console.warn('Error matching subject during join:', err);
                 }
             }
 
-            // Update user document
+            // Update user document with assigned subjects
             await Firebase.db.updateDoc('users', AppState.currentUser.uid, {
                 schoolId: school.id,
                 assignedSubjects: assignedSubjects

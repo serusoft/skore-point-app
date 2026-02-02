@@ -144,9 +144,15 @@ function setupMarksEventListeners() {
     const searchSuggestions = document.getElementById('searchSuggestions');
     
     if (studentSearch) {
-        studentSearch.addEventListener('input', debounce(async () => {
-            await handleStudentSearch(studentSearch.value);
-        }, 300));
+        studentSearch.setAttribute('autocomplete', 'off');
+        studentSearch.addEventListener('input', () => {
+            handleStudentSearch(studentSearch.value);
+        });
+
+        // Show suggestions on focus — if empty, show top alphabetical suggestions
+        studentSearch.addEventListener('focus', () => {
+            handleStudentSearch(studentSearch.value || '');
+        });
     }
     
     if (searchClear) {
@@ -176,6 +182,9 @@ async function loadMarksData(level) {
         
         // Load subjects for this level
         await loadSubjectsForMarks(level);
+        
+        // Load all students for this level to enable search immediately
+        await loadAllStudentsForLevel(level);
         
         // Set current term
         updateTermDisplay();
@@ -214,10 +223,28 @@ async function loadClassesForMarks(level) {
     if (!classSelect) return;
     
     try {
-        const classes = await Firebase.db.query('classes', [
+        let classes = await Firebase.db.query('classes', [
             { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
             { field: 'category', op: '==', value: level }
         ]);
+        
+        // For teachers, filter classes to only those where they teach a subject
+        const userRole = AppState.currentUserData?.role;
+        const userSubjects = AppState.currentUserData?.assignedSubjects || [];
+        
+        if (userRole === 'teacher' && userSubjects.length > 0) {
+            // Filter classes that have at least one subject the teacher is assigned to
+            classes = classes.filter(cls => {
+                const classSubjects = cls.subjects || [];
+                return classSubjects.some(subjectId => userSubjects.includes(subjectId));
+            });
+            
+            if (classes.length === 0) {
+                classSelect.innerHTML = '<option value="" disabled selected>No classes available for your subjects</option>';
+                showToast('No classes found for your assigned subjects.', 'info');
+                return;
+            }
+        }
         
         classSelect.innerHTML = '<option value="">Select Class</option>' + 
             classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
@@ -233,8 +260,8 @@ async function loadSubjectsForMarks(level) {
     if (!subjectSelect) return;
     
     // Check user permissions
-    const userRole = AppState.currentUserData.role;
-    const userSubjects = AppState.currentUserData.assignedSubjects || [];
+    const userRole = AppState.currentUserData?.role;
+    const userSubjects = AppState.currentUserData?.assignedSubjects || [];
     
     try {
         let subjects = await Firebase.db.query('subjects', [
@@ -245,8 +272,15 @@ async function loadSubjectsForMarks(level) {
         // Filter subjects for teachers (admins see all)
         if (userRole === 'teacher' && userSubjects.length > 0) {
             subjects = subjects.filter(subject => 
-                userSubjects.includes(subject.name)
+                userSubjects.includes(subject.id)
             );
+            
+            // If teacher has no subjects assigned, show message
+            if (subjects.length === 0) {
+                subjectSelect.innerHTML = '<option value="" disabled selected>No subjects assigned to you</option>';
+                showToast('You do not have any subjects assigned. Contact your admin for subject assignments.', 'warning');
+                return;
+            }
         }
         
         subjectSelect.innerHTML = '<option value="">All Subjects</option>' + 
@@ -262,6 +296,7 @@ async function handleClassSelection(classId) {
     if (!classId) {
         clearSelectedStudent();
         hideMarksForm();
+        await loadAllStudentsForLevel(AppState.currentAcademicLevel);
         return;
     }
     
@@ -298,6 +333,25 @@ async function handleSubjectSelection(subjectId) {
     await updateMarksForm(subjectId);
 }
 
+async function loadAllStudentsForLevel(level) {
+    // Store students in memory for search
+    window.marksStudents = [];
+    
+    try {
+        const students = await Firebase.db.query('students', [
+            { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
+            { field: 'category', op: '==', value: level }
+        ]);
+        
+        window.marksStudents = students;
+        console.log(`Loaded ${students.length} students for search`);
+        
+    } catch (error) {
+        console.error('Error loading all students:', error);
+        window.marksStudents = [];
+    }
+}
+
 async function loadStudentsForClass(classId) {
     // Store students in memory for search
     window.marksStudents = [];
@@ -316,47 +370,92 @@ async function loadStudentsForClass(classId) {
     }
 }
 
-async function handleStudentSearch(query) {
+function handleStudentSearch(query) {
     const suggestions = document.getElementById('searchSuggestions');
     const clearBtn = document.getElementById('searchClear');
     
-    if (!query || query.length < 2) {
-        suggestions.style.display = 'none';
-        clearBtn.style.display = 'none';
-        return;
+    if (!suggestions) return;
+
+    const students = (window.marksStudents || []).slice();
+
+    // Logging for debugging
+    console.debug('handleStudentSearch called with query:', query, 'studentsCount:', students.length);
+
+    // If query is empty, show top alphabetical suggestions
+    const searchTerm = (query || '').toLowerCase().trim();
+    let filtered = [];
+
+    if (!searchTerm) {
+        filtered = students;
+    } else {
+        // Prioritize prefix matches, then include-containing matches
+        const term = searchTerm;
+        const prefixMatches = [];
+        const partialMatches = [];
+
+        students.forEach(student => {
+            if (!student.name) return;
+            const name = student.name.toLowerCase();
+            if (name.startsWith(term)) prefixMatches.push(student);
+            else if (name.includes(term)) partialMatches.push(student);
+        });
+
+        // Combine and use as filtered
+        filtered = prefixMatches.concat(partialMatches);
     }
-    
-    clearBtn.style.display = 'block';
-    
-    const students = window.marksStudents || [];
-    const filtered = students.filter(student => 
-        student.name.toLowerCase().includes(query.toLowerCase())
-    );
-    
+
+    // Sort alphabetically by student name
+    filtered.sort((a, b) => {
+        const an = (a.name || '').toLowerCase();
+        const bn = (b.name || '').toLowerCase();
+        if (an < bn) return -1;
+        if (an > bn) return 1;
+        return 0;
+    });
+
     if (filtered.length > 0) {
-        suggestions.innerHTML = filtered.map(student => `
-            <div class="suggestion-item" data-student-id="${student.id}">
-                <strong>${student.name}</strong>
-                <small>${getClassFromId(student.classId)}</small>
+        if (clearBtn) clearBtn.style.display = (searchTerm ? 'block' : 'none');
+
+        // Limit to 10 results for performance
+        // Highlight match
+        const makeHighlighted = (name) => {
+            if (!searchTerm) return name;
+            try {
+                const re = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'ig');
+                return name.replace(re, '<strong>$1</strong>');
+            } catch (e) {
+                return name;
+            }
+        };
+
+        suggestions.innerHTML = filtered.slice(0, 10).map(student => `
+            <div class="suggestion-item" data-student-id="${student.id}" style="padding: 10px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <div style="font-weight: bold;">${makeHighlighted(student.name)}</div>
+                <div style="font-size: 0.85em; opacity: 0.7;">${getClassFromId(student.classId)}</div>
             </div>
         `).join('');
-        
+
         suggestions.style.display = 'block';
-        
-        // Add click handlers
-        suggestions.querySelectorAll('.suggestion-item').forEach(item => {
-            item.addEventListener('click', async () => {
-                const studentId = item.dataset.studentId;
-                const student = students.find(s => s.id === studentId);
-                
-                if (student) {
-                    selectStudent(student);
-                    suggestions.style.display = 'none';
-                }
-            });
-        });
+
+        // Use event delegation to handle clicks reliably
+        suggestions.onclick = function (evt) {
+            const item = evt.target.closest('.suggestion-item');
+            if (!item) return;
+            evt.stopPropagation();
+            const studentId = item.dataset.studentId;
+            // find in the live window list (not the sliced copy) to avoid id type issues
+            const student = (window.marksStudents || []).find(s => String(s.id) === String(studentId));
+            console.debug('suggestion clicked, studentId:', studentId, 'found:', !!student);
+            if (student) {
+                selectStudent(student);
+                suggestions.style.display = 'none';
+                const searchInput = document.getElementById('studentSearch');
+                if (searchInput) searchInput.value = student.name;
+            }
+        };
     } else {
         suggestions.style.display = 'none';
+        if (clearBtn) clearBtn.style.display = 'none';
     }
 }
 
@@ -382,17 +481,20 @@ async function loadStudentMarks(studentId) {
         return;
     }
     
+    let marksData = null;
     try {
         // Get existing marks
         const marksDoc = await Firebase.db.getDoc('marks', `${studentId}_${term}`);
-        
-        // Show marks form
-        await showMarksForm(subjectId, marksDoc?.data());
-        
+        if (marksDoc && marksDoc.exists()) {
+            marksData = marksDoc.data();
+        }
     } catch (error) {
         console.error('Error loading student marks:', error);
-        hideMarksForm();
+        // Continue to show form even if marks load fails
     }
+    
+    // Show marks form
+    await showMarksForm(subjectId, marksData);
 }
 
 async function showMarksForm(subjectId, existingMarks = null) {
@@ -408,17 +510,24 @@ async function showMarksForm(subjectId, existingMarks = null) {
     // Get subjects to show
     let subjects = [];
     
-    if (subjectId) {
-        // Single subject
-        const subject = await Firebase.db.getDoc('subjects', subjectId);
-        if (subject) subjects = [subject];
-    } else {
-        // All subjects for current level
-        const level = AppState.currentAcademicLevel;
-        subjects = await Firebase.db.query('subjects', [
-            { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-            { field: 'category', op: '==', value: level }
-        ]);
+    try {
+        if (subjectId) {
+            // Single subject
+            const subjectDoc = await Firebase.db.getDoc('subjects', subjectId);
+            if (subjectDoc && subjectDoc.exists()) {
+                subjects = [{ id: subjectDoc.id, ...subjectDoc.data() }];
+            }
+        } else {
+            // All subjects for current level
+            const level = AppState.currentAcademicLevel;
+            subjects = await Firebase.db.query('subjects', [
+                { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
+                { field: 'category', op: '==', value: level }
+            ]);
+        }
+    } catch (error) {
+        console.error('Error loading subjects:', error);
+        // Continue with empty subjects, will show "No subjects found"
     }
     
     if (subjects.length === 0) {
@@ -775,7 +884,7 @@ function getSelectedStudent() {
 
 function getTeacherInitials(name) {
     if (!name) return 'T';
-    return name.split(' ').map(n => n[0]).toUpperCase().join('').substring(0, 3);
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 3);
 }
 
 function getLevelDisplayName(level) {

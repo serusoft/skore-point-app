@@ -101,6 +101,26 @@
     color: var(--primary);
 }
 
+/* Ensure the toggle sits inside the input field visually and input has space */
+.password-input input {
+    padding-right: 48px; /* room for the toggle */
+}
+
+.password-toggle {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border-radius: 6px;
+}
+
+@media (max-width: 480px) {
+    .password-toggle { width: 44px; height: 44px; right: 8px; }
+    .password-input input { padding-right: 56px; }
+}
+
 .auth-footer {
     margin-top: 30px;
     text-align: center;
@@ -138,4 +158,39 @@
 @media (max-width: 640px) {
     .auth-container { padding: 22px; }
     .auth-container form { max-width: 100%; }
+}
+
+/* Improved responsiveness for tablets and phones */
+@media (max-width: 768px) {
+    .auth-container {
+        padding: 20px;
+        max-width: 420px;
+        border-radius: 12px;
+    }
+    .auth-header .logo h1 { font-size: 22px; }
+    .auth-header h2 { font-size: 18px; }
+    .auth-container form { gap: 12px; }
+    .auth-container form .form-group,
+    .auth-container form input,
+    .auth-container form select,
+    .auth-container form textarea {
+        max-width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+    }
+    .auth-container form input { padding: 12px 14px; font-size: 16px; border-radius: 8px; }
+    .btn.btn-primary { width: 100%; padding: 14px; font-size: 16px; }
+    .auth-footer { font-size: 14px; }
+}
+
+@media (max-width: 480px) {
+    .auth-container { padding: 20px; box-shadow: 0 8px 20px rgba(8,10,20,0.25); border-radius: 14px; }
+    .auth-header .logo i { font-size: 30px; }
+    .auth-header .logo h1 { font-size: 22px; }
+    .auth-header h2 { font-size: 18px; }
+    .auth-container form { gap: 12px; }
+    .auth-container form input { padding: 14px 14px; font-size: 16px; border-radius: 10px; }
+    .password-toggle { right: 10px; }
+    .btn.btn-primary { padding: 14px; font-size: 16px; border-radius: 10px; }
+    .alert { padding: 10px 12px; }
 }

@@ -116,6 +116,7 @@ function initRegistrationPage() {
                 subject: subject,
                 profileUrl: uploadedProfileUrl, // Use the URL from Cloudinary
                 role: 'teacher',
+                assignedSubjects: [], // Will be populated when joining a school
                 createdAt: Firebase.db.serverTimestamp()
             };
             await Firebase.db.setDoc('users', userCredential.user.uid, userData);

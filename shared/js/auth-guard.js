@@ -42,7 +42,7 @@ class AuthGuard {
         );
         
         // If page is protected and user is not authenticated, redirect to login
-            if (isProtected && !AppState.isAuthenticated) {
+        if (isProtected && !AppState.isAuthenticated) {
             console.log('Auth guard: Redirecting to login');
             window.location.href = '../auth/login.html';
             return false;
@@ -89,18 +89,36 @@ class AuthGuard {
     }
     
     // Check if user has permission for specific action
-    hasPermission(action, resource) {
+    // Accepts optional `section` for page-level checks (e.g. school -> students)
+    hasPermission(action, resource, section = null) {
+        // First check if user is authenticated
+        if (!AppState.isAuthenticated) {
+            return false;
+        }
+        
+        // Admin has all permissions
         if (this.isAdmin()) {
-            return true; // Admin has all permissions
+            return true;
         }
         
         // Teacher permissions
         const teacherPermissions = {
-            'view': ['dashboard', 'marks', 'reports', 'analytics'],
+            'view': ['dashboard', 'classes', 'marks', 'analysis', 'my-admin'],
             'create': ['marks'],
             'update': ['marks'],
             'delete': []
         };
+        
+        // For school page or school-related resources, check additional restrictions
+        const restrictedSections = ['students', 'subjects', 'settings', 'reports'];
+        // If a specific section is supplied for school, block teacher access to those sections
+        if (resource === 'school' && section && restrictedSections.includes(section)) {
+            return false;
+        }
+        // If resource itself is a restricted school section (caller passed 'students'|'reports' etc.), block
+        if (restrictedSections.includes(resource)) {
+            return false;
+        }
         
         if (teacherPermissions[action] && teacherPermissions[action].includes(resource)) {
             return true;
@@ -161,9 +179,28 @@ class AuthGuard {
             } catch (error) {
                 console.error(`Role middleware error (${role}):`, error);
                 showError(`You need ${role} privileges to access this page.`);
-                router.navigate('../dashboard/dashboard.html');
+                window.location.href = '../dashboard/dashboard.html';
             }
         };
+    }
+    
+    // Page-specific permission checker
+    checkPagePermissions(page, section = null) {
+        if (!AppState.isAuthenticated) {
+            return false;
+        }
+        
+        if (page === 'school') {
+            const isAdmin = this.isAdmin();
+            
+            // Teachers cannot access certain sections
+            if (!isAdmin && section && ['students', 'subjects', 'settings', 'reports'].includes(section)) {
+                return false;
+            }
+            return true;
+        }
+        
+        return true;
     }
 }
 

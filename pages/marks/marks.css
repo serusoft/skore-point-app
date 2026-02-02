@@ -439,3 +439,36 @@
     box-shadow: 0 6px 20px rgba(0,0,0,0.4);
     background-color: var(--secondary-dark, #38bdf8);
 }
+
+/* Responsive adjustments for tablet and mobile */
+@media (max-width: 992px) {
+    .marks-page { padding: 16px; }
+    .filter-group { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    .marks-interface { padding: 20px; }
+    .search-input input { font-size: 15px; padding: 12px 42px 12px 12px; }
+    .search-suggestions { max-height: 220px; }
+}
+
+@media (max-width: 768px) {
+    .marks-page { padding: 12px; max-width: 100%; }
+    .filter-group { grid-template-columns: 1fr; }
+    .level-options { grid-template-columns: 1fr; }
+    .marks-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .marks-entry-form { padding: 16px; }
+    .form-actions { flex-direction: column; align-items: stretch; gap: 10px; }
+    .form-actions .btn { width: 100%; }
+    .student-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .search-suggestions { font-size: 14px; max-height: 200px; }
+    .suggestion-item { padding: 14px; }
+}
+
+@media (max-width: 480px) {
+    .page-header h1 { font-size: 20px; }
+    .search-input input { padding: 12px 40px 12px 12px; font-size: 15px; }
+    .search-clear { right: 6px; }
+    .search-suggestions { border-radius: 0 0 8px 8px; }
+    .suggestion-item { padding: 16px; font-size: 15px; }
+    .marks-entry-form { padding: 12px; }
+    .marks-grid .mark-input-group label { font-size: 14px; }
+    .mark-input { font-size: 15px; padding: 10px; }
+}

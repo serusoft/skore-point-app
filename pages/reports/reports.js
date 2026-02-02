@@ -28,8 +28,33 @@ class ReportsController {
             return;
         }
         
+        // Apply role-based tab visibility
+        this.applyRoleBasedReportVisibility();
+        
         this.setupEventListeners();
         this.showLevelSelection();
+    }
+    
+    /**
+     * Apply role-based visibility to report tabs
+     */
+    applyRoleBasedReportVisibility() {
+        const isAdmin = this.currentSchool.admins && this.currentSchool.admins.includes(this.currentUser.uid);
+        
+        if (!isAdmin) {
+            // Hide class and school report tabs for teachers
+            const classTab = document.querySelector('[data-type="class"]');
+            const schoolTab = document.querySelector('[data-type="school"]');
+            
+            if (classTab) classTab.style.display = 'none';
+            if (schoolTab) schoolTab.style.display = 'none';
+            
+            // Set subject as default active tab for teachers
+            const subjectTab = document.querySelector('[data-type="subject"]');
+            if (subjectTab) {
+                subjectTab.click();
+            }
+        }
     }
     
     setupEventListeners() {
@@ -196,7 +221,20 @@ class ReportsController {
     
     async loadSubjects() {
         try {
-            const subjects = await SchoolService.getSubjectsByLevel(this.currentSchool.id, this.currentLevel);
+            let subjects = await SchoolService.getSubjectsByLevel(this.currentSchool.id, this.currentLevel);
+            
+            // Filter subjects for teachers (only show their assigned subjects)
+            const isAdmin = this.currentSchool.admins && this.currentSchool.admins.includes(this.currentUser.uid);
+            if (!isAdmin) {
+                // Get current user's assigned subjects from AppState
+                const assignedSubjectIds = AppState.currentUserData?.assignedSubjects || [];
+                subjects = subjects.filter(subject => assignedSubjectIds.includes(subject.id));
+                
+                if (subjects.length === 0) {
+                    console.warn('No subjects assigned to this teacher for the selected level');
+                }
+            }
+            
             this.subjects = subjects;
             
             // Update subject selectors

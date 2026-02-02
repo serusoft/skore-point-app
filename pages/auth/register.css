@@ -90,10 +90,50 @@
     .auth-container form { max-width: 100%; }
 }
 
+/* Improved responsiveness for tablets and phones */
+@media (max-width: 768px) {
+    .register-page .auth-container {
+        padding: 20px;
+        max-width: 460px;
+        border-radius: 12px;
+    }
+    .register-page form { gap: 12px; }
+    .auth-container form .form-group,
+    .auth-container form input,
+    .auth-container form select,
+    .auth-container form textarea {
+        max-width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+    }
+    .form-group input, .form-group select, .form-group textarea { padding: 12px 14px; font-size: 16px; border-radius: 8px; }
+    .btn.btn-primary { width: 100%; padding: 14px; font-size: 16px; }
+    .image-upload { padding: 18px; }
+    .image-preview { max-width: 80px; max-height: 80px; }
+}
+
+@media (max-width: 480px) {
+    .register-page .auth-container { padding: 20px; box-shadow: 0 8px 20px rgba(8,10,20,0.25); border-radius: 14px; }
+    .image-upload { padding: 16px; }
+    .image-upload i { font-size: 36px; }
+    .image-preview { max-width: 80px; max-height: 80px; }
+    .btn.btn-primary { padding: 14px; font-size: 16px; border-radius: 10px; }
+}
+
 .image-preview img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+/* Password toggle inside input */
+.password-input { position: relative; width: 100%; }
+.password-input input { padding-right: 48px; }
+.password-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; display:flex; align-items:center; justify-content:center; background: transparent; border: none; border-radius: 6px; color: var(--gray-light); cursor: pointer; }
+.password-toggle:hover { color: var(--primary); }
+@media (max-width: 480px) {
+    .password-toggle { width: 44px; height: 44px; right: 8px; }
+    .password-input input { padding-right: 56px; }
 }
 
 .file-input {
