@@ -115,42 +115,80 @@ document.addEventListener('DOMContentLoaded', async () => {
     /**
      * Get teacher's assigned subjects
      */
-    async function getTeacherAssignedSubjects() {
+    async function getTeacherAssignedSubjects(academicLevel = null) {
         try {
             const currentUserId = AppState.currentUser?.uid;
             if (!currentUserId || !AppState.currentSchool) {
-                console.warn('getTeacherAssignedSubjects: Missing user or school');
+                console.warn('getTeacherAssignedSubjects: Missing user or school data');
                 return [];
             }
 
-            // Try to get from Firebase teachers collection
-            try {
-                const userTeacherData = await db.collection('schools')
-                    .doc(AppState.currentSchool.id)
-                    .collection('teachers')
-                    .doc(currentUserId)
-                    .get();
-                
-                if (userTeacherData.exists) {
-                    const subjects = userTeacherData.data().assignedSubjects || [];
-                    console.log(`Teacher ${currentUserId} assigned subjects:`, subjects);
-                    return subjects;
-                }
-            } catch (err) {
-                console.log('Teacher collection not found, trying users collection:', err.message);
-            }
-            
-            // Fallback: check users collection
+            // Get user document
             const userDoc = await Firebase.db.getDoc('users', currentUserId);
-            if (userDoc && userDoc.assignedSubjects) {
-                console.log(`Teacher ${currentUserId} assigned subjects from users:`, userDoc.assignedSubjects);
-                return userDoc.assignedSubjects;
+
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                
+                // Start with existing assigned subjects
+                let finalAssignedSubjects = userData.assignedSubjects || [];
+
+                // Check for default 'subject' string from registration
+                // We do this to ensure the default subject is assigned for the current level
+                if (userData.subject) {
+                    const subjectName = userData.subject.trim().toLowerCase();
+
+                    try {
+                        let matchedSubjects = [];
+
+                        // Look for the subject in the current academic level
+                        if (academicLevel) {
+                            matchedSubjects = await Firebase.db.query('subjects', [
+                                { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
+                                { field: 'name_lowercase', op: '==', value: subjectName },
+                                { field: 'category', op: '==', value: academicLevel }
+                            ]);
+                        }
+
+                        // Fallback: If no subjects assigned at all and no level specified, search all levels
+                        if (matchedSubjects.length === 0 && finalAssignedSubjects.length === 0 && !academicLevel) {
+                            matchedSubjects = await Firebase.db.query('subjects', [
+                                { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
+                                { field: 'name_lowercase', op: '==', value: subjectName }
+                            ]);
+                        }
+
+                        if (matchedSubjects.length > 0) {
+                            const subjectToAssign = matchedSubjects[0]; // Take the first match
+                            const subjectId = subjectToAssign.id;
+                            
+                            // If this subject is not yet assigned, add it
+                            if (!finalAssignedSubjects.includes(subjectId)) {
+                                console.log(`Auto-assigning default subject "${userData.subject}" for level ${academicLevel}: ${subjectId}`);
+
+                                // Update DB using arrayUnion to preserve existing subjects
+                                await Firebase.db.updateDoc('users', currentUserId, {
+                                    assignedSubjects: Firebase.db.arrayUnion(subjectId)
+                                });
+
+                                // Update local list and AppState
+                                finalAssignedSubjects.push(subjectId);
+                                if (AppState.currentUserData) {
+                                    AppState.currentUserData.assignedSubjects = finalAssignedSubjects;
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Error resolving default subject:', err);
+                    }
+                }
+                
+                return finalAssignedSubjects;
             }
 
             console.warn('Teacher assigned subjects could not be loaded for user:', currentUserId);
             return [];
         } catch (error) {
-            console.error('Error fetching teacher subjects:', error);
+            console.error('Error in getTeacherAssignedSubjects:', error);
             return [];
         }
     }
@@ -428,7 +466,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                             icon.className = 'fas fa-crown';
                         }
                         const span = tab.querySelector('span');
-                        if (span) span.textContent = ' My Admin';
+                        if (span) {
+                            span.textContent = ' My Admin';
+                        } else {
+                            // Fallback: Update text node directly if span doesn't exist
+                            Array.from(tab.childNodes).forEach(node => {
+                                if (node.nodeType === 3 && node.textContent.trim().length > 0) { // 3 is TEXT_NODE
+                                    node.textContent = ' My Admin';
+                                }
+                            });
+                        }
                     } else if (section === 'reportCard') {
                         const icon = tab.querySelector('i');
                         if (icon) {
@@ -460,14 +507,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                             icon.className = 'fas fa-crown';
                         }
                         const span = tab.querySelector('span');
-                        if (span) span.textContent = 'My Admin';
+                        if (span) {
+                            span.textContent = ' My Admin';
+                        } else {
+                            // Fallback: Update text node directly if span doesn't exist
+                            Array.from(tab.childNodes).forEach(node => {
+                                if (node.nodeType === 3 && node.textContent.trim().length > 0) { // 3 is TEXT_NODE
+                                    node.textContent = ' My Admin';
+                                }
+                            });
+                        }
                     } else if (section === 'reportCard') {
                         const icon = tab.querySelector('i');
                         if (icon) {
                             icon.className = 'fas fa-chart-pie';
                         }
                         const span = tab.querySelector('span');
-                        if (span) span.textContent = 'Analysis';
+                        if (span) span.textContent = ' Analysis';
                     }
                 }
             }
@@ -1761,6 +1817,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 await Firebase.db.addDoc('subjects', {
                     name: formData.name,
+                    name_lowercase: formData.name.toLowerCase(), // For case-insensitive search
                     code: formData.code || '',
                     schoolId: AppState.currentSchool.id,
                     level: AppState.currentSchool.level,
@@ -1837,10 +1894,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             enterMarksBtn.addEventListener('click', async () => {
                 // TEACHER RESTRICTION: Teachers can enter marks for their assigned subjects
                 const isAdmin = isCurrentUserAdmin();
-                const assignedSubjects = isAdmin ? [] : await getTeacherAssignedSubjects();
                 
-                if (!isAdmin && assignedSubjects.length === 0) {
-                    showToast('You need assigned subjects to enter marks', 'warning');
+                if (isAdmin) {
+                    showToast('Opening marks entry...', 'info');
+                    if (typeof window.navigateTo === 'function') {
+                        window.navigateTo('marks', {
+                            level: AppState.currentAcademicLevel,
+                            isAdmin: true,
+                            assignedSubjects: []
+                        });
+                    }
+                    return;
+                }
+                
+                // Teacher flow
+                showPageLoading('Checking assigned subjects...');
+                // Get all subjects, not just for this level, to allow warnings on the marks page
+                const assignedSubjects = await getTeacherAssignedSubjects();
+                hidePageLoading();
+                
+                if (assignedSubjects.length === 0) {
+                    // Try to give a specific error message
+                    const userDoc = await Firebase.db.getDoc('users', AppState.currentUser.uid);
+                    const userData = userDoc.exists() ? userDoc.data() : {};
+                    
+                    if (userData.subject) {
+                        showToast(`Your registered subject "${userData.subject}" was not found in this school. Please contact an admin.`, 'error', 5000);
+                    } else {
+                        showToast('You have no subjects assigned. Please contact an admin to assign subjects to you.', 'warning');
+                    }
                     return;
                 }
                 
@@ -1849,7 +1931,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (typeof window.navigateTo === 'function') {
                     window.navigateTo('marks', {
                         level: AppState.currentAcademicLevel,
-                        isAdmin: isAdmin,
+                        isAdmin: false,
                         assignedSubjects: assignedSubjects
                     });
                 }

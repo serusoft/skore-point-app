@@ -87,6 +87,13 @@ async function initializeMarksPage(level) {
     const marksInterface = document.getElementById('marksInterface');
     if (marksInterface) marksInterface.style.display = 'block';
     
+    // Disable student search until a class is selected
+    const studentSearchInput = document.getElementById('studentSearch');
+    if (studentSearchInput) {
+        studentSearchInput.disabled = true;
+        studentSearchInput.placeholder = 'Select a class to enable search';
+    }
+    
     // Update level badge
     const badge = document.getElementById('marksLevelBadge');
     if (badge) badge.textContent = getLevelDisplayName(level);
@@ -173,6 +180,17 @@ function setupMarksEventListeners() {
     document.getElementById('clearFormBtn')?.addEventListener('click', () => {
         clearMarksForm();
     });
+
+    // Add listener for clicking on disabled subject inputs
+    const marksGrid = document.getElementById('marksGrid');
+    if (marksGrid) {
+        marksGrid.addEventListener('click', (e) => {
+            const mismatchedGroup = e.target.closest('.mark-input-group.mismatched');
+            if (mismatchedGroup) {
+                showToast('This subject is not offered for the current academic level.', 'warning');
+            }
+        });
+    }
 }
 
 async function loadMarksData(level) {
@@ -236,6 +254,8 @@ async function loadClassesForMarks(level) {
             // Filter classes that have at least one subject the teacher is assigned to
             classes = classes.filter(cls => {
                 const classSubjects = cls.subjects || [];
+                // If class has no specific subjects defined, assume it's available for all
+                if (classSubjects.length === 0) return true;
                 return classSubjects.some(subjectId => userSubjects.includes(subjectId));
             });
             
@@ -258,33 +278,48 @@ async function loadClassesForMarks(level) {
 async function loadSubjectsForMarks(level) {
     const subjectSelect = document.getElementById('marksSubject');
     if (!subjectSelect) return;
-    
-    // Check user permissions
-    const userRole = AppState.currentUserData?.role;
-    const userSubjects = AppState.currentUserData?.assignedSubjects || [];
-    
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const userSubjectIds = (urlParams.get('assignedSubjects') || '').split(',').filter(id => id);
+    const isAdmin = urlParams.get('isAdmin') === 'true';
+
     try {
-        let subjects = await Firebase.db.query('subjects', [
-            { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-            { field: 'category', op: '==', value: level }
-        ]);
-        
-        // Filter subjects for teachers (admins see all)
-        if (userRole === 'teacher' && userSubjects.length > 0) {
-            subjects = subjects.filter(subject => 
-                userSubjects.includes(subject.id)
-            );
-            
-            // If teacher has no subjects assigned, show message
-            if (subjects.length === 0) {
+        let subjects = [];
+        if (isAdmin) {
+            // Admins see all subjects for the current level
+            subjects = await Firebase.db.query('subjects', [
+                { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
+                { field: 'category', op: '==', value: level }
+            ]);
+        } else {
+            // Teachers see their assigned subjects
+            if (userSubjectIds.length === 0) {
                 subjectSelect.innerHTML = '<option value="" disabled selected>No subjects assigned to you</option>';
-                showToast('You do not have any subjects assigned. Contact your admin for subject assignments.', 'warning');
+                showToast('You do not have any subjects assigned. Contact your admin.', 'warning');
                 return;
             }
+
+            // Fetch all subjects for the school to filter locally.
+            const allSchoolSubjects = await Firebase.db.query('subjects', [
+                { field: 'schoolId', op: '==', value: AppState.currentSchool.id }
+            ]);
+
+            // Filter to get only the teacher's assigned subjects
+            subjects = allSchoolSubjects.filter(s => userSubjectIds.includes(s.id));
+        }
+
+        if (subjects.length === 0 && !isAdmin) {
+            subjectSelect.innerHTML = '<option value="" disabled selected>No subjects assigned to you</option>';
+            return;
         }
         
-        subjectSelect.innerHTML = '<option value="">All Subjects</option>' + 
-            subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+        const defaultOption = isAdmin ? 'All Subjects' : 'Select Subject';
+        subjectSelect.innerHTML = `<option value="">${defaultOption}</option>` + 
+            subjects.map(s => {
+                const isMismatched = s.category !== level;
+                const warningText = isMismatched ? ` (Wrong Level: ${s.category.replace('-', ' ')})` : '';
+                return `<option value="${s.id}" data-mismatched="${isMismatched}">${s.name}${warningText}</option>`;
+            }).join('');
             
     } catch (error) {
         console.error('Error loading subjects:', error);
@@ -293,11 +328,23 @@ async function loadSubjectsForMarks(level) {
 }
 
 async function handleClassSelection(classId) {
+    const studentSearchInput = document.getElementById('studentSearch');
+
     if (!classId) {
         clearSelectedStudent();
         hideMarksForm();
         await loadAllStudentsForLevel(AppState.currentAcademicLevel);
+        if (studentSearchInput) {
+            studentSearchInput.disabled = true;
+            studentSearchInput.placeholder = 'Select a class to enable search';
+        }
         return;
+    }
+
+    // Enable student search
+    if (studentSearchInput) {
+        studentSearchInput.disabled = false;
+        studentSearchInput.placeholder = 'Type student name...';
     }
     
     try {
@@ -329,8 +376,25 @@ async function handleTermSelection(term) {
 }
 
 async function handleSubjectSelection(subjectId) {
+    // Check for mismatched level warning
+    const subjectSelect = document.getElementById('marksSubject');
+    const selectedOption = subjectSelect.querySelector(`option[value="${subjectId}"]`);
+    if (selectedOption && selectedOption.dataset.mismatched === 'true') {
+        const subjectName = selectedOption.textContent.split(' (')[0];
+        showToast(
+            `Warning: "${subjectName}" is not offered for this level. Go to the "My Admin" tab to contact an admin for help.`, 
+            'warning', 
+            8000 // show for 8 seconds
+        );
+    }
+
     // Update marks form based on selected subject
-    await updateMarksForm(subjectId);
+    const selectedStudent = getSelectedStudent();
+    if (selectedStudent) {
+        await loadStudentMarks(selectedStudent.id);
+    } else {
+        await showMarksForm(subjectId);
+    }
 }
 
 async function loadAllStudentsForLevel(level) {
@@ -539,13 +603,14 @@ async function showMarksForm(subjectId, existingMarks = null) {
     // Generate marks inputs
     marksGrid.innerHTML = subjects.map(subject => {
         const existingMark = existingMarks ? existingMarks[subject.id] : null;
+        const isMismatched = subject.category !== AppState.currentAcademicLevel;
         
         if (subject.level === 'secondary' && subject.category === 'alevel' && subject.type) {
             // A-Level subject with multiple papers
-            return generateALevelInputs(subject, existingMark);
+            return generateALevelInputs(subject, existingMark, isMismatched);
         } else {
             // Regular subject (single mark)
-            return generateRegularInput(subject, existingMark);
+            return generateRegularInput(subject, existingMark, isMismatched);
         }
     }).join('');
     
@@ -556,20 +621,24 @@ async function showMarksForm(subjectId, existingMarks = null) {
     updateMarksSummary();
 }
 
-function generateRegularInput(subject, existingMark) {
+function generateRegularInput(subject, existingMark, isMismatched) {
+    const disabledAttr = isMismatched ? 'disabled' : '';
     return `
-        <div class="mark-input-group" data-subject-id="${subject.id}">
+        <div class="mark-input-group ${isMismatched ? 'mismatched' : ''}" data-subject-id="${subject.id}">
             <label>${subject.name}</label>
             <input type="number" class="mark-input" 
                    min="0" max="100" 
                    value="${existingMark || ''}" 
                    placeholder="0-100"
-                   oninput="updateMarksSummary()">
+                   oninput="updateMarksSummary()"
+                   ${disabledAttr}>
+            ${isMismatched ? '<div class="level-mismatch-warning"><i class="fas fa-exclamation-triangle"></i> Not for this level</div>' : ''}
         </div>
     `;
 }
 
-function generateALevelInputs(subject, existingMark) {
+function generateALevelInputs(subject, existingMark, isMismatched) {
+    const disabledAttr = isMismatched ? 'disabled' : '';
     const paperCount = subject.paperCount || 1;
     const isGeneralPaper = subject.type === 'general';
     const isSubsidiary = subject.type === 'subsidiary';
@@ -588,7 +657,8 @@ function generateALevelInputs(subject, existingMark) {
                            min="0" max="100" 
                            value="${paperMark}" 
                            placeholder="0-100"
-                           oninput="updateMarksSummary()">
+                           oninput="updateMarksSummary()"
+                           ${disabledAttr}>
                 </div>
             `;
         }
@@ -599,12 +669,13 @@ function generateALevelInputs(subject, existingMark) {
                    min="0" max="100" 
                    value="${existingMark || ''}" 
                    placeholder="0-100"
-                   oninput="updateMarksSummary()">
+                   oninput="updateMarksSummary()"
+                   ${disabledAttr}>
         `;
     }
     
     return `
-        <div class="mark-input-group" data-subject-id="${subject.id}" 
+        <div class="mark-input-group ${isMismatched ? 'mismatched' : ''}" data-subject-id="${subject.id}" 
              data-subject-type="${subject.type}">
             <label>
                 ${subject.name}
@@ -614,6 +685,7 @@ function generateALevelInputs(subject, existingMark) {
             <div class="paper-inputs">
                 ${inputs}
             </div>
+            ${isMismatched ? '<div class="level-mismatch-warning"><i class="fas fa-exclamation-triangle"></i> Not for this level</div>' : ''}
         </div>
     `;
 }
@@ -818,6 +890,13 @@ async function saveMarks() {
         
         // Update summary
         updateMarksSummary();
+        
+        // Clear form to get ready for next student
+        clearMarksForm();
+        
+        // Focus search input for better UX
+        const searchInput = document.getElementById('studentSearch');
+        if (searchInput) searchInput.focus();
         
     } catch (error) {
         hideLoading();

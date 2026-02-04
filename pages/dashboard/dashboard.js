@@ -247,12 +247,6 @@ function showJoinSchoolModal() {
                     <input type="text" id="joinSchoolCode" placeholder="6-digit code" required maxlength="6" 
                            oninput="this.value = this.value.toUpperCase()">
                 </div>
-                <div class="form-group">
-                    <label for="joinSchoolSubject">
-                        <i class="fas fa-book"></i> Teaching Subject (Optional)
-                    </label>
-                    <input type="text" id="joinSchoolSubject" placeholder="e.g. Mathematics">
-                </div>
                 <button type="submit" class="btn btn-primary btn-block">
                     <i class="fas fa-sign-in-alt"></i> Join School
                 </button>
@@ -319,7 +313,6 @@ function showJoinSchoolModal() {
         
         const schoolName = schoolNameInput.value.trim();
         const schoolCode = modal.querySelector('#joinSchoolCode').value.trim().toUpperCase();
-        let subjectName = modal.querySelector('#joinSchoolSubject').value.trim();
         
         if (!schoolName || !schoolCode) {
             showJoinError('Please enter both school name and code');
@@ -340,10 +333,8 @@ function showJoinSchoolModal() {
 
             showLoading('Joining school...');
             
-            // If subject not specified, use the teacher's registered subject
-            if (!subjectName && AppState.currentUserData && AppState.currentUserData.subject) {
-                subjectName = AppState.currentUserData.subject;
-            }
+            // Use the teacher's registered subject
+            const subjectName = (AppState.currentUserData && AppState.currentUserData.subject) ? AppState.currentUserData.subject : '';
             
             // Search for school in cache
             // Use schoolsCache populated from Firebase.db.getAll('schools')
@@ -358,30 +349,25 @@ function showJoinSchoolModal() {
             }
             
             // Check if user is already a member
-            if (school.teachers && school.teachers.includes(AppState.currentUser.uid)) {
-                hideLoading();
-                showJoinError('You are already a member of this school');
-                return;
-            }
+            const isAlreadyMember = school.teachers && school.teachers.includes(AppState.currentUser.uid);
             
-            // Add user to school
-            await Firebase.db.updateDoc('schools', school.id, {
-                teachers: Firebase.db.arrayUnion(AppState.currentUser.uid)
-            });
+            // Add user to school if not already a member
+            if (!isAlreadyMember) {
+                await Firebase.db.updateDoc('schools', school.id, {
+                    teachers: Firebase.db.arrayUnion(AppState.currentUser.uid)
+                });
+            }
             
             // Find and assign subject if provided
             let assignedSubjects = [];
             if (subjectName) {
                 try {
-                    // Fetch all subjects for the school to do a case-insensitive match
-                    const allSubjects = await Firebase.db.query('subjects', [
-                        { field: 'schoolId', op: '==', value: school.id }
+                    // More efficient: Directly query for the lowercase subject name.
+                    const matchedSubjects = await Firebase.db.query('subjects', [
+                        { field: 'schoolId', op: '==', value: school.id },
+                        { field: 'name_lowercase', op: '==', value: subjectName.toLowerCase() }
                     ]);
-                    
-                    const matchedSubjects = allSubjects.filter(s => 
-                        s.name.toLowerCase() === subjectName.toLowerCase()
-                    );
-                    
+
                     assignedSubjects = matchedSubjects.map(s => s.id);
                     
                     if (assignedSubjects.length === 0) {
@@ -412,7 +398,11 @@ function showJoinSchoolModal() {
             modal.querySelector('#joinError').style.display = 'none';
             const successEl = modal.querySelector('#joinSuccess');
             const successText = modal.querySelector('#joinSuccessText');
-            successText.textContent = `Successfully joined ${school.name}! Redirecting to portal...`;
+            if (isAlreadyMember) {
+                successText.textContent = `Switched to ${school.name}! Redirecting...`;
+            } else {
+                successText.textContent = `Successfully joined ${school.name}! Redirecting to portal...`;
+            }
             successEl.style.display = 'flex';
             
             // Navigate to school portal after a short delay
