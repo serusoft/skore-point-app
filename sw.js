@@ -1,6 +1,6 @@
 // Service Worker for Skore Point PWA
 
-const CACHE_VERSION = Date.now(); // Use timestamp for automatic cache busting
+const CACHE_VERSION = '1.1.4'; // Increment version to force cache refresh
 const CACHE_NAME = `skore-point-v${CACHE_VERSION}`;
 const urlsToCache = [
     'index.html',
@@ -31,6 +31,16 @@ const urlsToCache = [
     'pages/dashboard/dashboard.html',
     'pages/dashboard/dashboard.css',
     'pages/dashboard/dashboard.js',
+
+    'pages/school/school.html',
+    'pages/school/school.css',
+    'pages/school/school.js',
+
+    'pages/marks/marks.html',
+    'pages/marks/marks.css',
+    'pages/marks/marks.js',
+
+    'pages/offline/offline.html',
 
     // Assets
     'assets/icons/icon-192x192.png',
