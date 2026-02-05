@@ -1,6 +1,6 @@
 // Service Worker for Skore Point PWA
 
-const CACHE_VERSION = '1.1.4'; // Increment version to force cache refresh
+const CACHE_VERSION = '1.2.2'; // Increment version to force cache refresh
 const CACHE_NAME = `skore-point-v${CACHE_VERSION}`;
 const urlsToCache = [
     'index.html',
@@ -39,6 +39,15 @@ const urlsToCache = [
     'pages/marks/marks.html',
     'pages/marks/marks.css',
     'pages/marks/marks.js',
+
+    'pages/reports/reports.html',
+    'pages/reports/reports.css',
+    'pages/reports/reports.js',
+
+    'services/report.service.js',
+    'services/school.service.js',
+    'utils/grading.js',
+    'utils/helpers.js',
 
     'pages/offline/offline.html',
 
@@ -152,7 +161,13 @@ self.addEventListener('fetch', event => {
                             
                             // If it's a page request, return offline page
                             if (isHTMLRequest) {
-                                return caches.match('pages/offline/offline.html');
+                                return caches.match('pages/offline/offline.html')
+                                    .then(response => {
+                                        return response || new Response('You are offline.', {
+                                            status: 503,
+                                            headers: { 'Content-Type': 'text/plain' }
+                                        });
+                                    });
                             }
                             
                             return new Response('Resource not available', {
@@ -194,7 +209,13 @@ self.addEventListener('fetch', event => {
                         })
                         .catch(error => {
                             console.log('Fetch failed:', error);
-                            return caches.match('pages/offline/offline.html');
+                            return caches.match('pages/offline/offline.html')
+                                .then(response => {
+                                    return response || new Response('You are offline.', {
+                                        status: 503,
+                                        headers: { 'Content-Type': 'text/plain' }
+                                    });
+                                });
                         });
                 })
         );
