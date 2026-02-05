@@ -1,11 +1,35 @@
 // Reports Page Controller
-import AuthService from '/services/auth.service.js';
-import SchoolService from '/services/school.service.js';
-import ReportService from '/services/report.service.js';
-import GradingUtils from '/utils/grading.js';
+import ReportService from '../../services/report.service.js';
+import GradingUtils from '../../utils/grading.js';
+
+// Local SchoolService helper to avoid import dependency issues
+const SchoolService = {
+    async getClassesByLevel(schoolId, level) {
+        return await window.Firebase.db.query('classes', [
+            { field: 'schoolId', op: '==', value: schoolId },
+            { field: 'category', op: '==', value: level }
+        ]);
+    },
+    async getSubjectsByLevel(schoolId, level) {
+        return await window.Firebase.db.query('subjects', [
+            { field: 'schoolId', op: '==', value: schoolId },
+            { field: 'category', op: '==', value: level }
+        ]);
+    },
+    async getStudentsByClass(classId) {
+        return await window.Firebase.db.query('students', [
+            { field: 'classId', op: '==', value: classId }
+        ]);
+    },
+    async getStudent(studentId) {
+        const doc = await window.Firebase.db.getDoc('students', studentId);
+        return doc.exists() ? { id: doc.id, ...doc.data() } : null;
+    }
+};
 
 class ReportsController {
     constructor() {
+        console.log('ReportsController initialized');
         this.currentLevel = null;
         this.currentSchool = null;
         this.currentUser = null;
@@ -18,9 +42,16 @@ class ReportsController {
     async initialize() {
         // Wait for app state to be ready
         if (!window.appInitialized) {
-            await new Promise(resolve => {
-                document.addEventListener('app:initialized', resolve, { once: true });
-            });
+            // Add timeout to prevent infinite loading
+            await Promise.race([
+                new Promise(resolve => {
+                    document.addEventListener('app:initialized', resolve, { once: true });
+                }),
+                new Promise(resolve => setTimeout(() => {
+                    console.warn('App initialization timed out in Reports');
+                    resolve();
+                }, 3000))
+            ]);
         }
         
         this.currentUser = window.AppState.currentUser;

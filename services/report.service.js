@@ -1,5 +1,5 @@
 // Report Generation Service
-import GradingUtils from '/utils/grading.js';
+import GradingUtils from '../utils/grading.js';
 
 // Helper to use global Firebase instance
 const db = {
