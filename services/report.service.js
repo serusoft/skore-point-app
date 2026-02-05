@@ -1,6 +1,16 @@
 // Report Generation Service
-import { db } from '/firebase/db.js';
 import GradingUtils from '/utils/grading.js';
+
+// Helper to use global Firebase instance
+const db = {
+    get: async (collection, id) => {
+        const doc = await window.Firebase.db.getDoc(collection, id);
+        return doc.exists() ? { id: doc.id, ...doc.data() } : null;
+    },
+    query: async (collection, constraints) => {
+        return await window.Firebase.db.query(collection, constraints);
+    }
+};
 
 const ReportService = {
     // Initialize service

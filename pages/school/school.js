@@ -1,8 +1,8 @@
 // pages/school/school.js
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('School Page: DOMContentLoaded - Starting initialization process.');
-    
+    console.log('School Page: DOMContentLoaded - Starting initialization process (v1.2.0).');
+
     // Track initialization state
     let pageInitialized = false;
     let schoolDataLoaded = false;
@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
      */
     function checkTeacherSectionAccess(section) {
         const isAdmin = isCurrentUserAdmin();
-        const restrictedSections = ['students', 'subjects', 'settings', 'reports'];
+        const restrictedSections = ['students', 'subjects', 'settings'];
         
         if (!isAdmin && restrictedSections.includes(section)) {
             console.error(`❌ SECURITY: Teacher attempted to access restricted section: ${section}`);
@@ -398,6 +398,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showToast('Page initialization taking longer than expected.', 'warning');
             }
         }
+        // Ensure UI is revealed even if initialization stalls
+        document.documentElement.classList.remove('rbac-pending');
     }, 10000);
 
     /**
@@ -423,6 +425,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             setupSchoolSettings();
             setupEnterMarksHandlers();
             await populateEnterMarksClassFilter();
+            setupReportCardHandlers();
+            await populateReportCardClassFilter();
             schoolDataLoaded = true;
             
             console.log('School Page: initializeAndLoad() - Initialization completed successfully.');
@@ -445,7 +449,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('User is Admin:', isAdmin);
         
         // Define restricted sections for teachers
-        const teacherHiddenSections = ['students', 'subjects', 'settings', 'reports'];
+        const teacherHiddenSections = ['students', 'subjects', 'settings'];
         
         // Update desktop tabs
         const desktopTabs = document.querySelectorAll('.content-tab');
@@ -473,6 +477,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                             Array.from(tab.childNodes).forEach(node => {
                                 if (node.nodeType === 3 && node.textContent.trim().length > 0) { // 3 is TEXT_NODE
                                     node.textContent = ' My Admin';
+                                }
+                            });
+                        }
+                    } else if (section === 'reports') {
+                        const icon = tab.querySelector('i');
+                        if (icon) {
+                            icon.className = 'fas fa-chart-line';
+                        }
+                        const span = tab.querySelector('span');
+                        if (span) span.textContent = ' My Analysis';
+                        else {
+                            Array.from(tab.childNodes).forEach(node => {
+                                if (node.nodeType === 3 && node.textContent.trim().length > 0) {
+                                    node.textContent = ' My Analysis';
                                 }
                             });
                         }
@@ -517,6 +535,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 }
                             });
                         }
+                    } else if (section === 'reports') {
+                        const icon = tab.querySelector('i');
+                        if (icon) {
+                            icon.className = 'fas fa-chart-line';
+                        }
+                        const span = tab.querySelector('span');
+                        if (span) span.textContent = ' My Analysis';
+                        else {
+                            Array.from(tab.childNodes).forEach(node => {
+                                if (node.nodeType === 3 && node.textContent.trim().length > 0) {
+                                    node.textContent = ' My Analysis';
+                                }
+                            });
+                        }
                     } else if (section === 'reportCard') {
                         const icon = tab.querySelector('i');
                         if (icon) {
@@ -545,7 +577,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             'addSubjectBtn',
             'addTeacherBtn',
             'assignSubjectsBtn',
-            'generateReportsBtn',
             'settingsTabBtn'
         ];
         
@@ -567,6 +598,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         console.log('=== applyRoleBasedTabVisibility() COMPLETE ===');
+
+        // --- START FLICKER FIX ---
+        // Remove the pending class to show the correctly configured UI all at once.
+        document.documentElement.classList.remove('rbac-pending');
+        // --- END FLICKER FIX ---
     }
     
     /**
@@ -692,10 +728,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (tab) {
                 const section = tab.dataset.section;
                 if (section) {
-                    console.log(`School Page: Tab clicked (section: ${section})`);
+                    console.log(`School Page: Tab clicked (section: ${section}), is admin: ${isCurrentUserAdmin()}`);
                     
                     // Check if teacher is trying to access restricted section
-                    if (!isCurrentUserAdmin() && ['students', 'subjects', 'settings', 'reports'].includes(section)) {
+                    if (!isCurrentUserAdmin() && ['students', 'subjects', 'settings'].includes(section)) {
                         console.error(`❌ SECURITY: Teacher attempted to access restricted section: ${section}`);
                         showToast('Access denied. This section is for administrators only.', 'error');
                         return;
@@ -906,6 +942,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                             errorCount++;
                         }
                     }
+
+                    // Update class student count
+                    if (addedCount > 0) {
+                        try {
+                            const classDoc = await Firebase.db.getDoc('classes', selectedClassId);
+                            if (classDoc.exists()) {
+                                const currentCount = classDoc.data().studentsCount || 0;
+                                await Firebase.db.updateDoc('classes', selectedClassId, {
+                                    studentsCount: currentCount + addedCount
+                                });
+                            }
+                        } catch (err) {
+                            console.error('Error updating class student count:', err);
+                        }
+                    }
                     
                     if (addedCount > 0) {
                         showToast(`Successfully imported ${addedCount} students to ${className}.`, 'success');
@@ -983,7 +1034,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log(`School Page: switchTab() called with section: ${section}`);
         
         // Check if teacher is trying to access restricted section
-        if (!isCurrentUserAdmin() && ['students', 'subjects', 'settings', 'reports'].includes(section)) {
+        if (!isCurrentUserAdmin() && ['students', 'subjects', 'settings'].includes(section)) {
             console.error(`❌ CRITICAL SECURITY: Teacher attempted to access restricted section: ${section}`);
             showToast('Access denied. This section is for administrators only.', 'error');
             return;
@@ -1003,7 +1054,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             sectionEl.classList.toggle('active', isActive);
             
             // Show/hide sections based on role
-            if (!isCurrentUserAdmin() && ['students', 'subjects', 'settings', 'reports'].includes(section)) {
+            if (!isCurrentUserAdmin() && ['students', 'subjects', 'settings'].includes(section)) {
                 sectionEl.style.display = 'none';
             } else if (isActive) {
                 sectionEl.style.display = 'block';
@@ -1018,6 +1069,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     loadSubjects(AppState.currentAcademicLevel);
                 } else if (section === 'teachers' && schoolDataLoaded) {
                     loadTeachers();
+                } else if (section === 'reports' && schoolDataLoaded) {
+                    // The reports.js file handles its own loading and role-based visibility.
+                    // We dispatch an event to let it know it's time to initialize or refresh.
+                    console.log('Dispatching event: reports:show to trigger analysis content loading.');
+                    document.dispatchEvent(new CustomEvent('reports:show', {
+                        detail: {
+                            isAdmin: isCurrentUserAdmin(),
+                            level: AppState.currentAcademicLevel
+                        }
+                    }));
                 }
             } else {
                 sectionEl.style.display = 'none';
@@ -1095,6 +1156,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const classes = await Firebase.db.query('classes', constraints);
             renderClasses(classes);
+            
+            // Background sync of student counts to ensure accuracy
+            updateClassStudentCounts(classes);
         } catch (error) {
             console.error('Error loading classes:', error);
             if (classesList) {
@@ -1104,6 +1168,53 @@ document.addEventListener('DOMContentLoaded', async () => {
                 emptyState.style.display = 'flex';
             }
         }
+    }
+    
+    /**
+     * Background sync of student counts for classes
+     * Ensures teachers see accurate numbers even if DB is out of sync
+     */
+    async function updateClassStudentCounts(classes) {
+        if (!classes || classes.length === 0) return;
+        
+        // Run in background to not block UI
+        setTimeout(async () => {
+            console.log('Syncing student counts for classes...');
+            const isAdmin = isCurrentUserAdmin();
+            
+            for (const cls of classes) {
+                try {
+                    // Query students for this class to get actual count
+                    const students = await Firebase.db.query('students', [
+                        { field: 'classId', op: '==', value: cls.id },
+                        { field: 'schoolId', op: '==', value: AppState.currentSchool.id }
+                    ]);
+                    
+                    const actualCount = students.length;
+                    const storedCount = cls.studentsCount || 0;
+                    
+                    // Update UI if different
+                    if (actualCount !== storedCount) {
+                        const card = document.querySelector(`.class-card[data-id="${cls.id}"]`);
+                        if (card) {
+                            const countEl = card.querySelector('.student-count');
+                            if (countEl) {
+                                countEl.textContent = `${actualCount} Students`;
+                            }
+                        }
+                        
+                        // Update DB if admin (teachers cannot write to classes)
+                        if (isAdmin) {
+                            await Firebase.db.updateDoc('classes', cls.id, {
+                                studentsCount: actualCount
+                            });
+                        }
+                    }
+                } catch (err) {
+                    console.error(`Error syncing count for class ${cls.name}:`, err);
+                }
+            }
+        }, 100);
     }
 
     /**
@@ -1131,7 +1242,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="class-card" data-id="${cls.id}">
                 <div style="flex: 1;">
                     <h3 class="class-name">${cls.name}</h3>
-                    <p style="color: var(--gray-light); font-size: 0.9rem; margin: 5px 0;">${cls.studentsCount || 0} Students</p>
+                    <p class="student-count" style="color: var(--gray-light); font-size: 0.9rem; margin: 5px 0;">${cls.studentsCount || 0} Students</p>
                     <span class="class-category">${cls.category || cls.level || 'General'}</span>
                     <div class="card-actions" style="margin-top: 15px;">
                         <span style="color: var(--primary); font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
@@ -1179,7 +1290,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!confirmed) return;        
         showPageLoading('Deleting class and associated students...');
         try {
-            // Delete all students in this class first
+            // 1. Delete all marks associated with this class
+            const marks = await Firebase.db.query('marks', [
+                { field: 'classId', op: '==', value: classId },
+                { field: 'schoolId', op: '==', value: AppState.currentSchool.id }
+            ]);
+            
+            if (marks.length > 0) {
+                await Promise.all(marks.map(mark => 
+                    Firebase.db.deleteDoc('marks', mark.id)
+                ));
+            }
+
+            // 2. Delete all students in this class
             const students = await Firebase.db.query('students', [
                 { field: 'classId', op: '==', value: classId },
                 { field: 'schoolId', op: '==', value: AppState.currentSchool.id }
@@ -1191,6 +1314,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ));
             }
 
+            // 3. Delete the class itself
             await Firebase.db.deleteDoc('classes', classId);
             showToast('Class and associated students deleted successfully', 'success');
             await loadClasses(AppState.currentAcademicLevel);
@@ -1222,7 +1346,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${classMap[student.classId] || 'N/A'}</td>
                 <td><span class="class-category" style="font-size: 0.8rem;">${student.category || 'N/A'}</span></td>
                 <td>
-                    ${isAdmin ? `<button class="btn btn-sm btn-danger btn-delete" data-student-id="${student.id}">
+                    ${isAdmin ? `<button class="btn btn-sm btn-danger btn-delete" data-student-id="${student.id}" data-class-id="${student.classId}">
                         <i class="fas fa-trash"></i> Delete
                     </button>` : ''}
                 </td>
@@ -1234,7 +1358,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const studentId = btn.dataset.studentId;
-                await deleteStudent(studentId);
+                const classId = btn.dataset.classId;
+                await deleteStudent(studentId, classId);
             });
         });
     }
@@ -1242,7 +1367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     /**
      * Delete a student
      */
-    async function deleteStudent(studentId) {
+    async function deleteStudent(studentId, classId) {
         // Permission check
         if (!isCurrentUserAdmin()) {
             showToast('Only admins can delete students', 'error');
@@ -1253,7 +1378,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!confirmed) return;        
         showPageLoading('Deleting student...');
         try {
+            // Delete student's marks first
+            const marks = await Firebase.db.query('marks', [
+                { field: 'studentId', op: '==', value: studentId },
+                { field: 'schoolId', op: '==', value: AppState.currentSchool.id }
+            ]);
+            
+            if (marks.length > 0) {
+                await Promise.all(marks.map(mark => 
+                    Firebase.db.deleteDoc('marks', mark.id)
+                ));
+            }
+
             await Firebase.db.deleteDoc('students', studentId);
+            
+            // Update class student count
+            if (classId) {
+                try {
+                    const classDoc = await Firebase.db.getDoc('classes', classId);
+                    if (classDoc.exists()) {
+                        const currentCount = classDoc.data().studentsCount || 0;
+                        if (currentCount > 0) {
+                            await Firebase.db.updateDoc('classes', classId, {
+                                studentsCount: currentCount - 1
+                            });
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error updating class student count:', err);
+                }
+            }
+            
             showToast('Student deleted successfully', 'success');
             await loadStudents(AppState.currentAcademicLevel);
         } catch (error) {
@@ -1764,6 +1919,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                         category: currentLevel,
                         createdAt: new Date().toISOString()
                     });
+                    
+                    // Update class student count
+                    try {
+                        const classDoc = await Firebase.db.getDoc('classes', formData.classId);
+                        if (classDoc.exists()) {
+                            const currentCount = classDoc.data().studentsCount || 0;
+                            await Firebase.db.updateDoc('classes', formData.classId, {
+                                studentsCount: currentCount + 1
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Error updating class student count:', err);
+                    }
+                    
                     showToast('Student added successfully', 'success');
                     await loadStudents(currentLevel);
                     return true;
@@ -1884,6 +2053,223 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     /**
+     * Setup Report Card tab handlers
+     */
+    function setupReportCardHandlers() {
+        const classFilter = document.getElementById('reportsClassFilter');
+        const generateBtn = document.getElementById('generateReportsBtn');
+
+        if (generateBtn) {
+            generateBtn.addEventListener('click', () => {
+                const classId = classFilter ? classFilter.value : '';
+                // Navigate to the dedicated reports page
+                window.location.href = `../reports/reports.html${classId ? '?classId=' + classId : ''}`;
+            });
+        }
+    }
+
+    /**
+     * Populate Report Card class filter
+     */
+    async function populateReportCardClassFilter() {
+        const classFilter = document.getElementById('reportsClassFilter');
+        if (!classFilter || !AppState.currentSchool) return;
+
+        try {
+            const constraints = [
+                { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
+                { field: 'category', op: '==', value: AppState.currentAcademicLevel || 'lower-primary' }
+            ];
+            const classes = await Firebase.db.query('classes', constraints);
+
+            classFilter.innerHTML = '<option value="">Select Class</option>';
+            classes.forEach(cls => {
+                const option = document.createElement('option');
+                option.value = cls.id;
+                option.textContent = cls.name;
+                classFilter.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error populating report card classes:', error);
+        }
+    }
+
+    /**
+     * Load students for report card dropdown
+     */
+    async function loadStudentsForReportCard(classId) {
+        const studentFilter = document.getElementById('reportCardStudentFilter');
+        if (!studentFilter) return;
+
+        studentFilter.innerHTML = '<option value="">Loading...</option>';
+        studentFilter.disabled = true;
+
+        if (!classId) {
+            studentFilter.innerHTML = '<option value="">Select Class First</option>';
+            return;
+        }
+
+        try {
+            const students = await Firebase.db.query('students', [
+                { field: 'classId', op: '==', value: classId },
+                { field: 'schoolId', op: '==', value: AppState.currentSchool.id }
+            ]);
+
+            studentFilter.innerHTML = '<option value="">Select Student</option>';
+            students.forEach(student => {
+                const option = document.createElement('option');
+                option.value = student.id;
+                option.textContent = student.name;
+                studentFilter.appendChild(option);
+            });
+            studentFilter.disabled = false;
+        } catch (error) {
+            console.error('Error loading students for report card:', error);
+            studentFilter.innerHTML = '<option value="">Error loading students</option>';
+        }
+    }
+
+    /**
+     * Generate Report Card
+     */
+    async function generateReportCard() {
+        const classId = document.getElementById('reportCardClassFilter')?.value;
+        const studentId = document.getElementById('reportCardStudentFilter')?.value;
+        const term = document.getElementById('reportCardTermFilter')?.value;
+        const previewArea = document.getElementById('reportCardPreview');
+
+        if (!classId || !studentId || !term) {
+            showToast('Please select class, student and term', 'warning');
+            return;
+        }
+
+        if (previewArea) {
+            previewArea.innerHTML = '<div class="loading-spinner"></div><p style="text-align:center">Generating report card...</p>';
+        }
+
+        try {
+            // Fetch student details
+            const studentDoc = await Firebase.db.getDoc('students', studentId);
+            const student = studentDoc.data();
+
+            // Fetch marks
+            const marksDoc = await Firebase.db.getDoc('marks', `${studentId}_${term}`);
+            const marksData = marksDoc.exists() ? marksDoc.data() : {};
+
+            // Fetch subjects to map names
+            const subjects = await Firebase.db.query('subjects', [
+                { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
+                { field: 'category', op: '==', value: AppState.currentAcademicLevel }
+            ]);
+
+            // Build report HTML
+            let marksHtml = '';
+            let totalScore = 0;
+            let subjectCount = 0;
+
+            subjects.forEach(subject => {
+                const mark = marksData[subject.id];
+                if (mark !== undefined) {
+                    let score = 0;
+                    if (typeof mark === 'object') {
+                        // Handle complex marks (papers) - simplified average
+                        const values = Object.values(mark).filter(v => typeof v === 'number');
+                        if (values.length > 0) score = values.reduce((a,b)=>a+b,0) / values.length;
+                    } else {
+                        score = Number(mark);
+                    }
+                    
+                    marksHtml += `
+                        <tr>
+                            <td>${subject.name}</td>
+                            <td>${Math.round(score)}</td>
+                            <td>${getGrade(score)}</td>
+                            <td>${getRemark(score)}</td>
+                        </tr>
+                    `;
+                    totalScore += score;
+                    subjectCount++;
+                }
+            });
+
+            if (subjectCount === 0) {
+                marksHtml = '<tr><td colspan="4" style="text-align:center">No marks found for this term</td></tr>';
+            }
+
+            const average = subjectCount > 0 ? Math.round(totalScore / subjectCount) : 0;
+
+            const html = `
+                <div class="report-card" style="background:white; padding:30px; max-width:800px; margin:0 auto; box-shadow:0 0 15px rgba(0,0,0,0.1);">
+                    <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #eee; padding-bottom:20px;">
+                        <h2 style="margin:0; color:var(--primary);">${AppState.currentSchool.name}</h2>
+                        <p style="margin:5px 0; color:#666;">Student Progress Report</p>
+                    </div>
+                    
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
+                        <div>
+                            <strong>Student:</strong> ${student.name}<br>
+                            <strong>Class:</strong> ${document.getElementById('reportCardClassFilter').options[document.getElementById('reportCardClassFilter').selectedIndex].text}
+                        </div>
+                        <div style="text-align:right;">
+                            <strong>Term:</strong> ${term}<br>
+                            <strong>Date:</strong> ${new Date().toLocaleDateString()}
+                        </div>
+                    </div>
+
+                    <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
+                        <thead>
+                            <tr style="background:#f8f9fa; text-align:left;">
+                                <th style="padding:10px; border-bottom:2px solid #ddd;">Subject</th>
+                                <th style="padding:10px; border-bottom:2px solid #ddd;">Score</th>
+                                <th style="padding:10px; border-bottom:2px solid #ddd;">Grade</th>
+                                <th style="padding:10px; border-bottom:2px solid #ddd;">Remark</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${marksHtml}
+                        </tbody>
+                    </table>
+
+                    <div style="background:#f8f9fa; padding:15px; border-radius:8px; display:flex; justify-content:space-between;">
+                        <div><strong>Total Score:</strong> ${Math.round(totalScore)}</div>
+                        <div><strong>Average:</strong> ${average}%</div>
+                        <div><strong>Subjects:</strong> ${subjectCount}</div>
+                    </div>
+                </div>
+            `;
+
+            if (previewArea) {
+                previewArea.innerHTML = html;
+                const printBtn = document.getElementById('printReportCardBtn');
+                if (printBtn) printBtn.style.display = 'inline-block';
+            }
+
+        } catch (error) {
+            console.error('Error generating report:', error);
+            showToast('Error generating report', 'error');
+            if (previewArea) previewArea.innerHTML = '<p class="error">Failed to generate report</p>';
+        }
+    }
+
+    function getGrade(score) {
+        if (score >= 80) return 'A';
+        if (score >= 70) return 'B';
+        if (score >= 60) return 'C';
+        if (score >= 50) return 'D';
+        if (score >= 40) return 'E';
+        return 'F';
+    }
+
+    function getRemark(score) {
+        if (score >= 80) return 'Excellent';
+        if (score >= 70) return 'Very Good';
+        if (score >= 60) return 'Good';
+        if (score >= 50) return 'Fair';
+        if (score >= 40) return 'Pass';
+        return 'Fail';
+    }
+
+    /**
      * Setup Enter Marks page - wire up handler buttons
      */
     function setupEnterMarksHandlers() {
@@ -1940,16 +2326,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (viewReportCardsBtn) {
             viewReportCardsBtn.addEventListener('click', () => {
-                // TEACHER RESTRICTION: Teachers cannot view reports
-                if (!isCurrentUserAdmin()) {
-                    showToast('Only admins can view reports', 'error');
-                    console.warn('❌ SECURITY: Teacher attempted to access reports');
-                    return;
-                }
-                
-                // Switch to reports tab instead of navigating away
+                // This button now switches to the "Reports" / "My Analysis" tab for all roles
                 switchTab('reports');
-                if (typeof showToast === 'function') showToast('Switched to Reports tab', 'info');
+                
+                const toastMessage = isCurrentUserAdmin() ? 'Switched to Reports tab' : 'Switched to My Analysis tab';
+                if (typeof showToast === 'function') showToast(toastMessage, 'info');
             });
         }
         

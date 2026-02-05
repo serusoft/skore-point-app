@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="rbac-pending">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,6 +10,23 @@
     <link rel="stylesheet" href="./school.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* Anti-flicker styles: Hide admin elements by default until role is verified */
+        html.rbac-pending .content-tab[data-section="students"],
+        html.rbac-pending .content-tab[data-section="subjects"],
+        html.rbac-pending .content-tab[data-section="settings"],
+        html.rbac-pending .mobile-tab[data-section="students"],
+        html.rbac-pending .mobile-tab[data-section="subjects"],
+        html.rbac-pending .mobile-tab[data-section="settings"],
+        html.rbac-pending #addClassBtn,
+        html.rbac-pending #addStudentBtn,
+        html.rbac-pending #addSubjectBtn,
+        html.rbac-pending #addTeacherBtn,
+        html.rbac-pending #assignSubjectsBtn,
+        html.rbac-pending #settingsTabBtn {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
     <div id="navbar-container"></div>

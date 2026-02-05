@@ -1,9 +1,8 @@
 // Reports Page Controller
-import { AuthService } from '/services/auth.service.js';
-import { SchoolService } from '/services/school.service.js';
-import { ReportService } from '/services/report.service.js';
-import { GradingUtils } from '/utils/grading.js';
-import { AppState, Router } from '/shared/js/app.js';
+import AuthService from '/services/auth.service.js';
+import SchoolService from '/services/school.service.js';
+import ReportService from '/services/report.service.js';
+import GradingUtils from '/utils/grading.js';
 
 class ReportsController {
     constructor() {
@@ -18,13 +17,17 @@ class ReportsController {
     
     async initialize() {
         // Wait for app state to be ready
-        await AppState.ready();
+        if (!window.appInitialized) {
+            await new Promise(resolve => {
+                document.addEventListener('app:initialized', resolve, { once: true });
+            });
+        }
         
-        this.currentUser = AppState.currentUser;
-        this.currentSchool = AppState.currentSchool;
+        this.currentUser = window.AppState.currentUser;
+        this.currentSchool = window.AppState.currentSchool;
         
         if (!this.currentSchool) {
-            Router.navigateTo('dashboard');
+            window.navigateTo('dashboard');
             return;
         }
         
@@ -33,6 +36,7 @@ class ReportsController {
         
         this.setupEventListeners();
         this.showLevelSelection();
+        this.hideLoading();
     }
     
     /**
@@ -105,7 +109,7 @@ class ReportsController {
         const optionsContainer = document.getElementById('levelOptionsPrompt');
         
         if (!this.currentSchool) {
-            Router.navigateTo('dashboard');
+            window.navigateTo('dashboard');
             return;
         }
         
@@ -308,7 +312,7 @@ class ReportsController {
             const students = await SchoolService.getStudentsByClass(classId);
             
             studentSelect.innerHTML = '<option value="">Select Student</option>';
-            students.forEach(student => {
+            students.sort((a,b) => a.name.localeCompare(b.name)).forEach(student => {
                 const option = document.createElement('option');
                 option.value = student.id;
                 option.textContent = student.name;

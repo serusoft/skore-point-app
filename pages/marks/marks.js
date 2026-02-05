@@ -185,10 +185,7 @@ function setupMarksEventListeners() {
     const marksGrid = document.getElementById('marksGrid');
     if (marksGrid) {
         marksGrid.addEventListener('click', (e) => {
-            const mismatchedGroup = e.target.closest('.mark-input-group.mismatched');
-            if (mismatchedGroup) {
-                showToast('This subject is not offered for the current academic level.', 'warning');
-            }
+            // Mismatch warning removed to allow entry
         });
     }
 }
@@ -317,8 +314,7 @@ async function loadSubjectsForMarks(level) {
         subjectSelect.innerHTML = `<option value="">${defaultOption}</option>` + 
             subjects.map(s => {
                 const isMismatched = s.category !== level;
-                const warningText = isMismatched ? ` (Wrong Level: ${s.category.replace('-', ' ')})` : '';
-                return `<option value="${s.id}" data-mismatched="${isMismatched}">${s.name}${warningText}</option>`;
+                return `<option value="${s.id}" data-mismatched="${isMismatched}">${s.name}</option>`;
             }).join('');
             
     } catch (error) {
@@ -381,11 +377,7 @@ async function handleSubjectSelection(subjectId) {
     const selectedOption = subjectSelect.querySelector(`option[value="${subjectId}"]`);
     if (selectedOption && selectedOption.dataset.mismatched === 'true') {
         const subjectName = selectedOption.textContent.split(' (')[0];
-        showToast(
-            `Warning: "${subjectName}" is not offered for this level. Go to the "My Admin" tab to contact an admin for help.`, 
-            'warning', 
-            8000 // show for 8 seconds
-        );
+        // Warning suppressed to allow entry for shared subjects
     }
 
     // Update marks form based on selected subject
@@ -622,7 +614,7 @@ async function showMarksForm(subjectId, existingMarks = null) {
 }
 
 function generateRegularInput(subject, existingMark, isMismatched) {
-    const disabledAttr = isMismatched ? 'disabled' : '';
+    const disabledAttr = '';
     return `
         <div class="mark-input-group ${isMismatched ? 'mismatched' : ''}" data-subject-id="${subject.id}">
             <label>${subject.name}</label>
@@ -632,13 +624,12 @@ function generateRegularInput(subject, existingMark, isMismatched) {
                    placeholder="0-100"
                    oninput="updateMarksSummary()"
                    ${disabledAttr}>
-            ${isMismatched ? '<div class="level-mismatch-warning"><i class="fas fa-exclamation-triangle"></i> Not for this level</div>' : ''}
         </div>
     `;
 }
 
 function generateALevelInputs(subject, existingMark, isMismatched) {
-    const disabledAttr = isMismatched ? 'disabled' : '';
+    const disabledAttr = '';
     const paperCount = subject.paperCount || 1;
     const isGeneralPaper = subject.type === 'general';
     const isSubsidiary = subject.type === 'subsidiary';
@@ -685,7 +676,6 @@ function generateALevelInputs(subject, existingMark, isMismatched) {
             <div class="paper-inputs">
                 ${inputs}
             </div>
-            ${isMismatched ? '<div class="level-mismatch-warning"><i class="fas fa-exclamation-triangle"></i> Not for this level</div>' : ''}
         </div>
     `;
 }
