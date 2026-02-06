@@ -337,16 +337,22 @@ async function handleClassSelection(classId) {
         return;
     }
 
-    // Enable student search
+    // Disable student search while loading to prevent race conditions
     if (studentSearchInput) {
-        studentSearchInput.disabled = false;
-        studentSearchInput.placeholder = 'Type student name...';
+        studentSearchInput.disabled = true;
+        studentSearchInput.placeholder = 'Loading students...';
     }
     
     try {
         // Load students for this class
         await loadStudentsForClass(classId);
         showToast('Class loaded. Search for a student to enter marks.', 'info');
+        
+        // Enable student search after loading is complete
+        if (studentSearchInput) {
+            studentSearchInput.disabled = false;
+            studentSearchInput.placeholder = 'Type student name...';
+        }
         
         // Show marks form if we have a selected student
         const selectedStudent = getSelectedStudent();
@@ -622,6 +628,18 @@ function generateRegularInput(subject, existingMark, isMismatched) {
                    min="0" max="100" 
                    value="${existingMark || ''}" 
                    placeholder="0-100"
+                   maxlength="3"
+                   onkeypress="return (event.charCode >= 48 && event.charCode <= 57) || event.charCode == 46"
+                   onkeyup="
+                      if(this.value>100){ this.value = 100; }
+                      else if(this.value<0){ this.value = 0; }
+                   "
+                   maxlength="3"
+                   onkeypress="return (event.charCode >= 48 && event.charCode <= 57) || event.charCode == 46"
+                   onkeyup="
+                      if(this.value>100){ this.value = 100; }
+                      else if(this.value<0){ this.value = 0; }
+                   "
                    oninput="updateMarksSummary()"
                    ${disabledAttr}>
         </div>
@@ -641,13 +659,31 @@ function generateALevelInputs(subject, existingMark, isMismatched) {
         for (let i = 1; i <= paperCount; i++) {
             const paperMark = existingMark && existingMark[`paper${i}`] ? existingMark[`paper${i}`] : '';
             inputs += `
-                <div class="paper-input">
+                <div class="paper-input">100"
+                           maxlength="3"
+                           onkeypress="return (event.charCode >= 48 && event.charCode <= 57) || event.charCode == 46"
+                           onkeyup="
+                              if(this.value>100){ this.value = ; }
+                              else if(this.value<0){ this.value = 0; }
+                           
                     <span class="paper-label">Paper ${i}:</span>
                     <input type="number" class="mark-input paper-mark" 
                            data-paper="${i}"
                            min="0" max="100" 
                            value="${paperMark}" 
                            placeholder="0-100"
+                           maxlength="3"
+                           onkeypress="return (event.charCode >= 48 && event.charCode <= 57) || event.charCode == 46"
+                           onkeyup="
+                              if(this.value>100){ this.value = 100; }
+                              else if(this.valu" 
+                   maxlength="3"
+                   onkeypress="return (event.charCode >= 48 && event.charCode <= 57) || event.charCode == 46"
+                   onkeyup=e
+                   <  if(this.value>100){ this.value = 100; }
+                      else if(this.value<0){ this.value = 0; }
+                   "0){ this.value = 0; }
+                           "
                            oninput="updateMarksSummary()"
                            ${disabledAttr}>
                 </div>
@@ -659,6 +695,12 @@ function generateALevelInputs(subject, existingMark, isMismatched) {
             <input type="number" class="mark-input" 
                    min="0" max="100" 
                    value="${existingMark || ''}" 
+                   maxlength="3"
+                   onkeypress="return (event.charCode >= 48 && event.charCode <= 57) || event.charCode == 46"
+                   onkeyup="
+                      if(this.value>100){ this.value = 100; }
+                      else if(this.value<0){ this.value = 0; }
+                   "
                    placeholder="0-100"
                    oninput="updateMarksSummary()"
                    ${disabledAttr}>

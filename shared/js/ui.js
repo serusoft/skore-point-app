@@ -123,7 +123,7 @@ class AppUI {
     injectNavbar() {
         try {
             // Always check current auth state from AppState
-            const isAuthenticated = AppState && AppState.isAuthenticated;
+            const isAuthenticated = window.AppState && window.AppState.isAuthenticated;
             let navHtml = '';
             
             console.log('UI.injectNavbar() - Injecting navbar, authenticated:', isAuthenticated);
@@ -176,9 +176,10 @@ class AppUI {
 
             // Setup event listeners
             setTimeout(() => {
-                this.setupGlobalNavbarEvents();
+                if (this.setupGlobalNavbarEvents) this.setupGlobalNavbarEvents();
+                
                 // Populate user info if authenticated
-                if (isAuthenticated && AppState.currentUser) {
+                if (isAuthenticated && window.AppState && window.AppState.currentUser) {
                     console.log('UI.injectNavbar() - Loading user profile in navbar');
                     this.loadUserProfileInNavbar();
                 }
@@ -257,6 +258,25 @@ class AppUI {
                 </div>
             </nav>
         `;
+    }
+
+    setupGlobalNavbarEvents() {
+        const toggle = document.getElementById('navbar-toggle');
+        const mobileNav = document.getElementById('navbar-mobile-nav');
+        
+        if (toggle && mobileNav) {
+            toggle.addEventListener('click', () => {
+                const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+                toggle.setAttribute('aria-expanded', !isExpanded);
+                mobileNav.setAttribute('aria-hidden', isExpanded);
+                mobileNav.classList.toggle('active');
+                
+                const icon = toggle.querySelector('i');
+                if (icon) {
+                    icon.className = isExpanded ? 'fas fa-bars' : 'fas fa-times';
+                }
+            });
+        }
     }
 
     // loadUserProfileInNavbar - FIXED VERSION (removed inline styles)

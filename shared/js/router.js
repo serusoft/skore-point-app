@@ -101,13 +101,30 @@ class Router {
     handleNotFound() {
         console.warn('Route not found:', window.location.pathname);
         
+        const currentPath = window.location.pathname;
+
+        // CRITICAL FIX: Prevent infinite redirect loops
+        // If we are already on a fallback page (dashboard or login), stop redirecting
+        if (currentPath.includes('dashboard.html') || currentPath.includes('login.html')) {
+            return;
+        }
+
+        // FIX: Allow standalone pages to exist without being registered in the router
+        // This prevents the router from redirecting pages like reports.html or marks.html
+        // back to the dashboard simply because they aren't SPA routes.
+        const standalonePages = ['reports.html', 'marks.html', 'school.html', 'analytics.html', 'tutorials.html', 'profile.html', 'settings.html'];
+        if (standalonePages.some(page => currentPath.includes(page))) {
+            console.log('Router: Ignoring standalone page:', currentPath);
+            return;
+        }
+
         // Check if we're in the app pages path
-        if (window.location.pathname.includes('/pages/')) {
+        if (currentPath.includes('/pages/')) {
             // Redirect to dashboard if authenticated, otherwise to login
             if (AppState.isAuthenticated) {
-                this.navigate('../dashboard/dashboard.html');
+                window.location.replace('../dashboard/dashboard.html');
             } else {
-                this.navigate('../auth/login.html');
+                window.location.replace('../auth/login.html');
             }
         }
     }

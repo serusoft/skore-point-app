@@ -255,19 +255,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         try {
-            const constraints = [
-                { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-                { field: 'category', op: '==', value: level }
-            ];
-
-            const students = await Firebase.db.query('students', constraints);
+            // Query by schoolId only to avoid composite index requirement
+            const allStudents = await Firebase.db.query('students', [
+                { field: 'schoolId', op: '==', value: AppState.currentSchool.id }
+            ]);
+            const students = allStudents.filter(s => s.category === level);
             
             // Fetch classes for lookup
-            const classConstraints = [
-                { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-                { field: 'category', op: '==', value: level }
-            ];
-            const classes = await Firebase.db.query('classes', classConstraints);
+            const allClasses = await Firebase.db.query('classes', [
+                { field: 'schoolId', op: '==', value: AppState.currentSchool.id }
+            ]);
+            const classes = allClasses.filter(c => c.category === level);
+            
             const classMap = {};
             classes.forEach(cls => {
                 classMap[cls.id] = cls.name;
@@ -317,11 +316,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         try {
-            const constraints = [
-                { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-                { field: 'category', op: '==', value: level }
-            ];
-            const subjects = await Firebase.db.query('subjects', constraints);
+            // Query by schoolId only to avoid composite index requirement
+            const allSubjects = await Firebase.db.query('subjects', [
+                { field: 'schoolId', op: '==', value: AppState.currentSchool.id }
+            ]);
+            const subjects = allSubjects.filter(s => s.category === level);
+            
             renderSubjects(subjects);
         } catch (error) {
             console.error('Error loading subjects:', error);
@@ -424,9 +424,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             setupSchoolSettings();
             setupEnterMarksHandlers();
-            await populateEnterMarksClassFilter();
+            // Class filters are now populated by loadClasses -> updateClassDropdowns
             setupReportCardHandlers();
-            await populateReportCardClassFilter();
+            // Class filters are now populated by loadClasses -> updateClassDropdowns
             schoolDataLoaded = true;
             
             console.log('School Page: initializeAndLoad() - Initialization completed successfully.');
@@ -833,6 +833,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     showToast('Exiting school portal...', 'info');
                     if (typeof window.navigateTo === 'function') {
                         window.navigateTo('dashboard');
+                    } else {
+                        // Fallback if router is not available
+                        window.location.href = '../dashboard/dashboard.html';
                     }
                     break;
             }
@@ -1031,7 +1034,14 @@ document.addEventListener('DOMContentLoaded', async () => {
      * Switch between content tabs
      */
     function switchTab(section) {
-        console.log(`School Page: switchTab() called with section: ${section}`);
+        console.log(`School Page: switchTab() called with section: ${section} (In-page view)`);
+        
+        // Redirect to reports page if reports tab is activated
+        if (section === 'reports' || section === 'reportCard') {
+            showPageLoading('Opening Reports...');
+            window.location.href = '../reports/reports.html';
+            return;
+        }
         
         // Check if teacher is trying to access restricted section
         if (!isCurrentUserAdmin() && ['students', 'subjects', 'settings'].includes(section)) {
@@ -1069,16 +1079,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                     loadSubjects(AppState.currentAcademicLevel);
                 } else if (section === 'teachers' && schoolDataLoaded) {
                     loadTeachers();
-                } else if (section === 'reports' && schoolDataLoaded) {
-                    // The reports.js file handles its own loading and role-based visibility.
-                    // We dispatch an event to let it know it's time to initialize or refresh.
-                    console.log('Dispatching event: reports:show to trigger analysis content loading.');
-                    document.dispatchEvent(new CustomEvent('reports:show', {
-                        detail: {
-                            isAdmin: isCurrentUserAdmin(),
-                            level: AppState.currentAcademicLevel
-                        }
-                    }));
+                } else if ((section === 'reports' || section === 'reportCard') && schoolDataLoaded) {
+                    // Handle Reports View Visibility
+                    const adminView = document.getElementById('adminReportsView');
+                    const teacherView = document.getElementById('teacherAnalysisView');
+                    
+                    if (isCurrentUserAdmin()) {
+                        if (adminView) adminView.style.display = 'block';
+                        if (teacherView) teacherView.style.display = 'none';
+                    } else {
+                        if (adminView) adminView.style.display = 'none';
+                        if (teacherView) teacherView.style.display = 'block';
+                    }
                 }
             } else {
                 sectionEl.style.display = 'none';
@@ -1136,6 +1148,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     /**
+     * Update all class dropdowns with the latest classes
+     * This ensures dropdowns are always in sync with the grid
+     */
+    function updateClassDropdowns(classes) {
+        const dropdowns = ['reportCardClassFilter', 'enterMarksClassFilter'];
+        
+        dropdowns.forEach(id => {
+            const select = document.getElementById(id);
+            if (select) {
+                const currentVal = select.value;
+                select.innerHTML = '<option value="">Select Class</option>';
+                classes.forEach(cls => {
+                    const option = document.createElement('option');
+                    option.value = cls.id;
+                    option.textContent = cls.name;
+                    select.appendChild(option);
+                });
+                
+                // Restore selection if possible
+                if (currentVal && classes.some(c => c.id === currentVal)) {
+                    select.value = currentVal;
+                }
+            }
+        });
+
+        // Update level labels
+        const levelLabel = AppState.currentAcademicLevel ? AppState.currentAcademicLevel.replace('-', ' ').toUpperCase() : '';
+        const labels = ['reportsLevelFilter', 'enterMarksLevelFilter'];
+        labels.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = levelLabel;
+        });
+    }
+
+    /**
      * Load classes for the current level
      */
     async function loadClasses(level) {
@@ -1149,12 +1196,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         try {
-            const constraints = [
-                { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-                { field: 'category', op: '==', value: level }
-            ];
-
-            const classes = await Firebase.db.query('classes', constraints);
+            // Query by schoolId only to avoid composite index requirement
+            const allClasses = await Firebase.db.query('classes', [
+                { field: 'schoolId', op: '==', value: AppState.currentSchool.id }
+            ]);
+            const classes = allClasses.filter(c => c.category === level);
+            
+            // Update dropdowns immediately to ensure they are in sync
+            updateClassDropdowns(classes || []);
+            
             renderClasses(classes);
             
             // Background sync of student counts to ensure accuracy
@@ -2056,41 +2106,26 @@ document.addEventListener('DOMContentLoaded', async () => {
      * Setup Report Card tab handlers
      */
     function setupReportCardHandlers() {
-        const classFilter = document.getElementById('reportsClassFilter');
+        const classFilter = document.getElementById('reportCardClassFilter');
         const generateBtn = document.getElementById('generateReportsBtn');
+
+        const reportsLevelFilter = document.getElementById('reportsLevelFilter');
+        if (reportsLevelFilter && AppState.currentAcademicLevel) {
+            reportsLevelFilter.textContent = AppState.currentAcademicLevel.replace('-', ' ').toUpperCase();
+        }
+
+        if (classFilter) {
+            classFilter.addEventListener('change', (e) => {
+                const classId = e.target.value;
+                loadStudentsForReportCard(classId);
+            });
+        }
 
         if (generateBtn) {
             generateBtn.addEventListener('click', () => {
-                const classId = classFilter ? classFilter.value : '';
-                // Navigate to the dedicated reports page
-                window.location.href = `../reports/reports.html${classId ? '?classId=' + classId : ''}`;
+                // Generate the report card preview in-page
+                generateReportCard();
             });
-        }
-    }
-
-    /**
-     * Populate Report Card class filter
-     */
-    async function populateReportCardClassFilter() {
-        const classFilter = document.getElementById('reportsClassFilter');
-        if (!classFilter || !AppState.currentSchool) return;
-
-        try {
-            const constraints = [
-                { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-                { field: 'category', op: '==', value: AppState.currentAcademicLevel || 'lower-primary' }
-            ];
-            const classes = await Firebase.db.query('classes', constraints);
-
-            classFilter.innerHTML = '<option value="">Select Class</option>';
-            classes.forEach(cls => {
-                const option = document.createElement('option');
-                option.value = cls.id;
-                option.textContent = cls.name;
-                classFilter.appendChild(option);
-            });
-        } catch (error) {
-            console.error('Error populating report card classes:', error);
         }
     }
 
@@ -2110,10 +2145,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         try {
-            const students = await Firebase.db.query('students', [
-                { field: 'classId', op: '==', value: classId },
+            if (!AppState.currentSchool || !AppState.currentSchool.id) {
+                throw new Error('School data missing');
+            }
+
+            // Query by schoolId only to avoid composite index requirement
+            const allStudents = await Firebase.db.query('students', [
                 { field: 'schoolId', op: '==', value: AppState.currentSchool.id }
             ]);
+            
+            const students = allStudents.filter(s => s.classId === classId);
+
+            if (!students || students.length === 0) {
+                studentFilter.innerHTML = '<option value="">No students found</option>';
+                studentFilter.disabled = false;
+                return;
+            }
+
+            // Sort students alphabetically
+            students.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
             studentFilter.innerHTML = '<option value="">Select Student</option>';
             students.forEach(student => {
@@ -2126,6 +2176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (error) {
             console.error('Error loading students for report card:', error);
             studentFilter.innerHTML = '<option value="">Error loading students</option>';
+            showToast('Failed to load students: ' + error.message, 'error');
         }
     }
 
@@ -2199,7 +2250,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const average = subjectCount > 0 ? Math.round(totalScore / subjectCount) : 0;
 
             const html = `
-                <div class="report-card" style="background:white; padding:30px; max-width:800px; margin:0 auto; box-shadow:0 0 15px rgba(0,0,0,0.1);">
+                <div class="report-card" style="background:white; padding:30px; max-width:800px; margin:0 auto; box-shadow:0 0 15px rgba(0,0,0,0.1); position: relative;">
+                    <div style="position: absolute; top: 20px; left: 20px; opacity: 0.8;">
+                        <img src="/assets/icons/skore-icon.jpg" alt="Skore Point" style="height: 40px; width: auto; border-radius: 4px;">
+                    </div>
                     <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #eee; padding-bottom:20px;">
                         <h2 style="margin:0; color:var(--primary);">${AppState.currentSchool.name}</h2>
                         <p style="margin:5px 0; color:#666;">Student Progress Report</p>
@@ -2326,11 +2380,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (viewReportCardsBtn) {
             viewReportCardsBtn.addEventListener('click', () => {
-                // This button now switches to the "Reports" / "My Analysis" tab for all roles
-                switchTab('reports');
-                
-                const toastMessage = isCurrentUserAdmin() ? 'Switched to Reports tab' : 'Switched to My Analysis tab';
-                if (typeof showToast === 'function') showToast(toastMessage, 'info');
+                // Switch to reports tab
+                switchTab('reports'); 
             });
         }
         
@@ -2341,63 +2392,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    /**
-     * Populate Enter Marks class filter dropdown
-     */
-    async function populateEnterMarksClassFilter() {
-        const classFilter = document.getElementById('enterMarksClassFilter');
-        if (!classFilter || !AppState.currentSchool) return;
-        
-        showPageLoading('Loading classes...');
-        try {
-            const constraints = [
-                { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-                { field: 'category', op: '==', value: AppState.currentAcademicLevel || 'lower-primary' }
-            ];
-            const classes = await Firebase.db.query('classes', constraints);
-            
-            classFilter.innerHTML = '<option value="">Select Class</option>';
-            classes.forEach(cls => {
-                const option = document.createElement('option');
-                option.value = cls.id;
-                option.textContent = cls.name;
-                classFilter.appendChild(option);
-            });
-            
-            // Add event listener to filter classes when level changes
-            document.addEventListener('academic-level:changed', async (e) => {
-                if (classFilter) {
-                    const level = e.detail.level;
-                    const constraints = [
-                        { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-                        { field: 'category', op: '==', value: level }
-                    ];
-                    const classes = await Firebase.db.query('classes', constraints);
-                    
-                    classFilter.innerHTML = '<option value="">Select Class</option>';
-                    classes.forEach(cls => {
-                        const option = document.createElement('option');
-                        option.value = cls.id;
-                        option.textContent = cls.name;
-                        classFilter.appendChild(option);
-                    });
-                    
-                    // Update level filter text
-                    const enterMarksLevelFilter = document.getElementById('enterMarksLevelFilter');
-                    if (enterMarksLevelFilter) {
-                        enterMarksLevelFilter.textContent = level.replace('-', ' ').toUpperCase();
-                    }
-                }
-            });
-            
-        } catch (error) {
-            console.error('Error populating class filter:', error);
-            showToast('Error loading classes for marks entry', 'error');
-        } finally {
-            hidePageLoading();
-        }
-    }
-    
     /**
      * Show level selection modal (generic)
      */

@@ -121,6 +121,42 @@ async function initializeFirebase() {
                     if (!constraints) constraints = [];
                     if (!Array.isArray(constraints)) constraints = [constraints];
                     
+                    // SMART QUERY: Handle composite index/permission issues for school data
+                    // If querying school-related collections and we have a current school
+                    const schoolCollections = ['students', 'classes', 'subjects', 'marks'];
+                    if (schoolCollections.includes(col) && AppState.currentSchool && AppState.currentSchool.id) {
+                        
+                        // Check if we need to optimize:
+                        // 1. If we have filters other than schoolId (would require composite index)
+                        // 2. OR if we are missing schoolId (would cause permission error)
+                        const hasOtherFilters = constraints.some(c => c.field !== 'schoolId');
+                        
+                        if (hasOtherFilters) {
+                            // console.log(`[App] Optimizing query for ${col} to avoid composite index/permission issues.`);
+                            
+                            // 1. Query by schoolId only (indexed by default, satisfies security rules)
+                            const schoolQuery = firestoreModule.query(
+                                firestoreModule.collection(firestoreDB, col), 
+                                firestoreModule.where('schoolId', '==', AppState.currentSchool.id)
+                            );
+                            
+                            const snap = await firestoreModule.getDocs(schoolQuery);
+                            let results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                            
+                            // 2. Apply original constraints in memory
+                            results = results.filter(item => {
+                                return constraints.every(c => {
+                                    const val = item[c.field];
+                                    if (c.op === '==') return val === c.value;
+                                    if (c.op === 'array-contains') return Array.isArray(val) && val.includes(c.value);
+                                    return true; // Fallback for other ops
+                                });
+                            });
+                            
+                            return results;
+                        }
+                    }
+
                     const queryConstraints = constraints.map(c => firestoreModule.where(c.field, c.op, c.value));
                     const q = firestoreModule.query(firestoreModule.collection(firestoreDB, col), ...queryConstraints);
                     const snap = await firestoreModule.getDocs(q);
