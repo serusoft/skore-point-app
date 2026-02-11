@@ -1,10 +1,9 @@
 // Service Worker for Skore Point PWA
 
-const CACHE_VERSION = '1.3.7'; // Increment version to force cache refresh
+const CACHE_VERSION = '1.4.6'; // Increment version to force cache refresh
 const CACHE_NAME = `skore-point-v${CACHE_VERSION}`;
 const urlsToCache = [
     'index.html',
-    './',
 
     // Shared resources
     'shared/css/base.css',

@@ -1577,13 +1577,11 @@
     .border-top {
       top: 10px; left: 20px; right: 20px; height: 15px;
     }
-    .border-top i { transform: rotate(90deg); }
 
     .border-bottom {
       bottom: 10px; left: 20px; right: 20px; height: 15px;
       transform: rotate(180deg);
     }
-    .border-bottom i { transform: rotate(90deg); }
 
     .border-left {
       top: 20px; bottom: 20px; left: 10px; width: 15px;

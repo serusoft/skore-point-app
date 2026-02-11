@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        table {
+  border-collapse: collapse;
+  width: 50%;
+}
+
+th, td {
+  border-right: 1px solid #333; /* Column line */
+  padding: 8px;
+  text-align: left;
+}
+
+/* Remove bottom border for rows */
+tr {
+  border-bottom: none;
+}
+
+/* Zebra row colors */
+tbody tr:nth-child(odd) {
+  background-color: #f0f0f0;
+}
+tbody tr:nth-child(even) {
+  background-color: #ffffff;
+}
+
+    </style>
+</head>
+<body>
+    <table>
+  <thead>
+    <tr>
+      <th>Item</th>
+      <th>Price</th>
+      <th>Stock</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Apple</td>
+      <td>$1</td>
+      <td>50</td>
+    </tr>
+    <tr>
+      <td>Banana</td>
+      <td>$0.5</td>
+      <td>100</td>
+    </tr>
+    <tr>
+      <td>Orange</td>
+      <td>$0.8</td>
+      <td>80</td>
+    </tr>
+  </tbody>
+</table>
+
+</body>
+</html>
