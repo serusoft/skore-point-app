@@ -8,6 +8,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     let schoolDataLoaded = false;
     let listenersSetup = false;
     
+    // Border style with repeating open book icons
+    const BOOK_ICON = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA1NzYgNTEyJyB3aWR0aD0nMjQnIGhlaWdodD0nMjQnPjxwYXRoIGZpbGw9JyMxYTczZTgnIGZpbGwtb3BhY2l0eT0nMC44JyBkPSdNNTQyLjIyIDMyLjA1Yy01NC44IDMuMTEtMTYzLjcyIDE0LjQzLTIzMC45NiA1NS41OS00LjY0IDIuODQtNy4yNyA3Ljg5LTcuMjcgMTMuMTd2MzYzLjg3YzAgMTEuNTUgMTIuNjMgMTguODUgMjMuMjggMTMuNDkgNjkuMTgtMzQuODIgMTY5LjIzLTQ0LjMyIDIxOC43LTQ2LjkyIDE2Ljg5LS44OSAzMC4wMi0xNC40MyAzMC4wMi0zMS4xMlY2Mi42OGMwLTE3LjA0LTE0LjMyLTMwLjczLTMzLjc3LTMwLjYzek0yNjQuNzMgODcuNjRDMTk3LjUgNDYuNDggODguNTggMzUuMTcgMzMuNzggMzIuMDUgMTQuMzMgMzEuOTUgMCA0NS42NCAwIDYyLjY4djI4NS4xM2MwIDE2LjY5IDEzLjEzIDMwLjIzIDMwLjAyIDMxLjEyIDQ5LjQ3IDIuNiAxNDkuNTIgMTIuMSAyMTguNyA0Ni45MiAxMC42NSA1LjM2IDIzLjI4LTEuOTQgMjMuMjgtMTMuNDlWMTAwLjgxYzAtNS4yOS0yLjYzLTEwLjM0LTcuMjctMTMuMTd6Jy8+PC9zdmc+";
+    const BOOK_ICON_FLIPPED = "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20576%20512%27%20width%3D%2724%27%20height%3D%2724%27%3E%3Cg%20transform%3D%27scale(-1%2C%201)%20translate(-576%2C%200)%27%3E%3Cpath%20fill%3D%27%231a73e8%27%20fill-opacity%3D%270.8%27%20d%3D%27M542.22%2032.05c-54.8%203.11-163.72%2014.43-230.96%2055.59-4.64%202.84-7.27%207.89-7.27%2013.17v363.87c0%2011.55%2012.63%2018.85%2023.28%2013.49%2069.18-34.82%20169.23-44.32%20218.7-46.92%2016.89-.89%2030.02-14.43%2030.02-31.12V62.68c0-17.04-14.32-30.73-33.77-30.62zM264.73%2087.64C197.5%2046.48%2088.58%2035.17%2033.78%2032.05%2014.33%2031.95%200%2045.64%200%2062.68v285.13c0%2016.69%2013.13%2030.23%2030.02%2031.12%2049.47%202.6%20149.52%2012.1%20218.7%2046.92%2010.65%205.36%2023.28-1.94%2023.28-13.49V100.81c0-5.29-2.63-10.34-7.27-13.17z%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E";
+    const BOOK_ICON_ROTATED = "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20576%20512%27%20width%3D%2724%27%20height%3D%2724%27%3E%3Cg%20transform%3D%27rotate(-90%20288%20256)%20scale(-1%2C%201)%20translate(-576%2C%200)%27%3E%3Cpath%20fill%3D%27%231a73e8%27%20fill-opacity%3D%270.8%27%20d%3D%27M542.22%2032.05c-54.8%203.11-163.72%2014.43-230.96%2055.59-4.64%202.84-7.27%207.89-7.27%2013.17v363.87c0%2011.55%2012.63%2018.85%2023.28%2013.49%2069.18-34.82%20169.23-44.32%20218.7-46.92%2016.89-.89%2030.02-14.43%2030.02-31.12V62.68c0-17.04-14.32-30.73-33.77-30.62zM264.73%2087.64C197.5%2046.48%2088.58%2035.17%2033.78%2032.05%2014.33%2031.95%200%2045.64%200%2062.68v285.13c0%2016.69%2013.13%2030.23%2030.02%2031.12%2049.47%202.6%20149.52%2012.1%20218.7%2046.92%2010.65%205.36%2023.28-1.94%2023.28-13.49V100.81c0-5.29-2.63-10.34-7.27-13.17z%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E";
+    const BOOK_BORDER_STYLE = `border: 24px solid transparent; background-clip: padding-box, border-box, border-box, border-box, border-box; background-origin: padding-box, border-box, border-box, border-box, border-box; background-image: linear-gradient(white, white), url('${BOOK_ICON_ROTATED}'), url('${BOOK_ICON_ROTATED}'), url('${BOOK_ICON_FLIPPED}'), url('${BOOK_ICON_FLIPPED}'); background-position: 0 0, top left, bottom left, top left, top right; background-repeat: no-repeat, repeat-x, repeat-x, repeat-y, repeat-y; background-size: cover, 24px 24px, 24px 24px, 24px 24px, 24px 24px; box-shadow: 0 0 0 1px #e0e0e0;`;
+
     // Performance optimization: Debounce function
     function debounce(func, wait) {
         let timeout;
@@ -19,6 +25,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             clearTimeout(timeout);
             timeout = setTimeout(later, wait);
         };
+    }
+
+    /**
+     * Get the current Ugandan school term based on the month.
+     * @returns {string} 'I', 'II', or 'III'
+     */
+    function getUgandanTerm() {
+        const month = new Date().getMonth() + 1; // getMonth() is 0-indexed
+        if (month >= 2 && month <= 4) return 'I';      // Term I: Feb - Apr
+        if (month >= 5 && month <= 8) return 'II';     // Term II: May - Aug
+        return 'III';                                  // Term III: Sep - Dec (and Jan holidays)
     }
     
     // Single source of truth for page loading state
@@ -2109,6 +2126,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const classFilter = document.getElementById('reportCardClassFilter');
         const generateBtn = document.getElementById('generateReportsBtn');
 
+        // The user refers to an "export" button. This could be the print button.
+        // We'll add a handler for both a potential 'export' button and the existing 'print' button.
+        const exportBtn = document.getElementById('exportReportCardBtn');
+        const printBtn = document.getElementById('printReportCardBtn');
+
         const reportsLevelFilter = document.getElementById('reportsLevelFilter');
         if (reportsLevelFilter && AppState.currentAcademicLevel) {
             reportsLevelFilter.textContent = AppState.currentAcademicLevel.replace('-', ' ').toUpperCase();
@@ -2126,6 +2148,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Generate the report card preview in-page
                 generateReportCard();
             });
+        }
+
+        if (exportBtn) {
+            exportBtn.addEventListener('click', downloadReportCardAsPDF);
+        }
+
+        if (printBtn) {
+            printBtn.addEventListener('click', printReportCardPreview);
         }
     }
 
@@ -2181,7 +2211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     /**
-     * Generate Report Card
+     * Generate Report Card with premium A4 formatting
      */
     async function generateReportCard() {
         const classId = document.getElementById('reportCardClassFilter')?.value;
@@ -2195,7 +2225,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (previewArea) {
-            previewArea.innerHTML = '<div class="loading-spinner"></div><p style="text-align:center">Generating report card...</p>';
+            previewArea.innerHTML = '<div class="loading-spinner"></div><p style="text-align:center">Generating premium report card...</p>';
         }
 
         try {
@@ -2213,7 +2243,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 { field: 'category', op: '==', value: AppState.currentAcademicLevel }
             ]);
 
-            // Build report HTML
+            // Build report HTML with premium formatting
             let marksHtml = '';
             let totalScore = 0;
             let subjectCount = 0;
@@ -2230,12 +2260,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                         score = Number(mark);
                     }
                     
+                    // Add padding and proper indentation
                     marksHtml += `
-                        <tr>
-                            <td>${subject.name}</td>
-                            <td>${Math.round(score)}</td>
-                            <td>${getGrade(score)}</td>
-                            <td>${getRemark(score)}</td>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding:8px 15px; color: #1f2937; font-size: 11px; font-weight: 500;">${subject.name}</td>
+                            <td style="padding:8px 15px; text-align:center; font-weight: 600; color: #111827; font-size: 11px;">${Math.round(score)}</td>
+                            <td style="padding:8px 15px; text-align:center; color: #374151; font-size: 11px;">${getGrade(score)}</td>
+                            <td style="padding:8px 15px; color: #6b7280; font-size: 10px; white-space: nowrap;">${getRemark(score)}</td>
                         </tr>
                     `;
                     totalScore += score;
@@ -2244,53 +2275,351 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             if (subjectCount === 0) {
-                marksHtml = '<tr><td colspan="4" style="text-align:center">No marks found for this term</td></tr>';
+                marksHtml = `
+                    <tr>
+                        <td colspan="4" style="text-align:center; padding: 30px; color: #9ca3af; font-size: 12px; font-style: italic;">
+                            No marks found for this term
+                        </td>
+                    </tr>
+                `;
             }
 
             const average = subjectCount > 0 ? Math.round(totalScore / subjectCount) : 0;
 
+            // Premium A4 template with proper margins and formatting
             const html = `
-                <div class="report-card" style="background:white; padding:30px; max-width:800px; margin:0 auto; box-shadow:0 0 15px rgba(0,0,0,0.1); position: relative;">
-                    <div style="position: absolute; top: 20px; left: 20px; opacity: 0.8;">
-                        <img src="/assets/icons/skore-icon.jpg" alt="Skore Point" style="height: 40px; width: auto; border-radius: 4px;">
-                    </div>
-                    <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #eee; padding-bottom:20px;">
-                        <h2 style="margin:0; color:var(--primary);">${AppState.currentSchool.name}</h2>
-                        <p style="margin:5px 0; color:#666;">Student Progress Report</p>
+                <div class="report-card premium-report" 
+                     style="width: 210mm; 
+                            min-height: 297mm; 
+                            max-height: 297mm;
+                            padding: 15mm 20mm; 
+                            box-sizing: border-box;
+                            margin: 0 auto; 
+                            position: relative; 
+                            background: white; 
+                            color: #111; 
+                            font-family: 'Times New Roman', 'Georgia', serif; 
+                            font-size: 11px; 
+                            overflow: hidden;
+                            border: 2px solid #000;
+                            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+                            line-height: 1.4;">
+                
+                <!-- Watermark Background -->
+                    ${AppState.currentSchool.logoUrl ? `
+                    <div style="position: absolute; 
+                                top: 50%; 
+                                left: 50%; 
+                                transform: translate(-50%, -50%); 
+                                width: 400px; 
+                                height: 400px; 
+                                background-image: url('${AppState.currentSchool.logoUrl}'); 
+                                background-size: contain; 
+                                background-repeat: no-repeat; 
+                                background-position: center; 
+                                opacity: 0.03; 
+                                filter: grayscale(100%); 
+                                pointer-events: none; 
+                                z-index: 0;"></div>
+                    ` : ''}
+                    
+                <div style="position: relative; z-index: 1; height: 100%;">
+                
+                <!-- Header Section with Proper Spacing -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid #1a73e8;">
+                    <!-- School Logo -->
+                    ${AppState.currentSchool.logoUrl 
+                        ? `<img src="${AppState.currentSchool.logoUrl}" 
+                                alt="${AppState.currentSchool.name}" 
+                                style="height: 100px; width: 100px; object-fit: contain;">` 
+                        : `<img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" 
+                                style="height: 100px; width: 100px; opacity: 0.7; object-fit: contain;">`}
+                    
+                    <!-- School Info -->
+                    <div style="text-align: center; flex: 1; padding: 0 20px;">
+                        <h1 style="margin:0 0 10px 0; 
+                                   color:#1a1a1a; 
+                                   font-size: 26px; 
+                                   font-weight: 700; 
+                                   letter-spacing: -0.5px; 
+                                   line-height: 1.1;">
+                            ${AppState.currentSchool.name}
+                        </h1>
+                        <p style="margin:0; 
+                                  color:#555; 
+                                  font-size: 12px; 
+                                  text-transform: uppercase; 
+                                  letter-spacing: 2px; 
+                                  font-weight: 600;">
+                            TERM ${getUgandanTerm()} STUDENT ASSESSMENT PROGRESS REPORT
+                        </p>
                     </div>
                     
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
-                        <div>
-                            <strong>Student:</strong> ${student.name}<br>
-                            <strong>Class:</strong> ${document.getElementById('reportCardClassFilter').options[document.getElementById('reportCardClassFilter').selectedIndex].text}
+                    <!-- Spacer for balance -->
+                    <div style="width: 100px;"></div>
+                </div>
+                
+                <!-- Student Information Grid -->
+                <div style="display:grid; 
+                            grid-template-columns:repeat(2, 1fr); 
+                            gap: 25px; 
+                            margin-bottom: 25px; 
+                            padding: 20px; 
+                            background: #f8fafc; 
+                            border-radius: 8px; 
+                            border: 1px solid #e5e7eb;">
+                    <div>
+                        <div style="margin-bottom: 15px;">
+                            <div style="font-size: 9px; 
+                                        text-transform: uppercase; 
+                                        letter-spacing: 1px; 
+                                        color: #6b7280; 
+                                        font-weight: 600; 
+                                        margin-bottom: 5px;">
+                                Student Name
+                            </div>
+                            <div style="font-size: 16px; 
+                                        font-weight: 700; 
+                                        color: #111827; 
+                                        padding-bottom: 5px; 
+                                        border-bottom: 1px solid #e5e7eb;">
+                                ${student.name}
+                            </div>
                         </div>
-                        <div style="text-align:right;">
-                            <strong>Term:</strong> ${term}<br>
-                            <strong>Date:</strong> ${new Date().toLocaleDateString()}
+                        <div>
+                            <div style="font-size: 9px; 
+                                        text-transform: uppercase; 
+                                        letter-spacing: 1px; 
+                                        color: #6b7280; 
+                                        font-weight: 600; 
+                                        margin-bottom: 5px;">
+                                Class
+                            </div>
+                            <div style="font-size: 14px; 
+                                        font-weight: 600; 
+                                        color: #374151;">
+                                ${document.getElementById('reportCardClassFilter').options[document.getElementById('reportCardClassFilter').selectedIndex].text}
+                            </div>
                         </div>
                     </div>
-
-                    <table style="width:100%; border-collapse:collapse; margin-bottom:20px;">
-                        <thead>
-                            <tr style="background:#f8f9fa; text-align:left;">
-                                <th style="padding:10px; border-bottom:2px solid #ddd;">Subject</th>
-                                <th style="padding:10px; border-bottom:2px solid #ddd;">Score</th>
-                                <th style="padding:10px; border-bottom:2px solid #ddd;">Grade</th>
-                                <th style="padding:10px; border-bottom:2px solid #ddd;">Remark</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${marksHtml}
-                        </tbody>
-                    </table>
-
-                    <div style="background:#f8f9fa; padding:15px; border-radius:8px; display:flex; justify-content:space-between;">
-                        <div><strong>Total Score:</strong> ${Math.round(totalScore)}</div>
-                        <div><strong>Average:</strong> ${average}%</div>
-                        <div><strong>Subjects:</strong> ${subjectCount}</div>
+                    <div>
+                        <div style="margin-bottom: 15px;">
+                            <div style="font-size: 9px; 
+                                        text-transform: uppercase; 
+                                        letter-spacing: 1px; 
+                                        color: #6b7280; 
+                                        font-weight: 600; 
+                                        margin-bottom: 5px;">
+                                Term
+                            </div>
+                            <div style="font-size: 14px; 
+                                        font-weight: 600; 
+                                        color: #374151; 
+                                        padding-bottom: 5px; 
+                                        border-bottom: 1px solid #e5e7eb;">
+                                ${term.charAt(0).toUpperCase() + term.slice(1)} Term
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 9px; 
+                                        text-transform: uppercase; 
+                                        letter-spacing: 1px; 
+                                        color: #6b7280; 
+                                        font-weight: 600; 
+                                        margin-bottom: 5px;">
+                                Date Generated
+                            </div>
+                            <div style="font-size: 14px; 
+                                        font-weight: 600; 
+                                        color: #374151;">
+                                ${new Date().toLocaleDateString('en-US', { 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                })}
+                            </div>
+                        </div>
                     </div>
                 </div>
-            `;
+
+                <!-- Performance Summary -->
+                <div style="display: flex; 
+                            justify-content: space-between; 
+                            margin-bottom: 25px; 
+                            padding: 15px 20px; 
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                            border-radius: 8px; 
+                            color: white;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total Score</div>
+                        <div style="font-size: 24px; font-weight: 800; margin-top: 5px;">${Math.round(totalScore)}</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Average</div>
+                        <div style="font-size: 24px; font-weight: 800; margin-top: 5px;">${average}%</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Subjects</div>
+                        <div style="font-size: 24px; font-weight: 800; margin-top: 5px;">${subjectCount}</div>
+                    </div>
+                </div>
+
+                <!-- Marks Table with Clean Borders -->
+                <table style="width:100%; 
+                              border-collapse:collapse; 
+                              margin-bottom: 30px; 
+                              border: 1px solid #e5e7eb; 
+                              border-radius: 8px; 
+                              overflow: hidden;">
+                    <thead>
+                        <tr style="background-color: #f3f4f6;">
+                            <th style="padding:12px 15px; 
+                                        text-align:left; 
+                                        font-size: 10px; 
+                                        text-transform: uppercase; 
+                                        letter-spacing: 1px; 
+                                        font-weight: 700; 
+                                        color: #4b5563; 
+                                        border-bottom: 2px solid #d1d5db; 
+                                        width: 40%;">
+                                Subject
+                            </th>
+                            <th style="padding:12px 15px; 
+                                        text-align:center; 
+                                        font-size: 10px; 
+                                        text-transform: uppercase; 
+                                        letter-spacing: 1px; 
+                                        font-weight: 700; 
+                                        color: #4b5563; 
+                                        border-bottom: 2px solid #d1d5db; 
+                                        width: 15%;">
+                                Score
+                            </th>
+                            <th style="padding:12px 15px; 
+                                        text-align:center; 
+                                        font-size: 10px; 
+                                        text-transform: uppercase; 
+                                        letter-spacing: 1px; 
+                                        font-weight: 700; 
+                                        color: #4b5563; 
+                                        border-bottom: 2px solid #d1d5db; 
+                                        width: 15%;">
+                                Grade
+                            </th>
+                            <th style="padding:12px 15px; 
+                                        text-align:left; 
+                                        font-size: 10px; 
+                                        text-transform: uppercase; 
+                                        letter-spacing: 1px; 
+                                        font-weight: 700; 
+                                        color: #4b5563; 
+                                        border-bottom: 2px solid #d1d5db; 
+                                        width: 30%;">
+                                Remark
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${marksHtml}
+                    </tbody>
+                </table>
+
+                <!-- Remarks Section -->
+                <div style="margin-top: 25px; margin-bottom: 30px;">
+                    <div style="margin-bottom: 30px;">
+                        <div style="font-size: 10px; 
+                                    text-transform: uppercase; 
+                                    color: #4b5563; 
+                                    margin-bottom: 25px; 
+                                    font-weight: 700; 
+                                    letter-spacing: 1px;">
+                            Class Teacher's Remarks
+                        </div>
+                        <div style="border-bottom: 1px dashed #9ca3af; 
+                                    margin-bottom: 12px; 
+                                    padding-bottom: 25px; 
+                                    min-height: 40px;"></div>
+                        <div style="text-align: right; 
+                                    font-size: 10px; 
+                                    color: #9ca3af; 
+                                    font-style: italic;">
+                            Signature: ........................................
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 10px; 
+                                    text-transform: uppercase; 
+                                    color: #4b5563; 
+                                    margin-bottom: 25px; 
+                                    font-weight: 700; 
+                                    letter-spacing: 1px;">
+                            Head Teacher's Remarks
+                        </div>
+                        <div style="border-bottom: 1px dashed #9ca3af; 
+                                    margin-bottom: 12px; 
+                                    padding-bottom: 25px; 
+                                    min-height: 40px;"></div>
+                        <div style="text-align: right; 
+                                    font-size: 10px; 
+                                    color: #9ca3af; 
+                                    font-style: italic;">
+                            Signature: ........................................
+                        </div>
+                    </div>
+                </div>
+                
+                ${term === 'end' ? `
+                <div style="text-align: center; 
+                            margin-top: 20px; 
+                            margin-bottom: 15px; 
+                            padding: 15px; 
+                            background: #f0f9ff; 
+                            border-radius: 6px; 
+                            border: 1px solid #bae6fd;">
+                    <p style="margin:0; 
+                              font-size: 11px; 
+                              color: #0369a1; 
+                              font-weight: 600;">
+                        <strong>Next Term Begins On:</strong> ________________________________
+                    </p>
+                </div>
+                ` : ''}
+                
+                <!-- Premium Footer -->
+                <div style="text-align: center; 
+                            border-top: 1px solid #e5e7eb; 
+                            padding-top: 20px; 
+                            margin-top: 25px;">
+                    <img src="../../assets/icons/skore-icon.jpg" 
+                         alt="Skore Point" 
+                         style="display: block; 
+                                margin: 0 auto 8px; 
+                                height: 30px; 
+                                width: auto; 
+                                opacity: 0.8;">
+                    <div style="font-size: 9px; 
+                                color: #6b7280; 
+                                letter-spacing: 1px; 
+                                font-weight: 500; 
+                                margin-bottom: 2px;">
+                        POWERED BY SKORE POINT
+                    </div>
+                    <div style="font-size: 8px; 
+                                color: #9ca3af; 
+                                margin-bottom: 4px;">
+                        A SERUSOFT PRODUCT
+                    </div>
+                    <div style="font-size: 10px; 
+                                color: #4361ee; 
+                                font-weight: 700; 
+                                letter-spacing: 0.5px;">
+                        skorepoint.com
+                    </div>
+                </div>
+
+                </div>
+            </div>
+        `;
 
             if (previewArea) {
                 previewArea.innerHTML = html;
@@ -2301,11 +2630,178 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (error) {
             console.error('Error generating report:', error);
             showToast('Error generating report', 'error');
-            if (previewArea) previewArea.innerHTML = '<p class="error">Failed to generate report</p>';
+        if (previewArea) {
+            previewArea.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #dc2626;">
+                    <i class="fas fa-exclamation-circle" style="font-size: 48px; margin-bottom: 20px;"></i>
+                    <h4 style="margin-bottom: 10px;">Failed to generate report</h4>
+                    <p>${error.message}</p>
+                </div>
+            `;
+        }
+        }
+    }
+
+    /**
+     * Downloads the generated report card as a PDF file directly with premium A4 formatting.
+     */
+    async function downloadReportCardAsPDF() {
+        const previewArea = document.getElementById('reportCardPreview');
+        const originalReportCardElement = previewArea ? previewArea.querySelector('.premium-report, .report-card') : null;
+
+        if (!originalReportCardElement) {
+            showToast('Please generate a report to download.', 'warning');
+            return;
+        }
+
+        showPageLoading('Generating premium PDF...');
+
+        // Dynamically load html2pdf.js if not present
+        if (typeof html2pdf === 'undefined') {
+            try {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+                    script.integrity = 'sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==';
+                    script.crossOrigin = 'anonymous';
+                    script.referrerPolicy = 'no-referrer';
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+            } catch (error) {
+                console.error('Failed to load html2pdf.js', error);
+                showToast('Could not load PDF generation library. Please try again.', 'error');
+                hidePageLoading();
+                return;
+            }
+        }
+
+        const studentSelect = document.getElementById('reportCardStudentFilter');
+        const studentName = studentSelect.options[studentSelect.selectedIndex].text;
+        const term = document.getElementById('reportCardTermFilter').value;
+        const fileName = `Report_Card_${studentName.replace(/\s+/g, '_')}_Term_${term}_${new Date().toISOString().slice(0,10)}.pdf`;
+
+        // Save current scroll position and scroll to top
+        const originalScrollPos = window.scrollY;
+        window.scrollTo(0, 0);
+
+        // --- PREMIUM PDF GENERATION FIX ---
+        // Clone the report card
+        const reportClone = originalReportCardElement.cloneNode(true);
+        
+        // Apply A4-specific styling to ensure perfect fit
+        reportClone.style.setProperty('width', '210mm', 'important');
+        reportClone.style.setProperty('min-height', '297mm', 'important');
+        reportClone.style.setProperty('max-height', '297mm', 'important');
+        reportClone.style.setProperty('padding', '15mm 20mm', 'important'); // Balanced margins
+        reportClone.style.setProperty('margin', '0', 'important');
+        reportClone.style.setProperty('box-shadow', 'none', 'important');
+        reportClone.style.setProperty('border', '2px solid #000', 'important');
+        reportClone.style.setProperty('border-radius', '0', 'important');
+        reportClone.style.setProperty('background', 'white', 'important');
+        reportClone.style.setProperty('font-size', '11px', 'important');
+        reportClone.style.setProperty('box-sizing', 'border-box', 'important');
+        reportClone.style.setProperty('overflow', 'hidden', 'important');
+        reportClone.style.setProperty('transform', 'none', 'important');
+        reportClone.style.setProperty('position', 'relative', 'important');
+        reportClone.style.setProperty('page-break-inside', 'avoid', 'important');
+        
+        // Create a temporary container with exact A4 dimensions
+        const printContainer = document.createElement('div');
+        printContainer.style.position = 'fixed';
+        printContainer.style.left = '0';
+        printContainer.style.top = '0';
+        printContainer.style.width = '210mm';
+        printContainer.style.height = '297mm';
+        printContainer.style.zIndex = '99999';
+        printContainer.style.backgroundColor = 'white';
+        printContainer.style.margin = '0';
+        printContainer.style.padding = '0';
+        printContainer.style.opacity = '0'; // Hide during processing
+        printContainer.style.pointerEvents = 'none';
+
+        // Append clone to container and container to body
+        printContainer.appendChild(reportClone);
+        document.body.appendChild(printContainer);
+
+        const opt = {
+            margin: 0,
+            filename: fileName,
+            image: { 
+                type: 'jpeg', 
+                quality: 1.0, // Highest quality
+                backgroundColor: '#ffffff' // Ensure white background
+            },
+            html2canvas: { 
+                scale: 2, // High resolution
+                useCORS: true,
+                letterRendering: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                scrollX: 0,
+                scrollY: 0,
+                windowWidth: 794, // 210mm at 96 DPI
+                windowHeight: 1123, // 297mm at 96 DPI
+                x: 0,
+                y: 0
+            },
+            jsPDF: { 
+                unit: 'mm', 
+                format: 'a4', 
+                orientation: 'portrait',
+                compress: true
+            },
+            pagebreak: {
+                mode: ['avoid-all', 'css', 'legacy'] // Keep everything on one page
+            }
+        };
+
+        try {
+            // Generate the PDF from the cloned element
+            await html2pdf()
+                .set(opt)
+                .from(reportClone)
+                .toPdf()
+                .get('pdf')
+                .then(pdf => {
+                    // Ensure single page
+                    const totalPages = pdf.internal.getNumberOfPages();
+                    if (totalPages > 1) {
+                        // If somehow it becomes multiple pages, try to scale down
+                        console.warn('PDF generated multiple pages, adjusting...');
+                    }
+                })
+                .save();
+                
+            showToast('Premium PDF generated successfully!', 'success');
+            
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            showToast('An error occurred while generating the PDF.', 'error');
+        } finally {
+            // IMPORTANT: Clean up
+            hidePageLoading();
+            if (document.body.contains(printContainer)) {
+                document.body.removeChild(printContainer);
+            }
+            // Restore scroll position
+            window.scrollTo(0, originalScrollPos);
         }
     }
 
     function getGrade(score) {
+        if (AppState.currentAcademicLevel === 'upper-primary') {
+            if (score >= 90) return 'D1';
+            if (score >= 80) return 'D2';
+            if (score >= 75) return 'C3';
+            if (score >= 70) return 'C4';
+            if (score >= 65) return 'C5';
+            if (score >= 60) return 'C6';
+            if (score >= 50) return 'P7';
+            if (score >= 40) return 'P8';
+            return 'F9';
+        }
         if (score >= 80) return 'A';
         if (score >= 70) return 'B';
         if (score >= 60) return 'C';
@@ -2315,6 +2811,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function getRemark(score) {
+        if (AppState.currentAcademicLevel === 'upper-primary') {
+            if (score >= 90) return 'Distinction';
+            if (score >= 80) return 'Very Good';
+            if (score >= 75) return 'Credit';
+            if (score >= 70) return 'Credit';
+            if (score >= 65) return 'Credit';
+            if (score >= 60) return 'Credit';
+            if (score >= 50) return 'Pass';
+            if (score >= 40) return 'Pass';
+            return 'Fail';
+        }
         if (score >= 80) return 'Excellent';
         if (score >= 70) return 'Very Good';
         if (score >= 60) return 'Good';

@@ -59,8 +59,8 @@ async function initializeApp() {
         console.log('App: initializeApp() - Application initialized successfully.');
         
         // Dispatch app initialized event
-        document.dispatchEvent(new CustomEvent('app:initialized'));
         window.appInitialized = true;
+        document.dispatchEvent(new CustomEvent('app:initialized'));
         console.log('App: initializeApp() - Dispatched app:initialized event.');
 
     } catch (error) {
@@ -121,9 +121,19 @@ async function initializeFirebase() {
                     if (!constraints) constraints = [];
                     if (!Array.isArray(constraints)) constraints = [constraints];
                     
+                    // Ensure schoolId is included for school collections if we have a current school
+                    // This fixes "Missing permissions" errors where security rules require schoolId
+                    const schoolCollections = ['students', 'classes', 'subjects', 'marks'];
+                    if (schoolCollections.includes(col) && AppState.currentSchool && AppState.currentSchool.id) {
+                        const hasSchoolId = constraints.some(c => c.field === 'schoolId');
+                        if (!hasSchoolId) {
+                            constraints.push({ field: 'schoolId', op: '==', value: AppState.currentSchool.id });
+                        }
+                    }
+
                     // SMART QUERY: Handle composite index/permission issues for school data
                     // If querying school-related collections and we have a current school
-                    const schoolCollections = ['students', 'classes', 'subjects', 'marks'];
+                    // Enable for all school collections (including marks) to avoid missing index/permission errors
                     if (schoolCollections.includes(col) && AppState.currentSchool && AppState.currentSchool.id) {
                         
                         // Check if we need to optimize:

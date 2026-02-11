@@ -670,3 +670,51 @@
     font-size: 16px;
     min-width: 20px;
 }
+
+/* Report Card Border */
+.report-border-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.report-border-side {
+    position: absolute;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.report-border-side i {
+    color: var(--primary);
+    font-size: 12px;
+    opacity: 0.3;
+}
+
+.border-top {
+    top: 10px; left: 20px; right: 20px; height: 15px;
+}
+.border-top i { transform: rotate(90deg); }
+
+.border-bottom {
+    bottom: 10px; left: 20px; right: 20px; height: 15px;
+    transform: rotate(180deg);
+}
+.border-bottom i { transform: rotate(90deg); }
+
+.border-left {
+    top: 20px; bottom: 20px; left: 10px; width: 15px;
+    flex-direction: column;
+}
+.border-left i { transform: rotate(-90deg) scaleX(-1); }
+
+.border-right {
+    top: 20px; bottom: 20px; right: 10px; width: 15px;
+    flex-direction: column;
+}
+.border-right i { transform: rotate(90deg); }

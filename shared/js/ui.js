@@ -285,8 +285,6 @@ class AppUI {
     }
 
     // populateGlobalUserInfo will now simply call loadUserProfileInNavbar
-    
-    // populateGlobalUserInfo will now simply call loadUserProfileInNavbar
     populateGlobalUserInfo() {
         this.loadUserProfileInNavbar();
     }

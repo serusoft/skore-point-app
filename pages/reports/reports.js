@@ -27,6 +27,17 @@ const SchoolService = {
     }
 };
 
+// Premium Report Card Style
+const PREMIUM_BORDER_STYLE = `
+    border: 2px solid #000;
+    background: white;
+    position: relative;
+    overflow: hidden;
+    page-break-inside: avoid;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+`;
+
 class ReportsController {
     constructor() {
         console.log('ReportsController initialized');
@@ -37,6 +48,17 @@ class ReportsController {
         this.gradeChart = null;
         
         this.initialize();
+    }
+
+    /**
+     * Get the current Ugandan school term based on the month.
+     * @returns {string} 'I', 'II', or 'III'
+     */
+    getUgandanTerm() {
+        const month = new Date().getMonth() + 1; // getMonth() is 0-indexed
+        if (month >= 2 && month <= 4) return 'I';      // Term I: Feb - Apr
+        if (month >= 5 && month <= 8) return 'II';     // Term II: May - Aug
+        return 'III';                                  // Term III: Sep - Dec (and Jan holidays)
     }
     
     async initialize() {
@@ -50,7 +72,7 @@ class ReportsController {
                 new Promise(resolve => setTimeout(() => {
                     console.warn('App initialization timed out in Reports');
                     resolve();
-                }, 3000))
+                }, 10000))
             ]);
         }
         
@@ -67,6 +89,7 @@ class ReportsController {
         
         this.setupEventListeners();
         this.showLevelSelection();
+        this.addBackToSchoolButton();
         this.hideLoading();
     }
     
@@ -92,6 +115,49 @@ class ReportsController {
         }
     }
     
+    addBackToSchoolButton() {
+        const btnId = 'backToSchoolBtn';
+        if (document.getElementById(btnId)) return;
+
+        const btn = document.createElement('button');
+        btn.id = btnId;
+        btn.innerHTML = '<i class="fas fa-arrow-left"></i> Back to School';
+        
+        // Apply styles directly to ensure visibility
+        Object.assign(btn.style, {
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            zIndex: '9999',
+            padding: '12px 24px',
+            backgroundColor: '#1f2937',
+            color: 'white',
+            border: 'none',
+            borderRadius: '30px',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            cursor: 'pointer',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '14px',
+            transition: 'all 0.2s ease'
+        });
+
+        btn.addEventListener('mouseenter', () => btn.style.transform = 'translateY(-2px)');
+        btn.addEventListener('mouseleave', () => btn.style.transform = 'translateY(0)');
+
+        btn.addEventListener('click', () => {
+            if (typeof window.navigateTo === 'function') {
+                window.navigateTo('school');
+            } else {
+                window.location.href = '../school/school.html';
+            }
+        });
+
+        document.body.appendChild(btn);
+    }
+
     setupEventListeners() {
         // Report type tabs
         document.querySelectorAll('.report-tab').forEach(tab => {
@@ -343,6 +409,13 @@ class ReportsController {
             const students = await SchoolService.getStudentsByClass(classId);
             
             studentSelect.innerHTML = '<option value="">Select Student</option>';
+            
+            // Add All Students option
+            const allOption = document.createElement('option');
+            allOption.value = 'all';
+            allOption.textContent = 'All Students (Bulk Export)';
+            studentSelect.appendChild(allOption);
+
             students.sort((a,b) => a.name.localeCompare(b.name)).forEach(student => {
                 const option = document.createElement('option');
                 option.value = student.id;
@@ -443,6 +516,10 @@ class ReportsController {
         }
         
         try {
+            if (studentId === 'all') {
+                return await this.generateBulkStudentReports(classId, term);
+            }
+
             const student = await SchoolService.getStudent(studentId);
             const classData = this.classes.find(c => c.id === classId);
             
@@ -464,6 +541,7 @@ class ReportsController {
                 },
                 class: classData,
                 term: this.getTermDisplayName(term),
+                termType: term,
                 marks: processedMarks,
                 summary: summary,
                 generatedAt: new Date().toISOString(),
@@ -476,6 +554,48 @@ class ReportsController {
         }
     }
     
+    async generateBulkStudentReports(classId, term) {
+        const classData = this.classes.find(c => c.id === classId);
+        const students = await SchoolService.getStudentsByClass(classId);
+        
+        if (students.length === 0) {
+            this.showError('No students found in this class');
+            return null;
+        }
+        
+        const reports = [];
+        
+        for (const student of students) {
+            const marks = await ReportService.getStudentMarks(student.id, term);
+            // Process marks even if empty to generate report card
+            const processedMarks = this.processMarks(marks || {});
+            const summary = this.calculateStudentSummary(processedMarks);
+            
+            reports.push({
+                student: {
+                    ...student,
+                    className: classData?.name || 'N/A'
+                },
+                marks: processedMarks,
+                summary: summary
+            });
+        }
+        
+        // Sort by name
+        reports.sort((a, b) => a.student.name.localeCompare(b.student.name));
+        
+        return {
+            type: 'bulk-student',
+            level: this.currentLevel,
+            class: classData,
+            term: this.getTermDisplayName(term),
+            termType: term,
+            reports: reports,
+            generatedAt: new Date().toISOString(),
+            school: this.currentSchool
+        };
+    }
+
     async generateClassReport() {
         const classId = document.getElementById('classReportClass').value;
         const term = document.getElementById('classReportTerm').value;
@@ -797,7 +917,16 @@ class ReportsController {
             aggregate = marks.reduce((sum, mark) => sum + mark.gradePoints, 0);
         }
         
-        const division = GradingUtils.calculateDivision(average, aggregate, this.currentLevel);
+        let division;
+        if (this.currentLevel === 'upper-primary') {
+            if (aggregate <= 12) division = 'Division 1';
+            else if (aggregate <= 23) division = 'Division 2';
+            else if (aggregate <= 29) division = 'Division 3';
+            else if (aggregate <= 34) division = 'Division 4';
+            else division = 'Ungraded';
+        } else {
+            division = GradingUtils.calculateDivision(average, aggregate, this.currentLevel);
+        }
         
         return {
             totalSubjects: marks.length,
@@ -819,6 +948,9 @@ class ReportsController {
         switch (reportData.type) {
             case 'student':
                 preview.innerHTML = this.generateStudentReportHTML(reportData);
+                break;
+            case 'bulk-student':
+                preview.innerHTML = this.generateBulkStudentReportHTML(reportData);
                 break;
             case 'class':
                 preview.innerHTML = this.generateClassReportHTML(reportData);
@@ -845,386 +977,1151 @@ class ReportsController {
         }
     }
     
+    generateBulkStudentReportHTML(reportData) {
+        return reportData.reports.map(report => {
+            const singleReportData = {
+                type: 'student',
+                level: reportData.level,
+                student: report.student,
+                class: reportData.class,
+                term: reportData.term,
+                termType: reportData.termType,
+                marks: report.marks,
+                summary: report.summary,
+                generatedAt: reportData.generatedAt,
+                school: reportData.school
+            };
+            
+            return `<div style="page-break-after: always; margin-bottom: 50px; border-bottom: 4px dashed #ccc; padding-bottom: 40px;">${this.generateStudentReportHTML(singleReportData)}</div>`;
+        }).join('');
+    }
+
     generateALevelReportHTML(reportData) {
-        const { student, marks, summary, school, term } = reportData;
+        const { student, marks, summary, school, term, termType } = reportData;
         
         // Get A-Level combination
         const principalSubjects = marks.filter(m => m.type === 'principal');
         const combination = principalSubjects.map(m => m.subjectName.charAt(0)).join('');
         
         return `
-            <div class="report-card alevel-report">
-                <!-- Skore Point Branding -->
-                <div class="skore-point-branding">
-                    <div class="skore-icon">SP</div>
-                    <div class="skore-text">SKORE POINT</div>
-                </div>
+            <div class="report-card alevel-report premium-report" 
+                 style="width: 210mm; 
+                        min-height: 297mm; 
+                        max-height: 297mm;
+                        padding: 15mm 20mm; 
+                        box-sizing: border-box; 
+                        margin: 0 auto; 
+                        ${PREMIUM_BORDER_STYLE} 
+                        font-family: 'Times New Roman', 'Georgia', serif; 
+                        color: #111;
+                        line-height: 1.4;">
+                ${school.logoUrl ? `
+                    <div style="position: absolute; 
+                                top: 50%; 
+                                left: 50%; 
+                                transform: translate(-50%, -50%); 
+                                width: 350px; 
+                                height: 350px; 
+                                background-image: url('${school.logoUrl}'); 
+                                background-size: contain; 
+                                background-repeat: no-repeat; 
+                                background-position: center; 
+                                opacity: 0.03; 
+                                filter: grayscale(100%); 
+                                pointer-events: none; 
+                                z-index: 0;"></div>
+                ` : ''}
+                <div style="position: relative; z-index: 1;">
                 
-                <!-- School Header -->
-                <div class="report-header" style="text-align: center; margin-bottom: 30px;">
-                    ${school.logoUrl ? `
-                        <div class="school-logo" style="margin: 0 auto 15px; width: 80px; height: 80px;">
-                            <img src="${school.logoUrl}" alt="${school.name}" style="width: 100%; height: 100%; object-fit: contain; border: 1px solid #ddd; padding: 5px;">
-                        </div>
-                    ` : ''}
-                    <div class="school-name" style="font-size: 24px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">${school.name}</div>
-                    <div class="report-title" style="font-size: 18px; font-weight: bold; text-decoration: underline; margin-bottom: 20px;">A-LEVEL PROGRESS REPORT CARD</div>
+                <!-- Premium Header -->
+                <div style="display: flex; 
+                            align-items: center; 
+                            justify-content: space-between; 
+                            margin-bottom: 25px; 
+                            padding-bottom: 20px; 
+                            border-bottom: 2px solid #1a73e8;">
+                    <!-- School Logo -->
+                    ${school.logoUrl 
+                        ? `<img src="${school.logoUrl}" 
+                                alt="${school.name}" 
+                                style="height: 100px; width: 100px; object-fit: contain;">` 
+                        : `<img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" 
+                                style="height: 100px; width: 100px; opacity: 0.7; object-fit: contain;">`}
+                    
+                    <!-- School Info -->
+                    <div style="text-align: center; flex: 1; padding: 0 20px;">
+                        <h1 style="margin:0 0 10px 0; 
+                                   color:#1a1a1a; 
+                                   font-size: 24px; 
+                                   font-weight: 700; 
+                                   letter-spacing: -0.5px; 
+                                   line-height: 1.1;">
+                            ${school.name}
+                        </h1>
+                        <p style="margin:0; 
+                                  color:#555; 
+                                  font-size: 12px; 
+                                  text-transform: uppercase; 
+                                  letter-spacing: 2px; 
+                                  font-weight: 600;">
+                            TERM ${this.getUgandanTerm()} STUDENT ASSESSMENT PROGRESS REPORT
+                        </p>
+                    </div>
+                    
+                    <!-- Spacer for balance -->
+                    <div style="width: 100px;"></div>
                 </div>
                 
                 <!-- Student Information -->
-                <div class="student-info" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 30px; padding: 15px; background: #f8f9fa; border: 1px solid #ddd;">
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Student Name:</span>
-                        <span>${student.name}</span>
+                <div class="student-info" style="margin-bottom: 30px;">
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-size: 9px; 
+                                    text-transform: uppercase; 
+                                    color: #6b7280; 
+                                    letter-spacing: 1px; 
+                                    margin-bottom: 5px; 
+                                    font-weight: 600;">
+                            Student Name
+                        </div>
+                        <div style="font-size: 18px; 
+                                    font-weight: 700; 
+                                    color: #111827; 
+                                    padding-bottom: 8px; 
+                                    border-bottom: 1px solid #e5e7eb;">
+                            ${student.name}
+                        </div>
                     </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Class:</span>
-                        <span>${student.className}</span>
+                    <div style="display: flex; gap: 40px; padding-top: 15px;">
+                        <div>
+                            <span style="font-size: 9px; 
+                                          text-transform: uppercase; 
+                                          color: #6b7280; 
+                                          font-weight: 600;">
+                                Class
+                            </span>
+                            <div style="font-size: 13px; 
+                                        font-weight: 600; 
+                                        color: #374151; 
+                                        margin-top: 4px;">
+                                ${student.className}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 9px; 
+                                          text-transform: uppercase; 
+                                          color: #6b7280; 
+                                          font-weight: 600;">
+                                Combination
+                            </span>
+                            <div style="font-size: 13px; 
+                                        font-weight: 600; 
+                                        color: #374151; 
+                                        margin-top: 4px;">
+                                ${combination}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 9px; 
+                                          text-transform: uppercase; 
+                                          color: #6b7280; 
+                                          font-weight: 600;">
+                                Term
+                            </span>
+                            <div style="font-size: 13px; 
+                                        font-weight: 600; 
+                                        color: #374151; 
+                                        margin-top: 4px;">
+                                ${term}
+                            </div>
+                        </div>
                     </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Combination:</span>
-                        <span>${combination}</span>
-                    </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Term:</span>
-                        <span>${term}</span>
-                    </div>
-                </div>
-                
-                <!-- Combination Info -->
-                <div class="combination-info">
-                    <h4>Subject Combination: ${combination}</h4>
-                    <p>Principal Subjects: ${principalSubjects.map(s => s.subjectName).join(', ')}</p>
                 </div>
                 
                 <!-- Subjects Table -->
-                <table class="subject-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <table class="subject-table" 
+                       style="width: 100%; 
+                              border-collapse: collapse; 
+                              margin-bottom: 30px; 
+                              border: 1px solid #e5e7eb; 
+                              border-radius: 6px; 
+                              overflow: hidden;">
                     <thead>
-                        <tr>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">SUBJECT</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">GRADE</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">POINTS</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">REMARKS</th>
+                        <tr style="background-color: #f3f4f6;">
+                            <th style="text-align: left; 
+                                        padding: 12px 15px; 
+                                        border-bottom: 2px solid #d1d5db; 
+                                        color: #4b5563; 
+                                        font-size: 10px; 
+                                        text-transform: uppercase; 
+                                        font-weight: 700; 
+                                        width: 40%;">
+                                Subject
+                            </th>
+                            <th style="text-align: center; 
+                                        padding: 12px 15px; 
+                                        border-bottom: 2px solid #d1d5db; 
+                                        color: #4b5563; 
+                                        font-size: 10px; 
+                                        text-transform: uppercase; 
+                                        font-weight: 700; 
+                                        width: 15%;">
+                                Grade
+                            </th>
+                            <th style="text-align: center; 
+                                        padding: 12px 15px; 
+                                        border-bottom: 2px solid #d1d5db; 
+                                        color: #4b5563; 
+                                        font-size: 10px; 
+                                        text-transform: uppercase; 
+                                        font-weight: 700; 
+                                        width: 15%;">
+                                Points
+                            </th>
+                            <th style="text-align: left; 
+                                        padding: 12px 15px; 
+                                        border-bottom: 2px solid #d1d5db; 
+                                        color: #4b5563; 
+                                        font-size: 10px; 
+                                        text-transform: uppercase; 
+                                        font-weight: 700; 
+                                        width: 30%;">
+                                Remarks
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${marks.map(mark => `
+                        ${marks.map((mark, index) => `
                             <tr>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${mark.subjectName}</td>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center; font-weight: bold;">${mark.grade}</td>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${mark.gradePoints}</td>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${GradingUtils.getGradeRemark(mark.grade)}</td>
+                                <td style="padding: 10px 15px; 
+                                            border-bottom: 1px solid #f3f4f6; 
+                                            color: #1f2937; 
+                                            font-size: 11px; 
+                                            font-weight: 500;">
+                                    ${mark.subjectName}
+                                </td>
+                                <td style="padding: 10px 15px; 
+                                            text-align: center; 
+                                            border-bottom: 1px solid #f3f4f6; 
+                                            color: #1f2937; 
+                                            font-weight: 600; 
+                                            font-size: 11px;">
+                                    ${mark.grade}
+                                </td>
+                                <td style="padding: 10px 15px; 
+                                            text-align: center; 
+                                            border-bottom: 1px solid #f3f4f6; 
+                                            color: #1f2937; 
+                                            font-size: 11px;">
+                                    ${mark.gradePoints}
+                                </td>
+                                <td style="padding: 10px 15px; 
+                                            border-bottom: 1px solid #f3f4f6; 
+                                            color: #6b7280; 
+                                            font-size: 10px;">
+                                    ${GradingUtils.getGradeRemark(mark.grade)}
+                                </td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
                 
-                <!-- Grade Points Summary -->
-                <div class="grade-points">
-                    <div class="grade-point-item">
-                        <div class="grade">A</div>
-                        <div class="points">6</div>
-                        <div class="remark">Exceptional</div>
+                <!-- Summary Section -->
+                <div class="summary-section" 
+                     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                            border-radius: 8px; 
+                            padding: 20px; 
+                            margin-bottom: 30px; 
+                            display: grid; 
+                            grid-template-columns: repeat(3, 1fr); 
+                            gap: 20px; 
+                            color: white;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 9px; 
+                                    text-transform: uppercase; 
+                                    opacity: 0.9; 
+                                    margin-bottom: 5px;">
+                            Average Grade
+                        </div>
+                        <div style="font-size: 20px; 
+                                    font-weight: 800;">
+                            ${GradingUtils.calculateGrade(summary.average, 'alevel')}
+                        </div>
                     </div>
-                    <div class="grade-point-item">
-                        <div class="grade">B</div>
-                        <div class="points">5</div>
-                        <div class="remark">Outstanding</div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 9px; 
+                                    text-transform: uppercase; 
+                                    opacity: 0.9; 
+                                    margin-bottom: 5px;">
+                            Total Points
+                        </div>
+                        <div style="font-size: 20px; 
+                                    font-weight: 800;">
+                            ${summary.aggregate}
+                        </div>
                     </div>
-                    <div class="grade-point-item">
-                        <div class="grade">C</div>
-                        <div class="points">4</div>
-                        <div class="remark">Good</div>
+                    <div style="text-align: center; 
+                                border-left: 1px solid rgba(255,255,255,0.3); 
+                                padding-left: 20px;">
+                        <div style="font-size: 9px; 
+                                    text-transform: uppercase; 
+                                    opacity: 0.9; 
+                                    margin-bottom: 5px;">
+                            Aggregate
+                        </div>
+                        <div style="font-size: 22px; 
+                                    font-weight: 900;">
+                            ${summary.aggregate}
+                        </div>
                     </div>
                 </div>
-                
-                <!-- Summary Table -->
-                <table class="summary-table" style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-                    <thead>
-                        <tr>
-                            <th style="background: var(--primary); color: white; padding: 12px; border: 1px solid #000; text-align: center;">AVERAGE GRADE</th>
-                            <th style="background: var(--primary); color: white; padding: 12px; border: 1px solid #000; text-align: center;">TOTAL POINTS</th>
-                            <th style="background: var(--primary); color: white; padding: 12px; border: 1px solid #000; text-align: center;">AGGREGATE</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="padding: 12px; border: 1px solid #000; text-align: center; font-weight: bold; background: #f8f9fa;">${GradingUtils.calculateGrade(summary.average, 'alevel')}</td>
-                            <td style="padding: 12px; border: 1px solid #000; text-align: center; font-weight: bold; background: #f8f9fa;">${summary.aggregate}</td>
-                            <td style="padding: 12px; border: 1px solid #000; text-align: center; font-weight: bold; background: #f8f9fa;">${summary.aggregate}</td>
-                        </tr>
-                    </tbody>
-                </table>
                 
                 <!-- Remarks Section -->
-                <div class="remarks-section" style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #000;">
-                    <h4 style="font-weight: bold; margin-bottom: 10px;">Teachers remarks:</h4>
-                    <div class="signature-line" style="border-bottom: 1px solid #000; margin-top: 2px; padding-top: 20px; height: 20px;"></div>
-                    
-                    <h4 style="font-weight: bold; margin-top: 20px; margin-bottom: 10px;">Headteacher remarks:</h4>
-                    <div class="signature-line" style="border-bottom: 1px solid #000; margin-top: 2px; padding-top: 20px; height: 20px;"></div>
+                <div class="remarks-section" style="margin-bottom: 30px;">
+                    <div style="margin-bottom: 30px;">
+                        <div style="font-size: 10px; 
+                                    text-transform: uppercase; 
+                                    color: #4b5563; 
+                                    margin-bottom: 25px; 
+                                    font-weight: 700; 
+                                    letter-spacing: 1px;">
+                            Class Teacher's Remarks
+                        </div>
+                        <div style="border-bottom: 1px dashed #9ca3af; 
+                                    margin-bottom: 12px; 
+                                    padding-bottom: 25px; 
+                                    min-height: 40px;"></div>
+                        <div style="text-align: right; 
+                                    font-size: 10px; 
+                                    color: #9ca3af; 
+                                    font-style: italic;">
+                            Signature: ........................................
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 10px; 
+                                    text-transform: uppercase; 
+                                    color: #4b5563; 
+                                    margin-bottom: 25px; 
+                                    font-weight: 700; 
+                                    letter-spacing: 1px;">
+                            Head Teacher's Remarks
+                        </div>
+                        <div style="border-bottom: 1px dashed #9ca3af; 
+                                    margin-bottom: 12px; 
+                                    padding-bottom: 25px; 
+                                    min-height: 40px;"></div>
+                        <div style="text-align: right; 
+                                    font-size: 10px; 
+                                    color: #9ca3af; 
+                                    font-style: italic;">
+                            Signature: ........................................
+                        </div>
+                    </div>
                 </div>
                 
-                <!-- Signature Area -->
-                <div class="signature-area">
-                    <div class="signature-box">
-                        <div class="signature-line"></div>
-                        <div>Headteacher</div>
+                ${termType === 'end' ? `
+                <div style="text-align: center; 
+                            margin-top: 20px; 
+                            margin-bottom: 15px; 
+                            padding: 15px; 
+                            background: #f0f9ff; 
+                            border-radius: 6px; 
+                            border: 1px solid #bae6fd;">
+                    <p style="margin:0; 
+                              font-size: 11px; 
+                              color: #0369a1; 
+                              font-weight: 600;">
+                        <strong>Next Term Begins On:</strong> ________________________________
+                    </p>
+                </div>
+                ` : ''}
+                
+                <!-- Premium Footer -->
+                <div style="text-align: center; 
+                            border-top: 1px solid #e5e7eb; 
+                            padding-top: 20px; 
+                            margin-top: 25px;">
+                    <img src="../../assets/icons/skore-icon.jpg" 
+                         alt="Skore Point" 
+                         style="display: block; 
+                                margin: 0 auto 8px; 
+                                height: 30px; 
+                                width: auto; 
+                                opacity: 0.8;">
+                    <div style="font-size: 9px; 
+                                color: #6b7280; 
+                                letter-spacing: 1px; 
+                                font-weight: 500; 
+                                margin-bottom: 2px;">
+                        POWERED BY SKORE POINT
                     </div>
-                    <div class="signature-box">
-                        <div class="signature-line"></div>
-                        <div>Class teacher</div>
+                    <div style="font-size: 8px; 
+                                color: #9ca3af; 
+                                margin-bottom: 4px;">
+                        A SERUSOFT PRODUCT
+                    </div>
+                    <div style="font-size: 10px; 
+                                color: #4361ee; 
+                                font-weight: 700; 
+                                letter-spacing: 0.5px;">
+                        skorepoint.com
                     </div>
                 </div>
-                
-                <!-- Footer -->
-                <div style="text-align: center; margin-top: 30px; font-size: 10px; color: #666;">
-                    <strong>SKORE POINT</strong> - A product of SERUSOFT | skorepoint.com
                 </div>
             </div>
         `;
     }
     
     generatePrimaryReportHTML(reportData) {
-        const { student, marks, summary, school, term } = reportData;
+        const { student, marks, summary, school, term, termType } = reportData;
         const isLowerPrimary = this.currentLevel === 'lower-primary';
         
         return `
-            <div class="report-card primary-report">
-                <!-- Skore Point Branding -->
-                <div class="skore-point-branding">
-                    <div class="skore-icon">SP</div>
-                    <div class="skore-text">SKORE POINT</div>
-                </div>
+            <div class="report-card primary-report premium-report" 
+                 style="width: 210mm; 
+                        min-height: 297mm; 
+                        max-height: 297mm;
+                        padding: 15mm 20mm; 
+                        box-sizing: border-box; 
+                        margin: 0 auto; 
+                        ${PREMIUM_BORDER_STYLE} 
+                        font-family: 'Times New Roman', 'Georgia', serif; 
+                        color: #111;
+                        line-height: 1.4;">
+                ${school.logoUrl ? `
+                    <div style="position: absolute; 
+                                top: 50%; 
+                                left: 50%; 
+                                transform: translate(-50%, -50%); 
+                                width: 350px; 
+                                height: 350px; 
+                                background-image: url('${school.logoUrl}'); 
+                                background-size: contain; 
+                                background-repeat: no-repeat; 
+                                background-position: center; 
+                                opacity: 0.03; 
+                                filter: grayscale(100%); 
+                                pointer-events: none; 
+                                z-index: 0;"></div>
+                ` : ''}
+                <div style="position: relative; z-index: 1;">
                 
-                <!-- School Header -->
-                <div class="report-header" style="text-align: center; margin-bottom: 30px;">
-                    ${school.logoUrl ? `
-                        <div class="school-logo" style="margin: 0 auto 15px; width: 80px; height: 80px;">
-                            <img src="${school.logoUrl}" alt="${school.name}" style="width: 100%; height: 100%; object-fit: contain; border: 1px solid #ddd; padding: 5px;">
-                        </div>
-                    ` : ''}
-                    <div class="school-name" style="font-size: 24px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">${school.name}</div>
-                    <div class="report-title" style="font-size: 18px; font-weight: bold; text-decoration: underline; margin-bottom: 20px;">${isLowerPrimary ? 'LOWER' : 'UPPER'} PRIMARY PROGRESS REPORT CARD</div>
+                <!-- Premium Header -->
+                <div style="display: flex; 
+                            align-items: center; 
+                            justify-content: space-between; 
+                            margin-bottom: 25px; 
+                            padding-bottom: 20px; 
+                            border-bottom: 2px solid #1a73e8;">
+                    <!-- School Logo -->
+                    ${school.logoUrl 
+                        ? `<img src="${school.logoUrl}" 
+                                alt="${school.name}" 
+                                style="height: 100px; width: 100px; object-fit: contain;">` 
+                        : `<img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" 
+                                style="height: 100px; width: 100px; opacity: 0.7; object-fit: contain;">`}
+                    
+                    <!-- School Info -->
+                    <div style="text-align: center; flex: 1; padding: 0 20px;">
+                        <h1 style="margin:0 0 10px 0; 
+                                   color:#1a1a1a; 
+                                   font-size: 24px; 
+                                   font-weight: 700; 
+                                   letter-spacing: -0.5px; 
+                                   line-height: 1.1;">
+                            ${school.name}
+                        </h1>
+                        <p style="margin:0; 
+                                  color:#555; 
+                                  font-size: 12px; 
+                                  text-transform: uppercase; 
+                                  letter-spacing: 2px; 
+                                  font-weight: 600;">
+                            TERM ${this.getUgandanTerm()} STUDENT ASSESSMENT PROGRESS REPORT
+                        </p>
+                    </div>
+                    
+                    <!-- Spacer for balance -->
+                    <div style="width: 100px;"></div>
                 </div>
                 
                 <!-- Student Information -->
-                <div class="student-info" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 30px; padding: 15px; background: #f8f9fa; border: 1px solid #ddd;">
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Student Name:</span>
-                        <span>${student.name}</span>
+                <div class="student-info" style="margin-bottom: 30px;">
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-size: 9px; 
+                                    text-transform: uppercase; 
+                                    color: #6b7280; 
+                                    letter-spacing: 1px; 
+                                    margin-bottom: 5px; 
+                                    font-weight: 600;">
+                            Student Name
+                        </div>
+                        <div style="font-size: 18px; 
+                                    font-weight: 700; 
+                                    color: #111827; 
+                                    padding-bottom: 8px; 
+                                    border-bottom: 1px solid #e5e7eb;">
+                            ${student.name}
+                        </div>
                     </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Class:</span>
-                        <span>${student.className}</span>
-                    </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Term:</span>
-                        <span>${term}</span>
-                    </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Date:</span>
-                        <span>${new Date().toLocaleDateString()}</span>
+                    <div style="display: flex; gap: 40px; padding-top: 15px;">
+                        <div>
+                            <span style="font-size: 9px; 
+                                          text-transform: uppercase; 
+                                          color: #6b7280; 
+                                          font-weight: 600;">
+                                Class
+                            </span>
+                            <div style="font-size: 13px; 
+                                        font-weight: 600; 
+                                        color: #374151; 
+                                        margin-top: 4px;">
+                                ${student.className}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 9px; 
+                                          text-transform: uppercase; 
+                                          color: #6b7280; 
+                                          font-weight: 600;">
+                                Term
+                            </span>
+                            <div style="font-size: 13px; 
+                                        font-weight: 600; 
+                                        color: #374151; 
+                                        margin-top: 4px;">
+                                ${term}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 9px; 
+                                          text-transform: uppercase; 
+                                          color: #6b7280; 
+                                          font-weight: 600;">
+                                Date
+                            </span>
+                            <div style="font-size: 13px; 
+                                        font-weight: 600; 
+                                        color: #374151; 
+                                        margin-top: 4px;">
+                                ${new Date().toLocaleDateString()}
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Subjects Table -->
-                <table class="subject-table">
+                <table class="subject-table" 
+                       style="width: 100%; 
+                              border-collapse: collapse; 
+                              margin-bottom: 30px; 
+                              border: 1px solid #e5e7eb; 
+                              border-radius: 6px; 
+                              overflow: hidden;">
                     <thead>
-                        <tr>
-                            <th>SUBJECT</th>
-                            <th>SCORE</th>
-                            ${isLowerPrimary ? '<th>REMARKS</th>' : '<th>GRADE</th>'}
+                        <tr style="background-color: #f3f4f6;">
+                            <th style="text-align: left; 
+                                        padding: 12px 15px; 
+                                        border-bottom: 2px solid #d1d5db; 
+                                        color: #4b5563; 
+                                        font-size: 10px; 
+                                        text-transform: uppercase; 
+                                        font-weight: 700; 
+                                        width: 40%;">
+                                Subject
+                            </th>
+                            <th style="text-align: center; 
+                                        padding: 12px 15px; 
+                                        border-bottom: 2px solid #d1d5db; 
+                                        color: #4b5563; 
+                                        font-size: 10px; 
+                                        text-transform: uppercase; 
+                                        font-weight: 700; 
+                                        width: 20%;">
+                                Score
+                            </th>
+                            <th style="text-align: center; 
+                                        padding: 12px 15px; 
+                                        border-bottom: 2px solid #d1d5db; 
+                                        color: #4b5563; 
+                                        font-size: 10px; 
+                                        text-transform: uppercase; 
+                                        font-weight: 700; 
+                                        width: 40%;">
+                                ${isLowerPrimary ? 'Remarks' : 'Grade'}
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${marks.map(mark => `
+                        ${marks.map((mark, index) => `
                             <tr>
-                                <td>${mark.subjectName}</td>
-                                <td>${mark.score}</td>
-                                <td>${isLowerPrimary ? GradingUtils.getPrimaryRemark(mark.score) : mark.grade}</td>
+                                <td style="padding: 10px 15px; 
+                                            border-bottom: 1px solid #f3f4f6; 
+                                            color: #1f2937; 
+                                            font-size: 11px; 
+                                            font-weight: 500;">
+                                    ${mark.subjectName}
+                                </td>
+                                <td style="padding: 10px 15px; 
+                                            text-align: center; 
+                                            border-bottom: 1px solid #f3f4f6; 
+                                            color: #1f2937; 
+                                            font-weight: 500; 
+                                            font-size: 12px;">
+                                    ${mark.score}
+                                </td>
+                                <td style="padding: 10px 15px; 
+                                            text-align: center; 
+                                            border-bottom: 1px solid #f3f4f6; 
+                                            color: #1f2937; 
+                                            font-size: 12px; 
+                                            white-space: nowrap;">
+                                    ${isLowerPrimary ? GradingUtils.getPrimaryRemark(mark.score) : mark.grade}
+                                </td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
                 
-                <!-- Summary Table -->
-                <table class="summary-table" style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-                    <thead>
-                        <tr>
-                            <th style="background: var(--primary); color: white; padding: 12px; border: 1px solid #000; text-align: center;">TOTAL MARKS</th>
-                            <th style="background: var(--primary); color: white; padding: 12px; border: 1px solid #000; text-align: center;">AVERAGE MARK</th>
-                            <th style="background: var(--primary); color: white; padding: 12px; border: 1px solid #000; text-align: center;">${isLowerPrimary ? 'OVERALL REMARKS' : 'AGGREGATES'}</th>
-                            <th style="background: var(--primary); color: white; padding: 12px; border: 1px solid #000; text-align: center;">${isLowerPrimary ? 'STUDENT CONDUCT' : 'FINAL GRADE/DIVISION'}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="padding: 12px; border: 1px solid #000; text-align: center; font-weight: bold; background: #f8f9fa;">${summary.totalMarks}</td>
-                            <td style="padding: 12px; border: 1px solid #000; text-align: center; font-weight: bold; background: #f8f9fa;">${summary.average}</td>
-                            <td style="padding: 12px; border: 1px solid #000; text-align: center; font-weight: bold; background: #f8f9fa;">${isLowerPrimary ? GradingUtils.getPrimaryRemark(summary.average) : summary.aggregate}</td>
-                            <td style="padding: 12px; border: 1px solid #000; text-align: center; font-weight: bold; background: #f8f9fa;">${isLowerPrimary ? 'GOOD' : summary.division}</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <!-- Summary (Boxed) -->
+                <div class="summary-section" 
+                     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                            border-radius: 8px; 
+                            padding: 20px; 
+                            margin-bottom: 30px; 
+                            display: grid; 
+                            grid-template-columns: repeat(4, 1fr); 
+                            gap: 20px; 
+                            color: white;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 9px; 
+                                    text-transform: uppercase; 
+                                    opacity: 0.9; 
+                                    margin-bottom: 5px;">
+                            Total Marks
+                        </div>
+                        <div style="font-size: 18px; 
+                                    font-weight: 700;">
+                            ${summary.totalMarks}
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 9px; 
+                                    text-transform: uppercase; 
+                                    opacity: 0.9; 
+                                    margin-bottom: 5px;">
+                            Average
+                        </div>
+                        <div style="font-size: 18px; 
+                                    font-weight: 700;">
+                            ${summary.average}
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 9px; 
+                                    text-transform: uppercase; 
+                                    opacity: 0.9; 
+                                    margin-bottom: 5px;">
+                            ${isLowerPrimary ? 'Conduct' : 'Aggregates'}
+                        </div>
+                        <div style="font-size: 18px; 
+                                    font-weight: 700;">
+                            ${isLowerPrimary ? 'Good' : summary.aggregate}
+                        </div>
+                    </div>
+                    <div style="text-align: center; 
+                                border-left: 1px solid rgba(255,255,255,0.3); 
+                                padding-left: 20px;">
+                        <div style="font-size: 9px; 
+                                    text-transform: uppercase; 
+                                    opacity: 0.9; 
+                                    margin-bottom: 5px;">
+                            ${isLowerPrimary ? 'Overall' : 'Division'}
+                        </div>
+                        <div style="font-size: 20px; 
+                                    font-weight: 800;">
+                            ${isLowerPrimary ? GradingUtils.getPrimaryRemark(summary.average) : summary.division}
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- Remarks Section -->
-                <div class="remarks-section" style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #000;">
-                    <h4 style="font-weight: bold; margin-bottom: 10px;">Class Teacher's Remarks:</h4>
-                    <div class="signature-line" style="border-bottom: 1px solid #000; margin-top: 2px; padding-top: 20px; height: 20px;"></div>
-                    
-                    <h4 style="font-weight: bold; margin-top: 20px; margin-bottom: 10px;">Head Teacher's Remarks:</h4>
-                    <div class="signature-line" style="border-bottom: 1px solid #000; margin-top: 2px; padding-top: 20px; height: 20px;"></div>
-                    
-                    ${!isLowerPrimary ? `
-                        <div class="next-term-info" style="margin-top: 12px;">
-                            <p><strong>Next Term Begins On:</strong> ________________________</p>
+                <div class="remarks-section" style="margin-bottom: 30px;">
+                    <div style="margin-bottom: 30px;">
+                        <div style="font-size: 10px; 
+                                    text-transform: uppercase; 
+                                    color: #4b5563; 
+                                    margin-bottom: 25px; 
+                                    font-weight: 700; 
+                                    letter-spacing: 1px;">
+                            Class Teacher's Remarks
                         </div>
-                    ` : ''}
+                        <div style="border-bottom: 1px dashed #9ca3af; 
+                                    margin-bottom: 12px; 
+                                    padding-bottom: 25px; 
+                                    min-height: 40px;"></div>
+                        <div style="text-align: right; 
+                                    font-size: 10px; 
+                                    color: #9ca3af; 
+                                    font-style: italic;">
+                            Signature: ........................................
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 10px; 
+                                    text-transform: uppercase; 
+                                    color: #4b5563; 
+                                    margin-bottom: 25px; 
+                                    font-weight: 700; 
+                                    letter-spacing: 1px;">
+                            Head Teacher's Remarks
+                        </div>
+                        <div style="border-bottom: 1px dashed #9ca3af; 
+                                    margin-bottom: 12px; 
+                                    padding-bottom: 25px; 
+                                    min-height: 40px;"></div>
+                        <div style="text-align: right; 
+                                    font-size: 10px; 
+                                    color: #9ca3af; 
+                                    font-style: italic;">
+                            Signature: ........................................
+                        </div>
+                    </div>
                 </div>
                 
-                <!-- Signature Area -->
-                <div class="signature-area">
-                    <div class="signature-box">
-                        <div class="signature-line"></div>
-                        <div>Class Teacher Signature</div>
+                ${termType === 'end' ? `
+                    <div style="text-align: center; 
+                                margin-top: 20px; 
+                                margin-bottom: 15px; 
+                                padding: 15px; 
+                                background: #f0f9ff; 
+                                border-radius: 6px; 
+                                border: 1px solid #bae6fd;">
+                        <p style="margin:0; 
+                                  font-size: 11px; 
+                                  color: #0369a1; 
+                                  font-weight: 600;">
+                            <strong>Next Term Begins On:</strong> ________________________
+                        </p>
                     </div>
-                    <div class="signature-box">
-                        <div class="signature-line"></div>
-                        <div>Head Teacher Signature</div>
-                    </div>
-                    ${!isLowerPrimary ? `
-                        <div class="signature-box">
-                            <div style="width: 80px; height: 80px; border: 2px dashed #666; margin: 0 auto;"></div>
-                            <div>School Stamp</div>
-                        </div>
-                    ` : ''}
-                </div>
+                ` : ''}
                 
-                <!-- Footer -->
-                <div style="text-align: center; margin-top: 30px; font-size: 10px; color: #666;">
-                    <strong>SKORE POINT</strong> - A product of SERUSOFT | skorepoint.com
+                <!-- Premium Footer -->
+                <div style="text-align: center; 
+                            border-top: 1px solid #e5e7eb; 
+                            padding-top: 20px; 
+                            margin-top: 25px;">
+                    <img src="../../assets/icons/skore-icon.jpg" 
+                         alt="Skore Point" 
+                         style="display: block; 
+                                margin: 0 auto 8px; 
+                                height: 30px; 
+                                width: auto; 
+                                opacity: 0.8;">
+                    <div style="font-size: 9px; 
+                                color: #6b7280; 
+                                letter-spacing: 1px; 
+                                font-weight: 500; 
+                                margin-bottom: 2px;">
+                        POWERED BY SKORE POINT
+                    </div>
+                    <div style="font-size: 8px; 
+                                color: #9ca3af; 
+                                margin-bottom: 4px;">
+                        A SERUSOFT PRODUCT
+                    </div>
+                    <div style="font-size: 10px; 
+                                color: #4361ee; 
+                                font-weight: 700; 
+                                letter-spacing: 0.5px;">
+                        skorepoint.com
+                    </div>
+                </div>
                 </div>
             </div>
         `;
     }
     
     generateOLevelReportHTML(reportData) {
-        const { student, marks, summary, school, term } = reportData;
+        const { student, marks, summary, school, term, termType } = reportData;
         
         return `
-            <div class="report-card olevel-report">
-                <!-- Skore Point Branding -->
-                <div class="skore-point-branding">
-                    <div class="skore-icon">SP</div>
-                    <div class="skore-text">SKORE POINT</div>
-                </div>
+            <div class="report-card olevel-report premium-report" 
+                 style="width: 210mm; 
+                        min-height: 297mm; 
+                        max-height: 297mm;
+                        padding: 15mm 20mm; 
+                        box-sizing: border-box; 
+                        margin: 0 auto; 
+                        ${PREMIUM_BORDER_STYLE} 
+                        font-family: 'Times New Roman', 'Georgia', serif; 
+                        color: #111;
+                        line-height: 1.4;">
+                ${school.logoUrl ? `
+                    <div style="position: absolute; 
+                                top: 50%; 
+                                left: 50%; 
+                                transform: translate(-50%, -50%); 
+                                width: 350px; 
+                                height: 350px; 
+                                background-image: url('${school.logoUrl}'); 
+                                background-size: contain; 
+                                background-repeat: no-repeat; 
+                                background-position: center; 
+                                opacity: 0.03; 
+                                filter: grayscale(100%); 
+                                pointer-events: none; 
+                                z-index: 0;"></div>
+                ` : ''}
+                <div style="position: relative; z-index: 1;">
                 
-                <!-- School Header -->
-                <div class="report-header" style="text-align: center; margin-bottom: 30px;">
-                    ${school.logoUrl ? `
-                        <div class="school-logo" style="margin: 0 auto 15px; width: 80px; height: 80px;">
-                            <img src="${school.logoUrl}" alt="${school.name}" style="width: 100%; height: 100%; object-fit: contain; border: 1px solid #ddd; padding: 5px;">
-                        </div>
-                    ` : ''}
-                    <div class="school-name" style="font-size: 24px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">${school.name}</div>
-                    <div class="report-title" style="font-size: 18px; font-weight: bold; text-decoration: underline; margin-bottom: 20px;">O-LEVEL STUDENT PROGRESS REPORT CARD</div>
+                <!-- Premium Header -->
+                <div style="display: flex; 
+                            align-items: center; 
+                            justify-content: space-between; 
+                            margin-bottom: 25px; 
+                            padding-bottom: 20px; 
+                            border-bottom: 2px solid #1a73e8;">
+                    <!-- School Logo -->
+                    ${school.logoUrl 
+                        ? `<img src="${school.logoUrl}" 
+                                alt="${school.name}" 
+                                style="height: 100px; width: 100px; object-fit: contain;">` 
+                        : `<img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" 
+                                style="height: 100px; width: 100px; opacity: 0.7; object-fit: contain;">`}
+                    
+                    <!-- School Info -->
+                    <div style="text-align: center; flex: 1; padding: 0 20px;">
+                        <h1 style="margin:0 0 10px 0; 
+                                   color:#1a1a1a; 
+                                   font-size: 24px; 
+                                   font-weight: 700; 
+                                   letter-spacing: -0.5px; 
+                                   line-height: 1.1;">
+                            ${school.name}
+                        </h1>
+                        <p style="margin:0; 
+                                  color:#555; 
+                                  font-size: 12px; 
+                                  text-transform: uppercase; 
+                                  letter-spacing: 2px; 
+                                  font-weight: 600;">
+                            TERM ${this.getUgandanTerm()} STUDENT ASSESSMENT PROGRESS REPORT
+                        </p>
+                    </div>
+                    
+                    <!-- Spacer for balance -->
+                    <div style="width: 100px;"></div>
                 </div>
                 
                 <!-- Student Information -->
-                <div class="student-info" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 30px; padding: 15px; background: #f8f9fa; border: 1px solid #ddd;">
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Student Name:</span>
-                        <span>${student.name}</span>
+                <div class="student-info" style="margin-bottom: 30px;">
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-size: 9px; 
+                                    text-transform: uppercase; 
+                                    color: #6b7280; 
+                                    letter-spacing: 1px; 
+                                    margin-bottom: 5px; 
+                                    font-weight: 600;">
+                            Student Name
+                        </div>
+                        <div style="font-size: 18px; 
+                                    font-weight: 700; 
+                                    color: #111827; 
+                                    padding-bottom: 8px; 
+                                    border-bottom: 1px solid #e5e7eb;">
+                            ${student.name}
+                        </div>
                     </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Class:</span>
-                        <span>${student.className}</span>
-                    </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Term:</span>
-                        <span>${term}</span>
-                    </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Date:</span>
-                        <span>${new Date().toLocaleDateString()}</span>
+                    <div style="display: flex; gap: 40px; padding-top: 15px;">
+                        <div>
+                            <span style="font-size: 9px; 
+                                          text-transform: uppercase; 
+                                          color: #6b7280; 
+                                          font-weight: 600;">
+                                Class
+                            </span>
+                            <div style="font-size: 13px; 
+                                        font-weight: 600; 
+                                        color: #374151; 
+                                        margin-top: 4px;">
+                                ${student.className}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 9px; 
+                                          text-transform: uppercase; 
+                                          color: #6b7280; 
+                                          font-weight: 600;">
+                                Term
+                            </span>
+                            <div style="font-size: 13px; 
+                                        font-weight: 600; 
+                                        color: #374151; 
+                                        margin-top: 4px;">
+                                ${term}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 9px; 
+                                          text-transform: uppercase; 
+                                          color: #6b7280; 
+                                          font-weight: 600;">
+                                Date
+                            </span>
+                            <div style="font-size: 13px; 
+                                        font-weight: 600; 
+                                        color: #374151; 
+                                        margin-top: 4px;">
+                                ${new Date().toLocaleDateString()}
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Subjects Table -->
-                <table class="subject-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <table class="subject-table" 
+                       style="width: 100%; 
+                              border-collapse: collapse; 
+                              margin-bottom: 30px; 
+                              border: 1px solid #e5e7eb; 
+                              border-radius: 6px; 
+                              overflow: hidden;">
                     <thead>
-                        <tr>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">SUBJECT</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">SCORE</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">GRADE</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">REMARKS</th>
+                        <tr style="background-color: #f3f4f6;">
+                            <th style="text-align: left; 
+                                        padding: 12px 15px; 
+                                        border-bottom: 2px solid #d1d5db; 
+                                        color: #4b5563; 
+                                        font-size: 10px; 
+                                        text-transform: uppercase; 
+                                        font-weight: 700; 
+                                        width: 40%;">
+                                Subject
+                            </th>
+                            <th style="text-align: center; 
+                                        padding: 12px 15px; 
+                                        border-bottom: 2px solid #d1d5db; 
+                                        color: #4b5563; 
+                                        font-size: 10px; 
+                                        text-transform: uppercase; 
+                                        font-weight: 700; 
+                                        width: 15%;">
+                                Score
+                            </th>
+                            <th style="text-align: center; 
+                                        padding: 12px 15px; 
+                                        border-bottom: 2px solid #d1d5db; 
+                                        color: #4b5563; 
+                                        font-size: 10px; 
+                                        text-transform: uppercase; 
+                                        font-weight: 700; 
+                                        width: 15%;">
+                                Grade
+                            </th>
+                            <th style="text-align: left; 
+                                        padding: 12px 15px; 
+                                        border-bottom: 2px solid #d1d5db; 
+                                        color: #4b5563; 
+                                        font-size: 10px; 
+                                        text-transform: uppercase; 
+                                        font-weight: 700; 
+                                        width: 30%;">
+                                Remarks
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${marks.map(mark => `
+                        ${marks.map((mark, index) => `
                             <tr>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${mark.subjectName}</td>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${mark.score}</td>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center; font-weight: bold;">${mark.grade}</td>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${GradingUtils.getGradeRemark(mark.grade)}</td>
+                                <td style="padding: 10px 15px; 
+                                            border-bottom: 1px solid #f3f4f6; 
+                                            color: #1f2937; 
+                                            font-size: 11px; 
+                                            font-weight: 500;">
+                                    ${mark.subjectName}
+                                </td>
+                                <td style="padding: 10px 15px; 
+                                            text-align: center; 
+                                            border-bottom: 1px solid #f3f4f6; 
+                                            color: #1f2937; 
+                                            font-weight: 500; 
+                                            font-size: 12px;">
+                                    ${mark.score}
+                                </td>
+                                <td style="padding: 10px 15px; 
+                                            text-align: center; 
+                                            border-bottom: 1px solid #f3f4f6; 
+                                            color: #1f2937; 
+                                            font-weight: 600; 
+                                            font-size: 12px;">
+                                    ${mark.grade}
+                                </td>
+                                <td style="padding: 10px 15px; 
+                                            border-bottom: 1px solid #f3f4f6; 
+                                            color: #6b7280; 
+                                            font-size: 10px;">
+                                    ${GradingUtils.getGradeRemark(mark.grade)}
+                                </td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
                 
-                <!-- Grade Summary -->
-                <div class="grade-summary">
-                    <div class="grade-summary-item">
-                        <div class="label">Average Score</div>
-                        <div class="value">${summary.average}%</div>
+                <!-- Summary (Boxed) -->
+                <div class="summary-section" 
+                     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                            border-radius: 8px; 
+                            padding: 20px; 
+                            margin-bottom: 30px; 
+                            display: grid; 
+                            grid-template-columns: repeat(4, 1fr); 
+                            gap: 20px; 
+                            color: white;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 9px; 
+                                    text-transform: uppercase; 
+                                    opacity: 0.9; 
+                                    margin-bottom: 5px;">
+                            Average Score
+                        </div>
+                        <div style="font-size: 18px; 
+                                    font-weight: 700;">
+                            ${summary.average}%
+                        </div>
                     </div>
-                    <div class="grade-summary-item">
-                        <div class="label">Average Grade</div>
-                        <div class="value">${GradingUtils.calculateGrade(summary.average, 'olevel')}</div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 9px; 
+                                    text-transform: uppercase; 
+                                    opacity: 0.9; 
+                                    margin-bottom: 5px;">
+                            Average Grade
+                        </div>
+                        <div style="font-size: 18px; 
+                                    font-weight: 700;">
+                            ${GradingUtils.calculateGrade(summary.average, 'olevel')}
+                        </div>
                     </div>
-                    <div class="grade-summary-item">
-                        <div class="label">Aggregate</div>
-                        <div class="value">${summary.aggregate}</div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 9px; 
+                                    text-transform: uppercase; 
+                                    opacity: 0.9; 
+                                    margin-bottom: 5px;">
+                            Aggregate
+                        </div>
+                        <div style="font-size: 18px; 
+                                    font-weight: 700;">
+                            ${summary.aggregate}
+                        </div>
                     </div>
-                    <div class="grade-summary-item">
-                        <div class="label">Division</div>
-                        <div class="value">${summary.division}</div>
+                    <div style="text-align: center; 
+                                border-left: 1px solid rgba(255,255,255,0.3); 
+                                padding-left: 20px;">
+                        <div style="font-size: 9px; 
+                                    text-transform: uppercase; 
+                                    opacity: 0.9; 
+                                    margin-bottom: 5px;">
+                            Division
+                        </div>
+                        <div style="font-size: 20px; 
+                                    font-weight: 800;">
+                            ${summary.division}
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Remarks Section -->
-                <div class="remarks-section" style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #000;">
-                    <h4 style="font-weight: bold; margin-bottom: 10px;">Class Teacher's Remarks:</h4>
-                    <div class="signature-line" style="border-bottom: 1px solid #000; margin-top: 2px; padding-top: 20px; height: 20px;"></div>
-                    
-                    <h4 style="font-weight: bold; margin-top: 20px; margin-bottom: 10px;">Head Teacher's Remarks:</h4>
-                    <div class="signature-line" style="border-bottom: 1px solid #000; margin-top: 2px; padding-top: 20px; height: 20px;"></div>
-                    
-                    <div class="next-term-info" style="margin-top: 12px;">
-                        <p><strong>Next Term Begins On:</strong> ________________________</p>
+                <div class="remarks-section" style="margin-bottom: 30px;">
+                    <div style="margin-bottom: 30px;">
+                        <div style="font-size: 10px; 
+                                    text-transform: uppercase; 
+                                    color: #4b5563; 
+                                    margin-bottom: 25px; 
+                                    font-weight: 700; 
+                                    letter-spacing: 1px;">
+                            Class Teacher's Remarks
+                        </div>
+                        <div style="border-bottom: 1px dashed #9ca3af; 
+                                    margin-bottom: 12px; 
+                                    padding-bottom: 25px; 
+                                    min-height: 40px;"></div>
+                        <div style="text-align: right; 
+                                    font-size: 10px; 
+                                    color: #9ca3af; 
+                                    font-style: italic;">
+                            Signature: ........................................
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 10px; 
+                                    text-transform: uppercase; 
+                                    color: #4b5563; 
+                                    margin-bottom: 25px; 
+                                    font-weight: 700; 
+                                    letter-spacing: 1px;">
+                            Head Teacher's Remarks
+                        </div>
+                        <div style="border-bottom: 1px dashed #9ca3af; 
+                                    margin-bottom: 12px; 
+                                    padding-bottom: 25px; 
+                                    min-height: 40px;"></div>
+                        <div style="text-align: right; 
+                                    font-size: 10px; 
+                                    color: #9ca3af; 
+                                    font-style: italic;">
+                            Signature: ........................................
+                        </div>
                     </div>
                 </div>
                 
-                <!-- Signature Area -->
-                <div class="signature-area">
-                    <div class="signature-box">
-                        <div class="signature-line"></div>
-                        <div>Class Teacher Signature</div>
+                ${termType === 'end' ? `
+                <div style="text-align: center; 
+                            margin-top: 20px; 
+                            margin-bottom: 15px; 
+                            padding: 15px; 
+                            background: #f0f9ff; 
+                            border-radius: 6px; 
+                            border: 1px solid #bae6fd;">
+                    <p style="margin:0; 
+                              font-size: 11px; 
+                              color: #0369a1; 
+                              font-weight: 600;">
+                        <strong>Next Term Begins On:</strong> ________________________
+                    </p>
+                </div>
+                ` : ''}
+                
+                <!-- Premium Footer -->
+                <div style="text-align: center; 
+                            border-top: 1px solid #e5e7eb; 
+                            padding-top: 20px; 
+                            margin-top: 25px;">
+                    <img src="../../assets/icons/skore-icon.jpg" 
+                         alt="Skore Point" 
+                         style="display: block; 
+                                margin: 0 auto 8px; 
+                                height: 30px; 
+                                width: auto; 
+                                opacity: 0.8;">
+                    <div style="font-size: 9px; 
+                                color: #6b7280; 
+                                letter-spacing: 1px; 
+                                font-weight: 500; 
+                                margin-bottom: 2px;">
+                        POWERED BY SKORE POINT
                     </div>
-                    <div class="signature-box">
-                        <div class="signature-line"></div>
-                        <div>Head Teacher Signature</div>
+                    <div style="font-size: 8px; 
+                                color: #9ca3af; 
+                                margin-bottom: 4px;">
+                        A SERUSOFT PRODUCT
                     </div>
-                    <div class="signature-box">
-                        <div style="width: 80px; height: 80px; border: 2px dashed #666; margin: 0 auto;"></div>
-                        <div>School Stamp</div>
+                    <div style="font-size: 10px; 
+                                color: #4361ee; 
+                                font-weight: 700; 
+                                letter-spacing: 0.5px;">
+                        skorepoint.com
                     </div>
                 </div>
-                
-                <!-- Footer -->
-                <div style="text-align: center; margin-top: 30px; font-size: 10px; color: #666;">
-                    <strong>SKORE POINT</strong> - A product of SERUSOFT | skorepoint.com
                 </div>
             </div>
         `;
@@ -1234,95 +2131,119 @@ class ReportsController {
         const { class: classData, studentReports, statistics, term } = reportData;
         
         return `
-            <div class="report-card">
-                <!-- Skore Point Branding -->
-                <div class="skore-point-branding">
-                    <div class="skore-icon">SP</div>
-                    <div class="skore-text">SKORE POINT</div>
-                </div>
-                
+            <div class="report-card" 
+                 style="padding:40px; 
+                        max-width: 210mm; 
+                        margin: 0 auto; 
+                        ${PREMIUM_BORDER_STYLE} 
+                        font-family: 'Times New Roman', serif; 
+                        color: #111;">
+                ${this.currentSchool.logoUrl ? `
+                    <div style="position: absolute; 
+                                top: 50%; 
+                                left: 50%; 
+                                transform: translate(-50%, -50%); 
+                                width: 500px; 
+                                height: 500px; 
+                                background-image: url('${this.currentSchool.logoUrl}'); 
+                                background-size: contain; 
+                                background-repeat: no-repeat; 
+                                background-position: center; 
+                                opacity: 0.04; 
+                                filter: grayscale(100%); 
+                                pointer-events: none; 
+                                z-index: 0;"></div>
+                ` : ''}
+                <div style="position: relative; z-index: 1;">
                 <!-- Class Header -->
-                <div class="report-header" style="text-align: center; margin-bottom: 30px;">
-                    <div class="school-name" style="font-size: 24px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">${this.currentSchool.name}</div>
-                    <div class="report-title" style="font-size: 18px; font-weight: bold; text-decoration: underline; margin-bottom: 20px;">CLASS PERFORMANCE REPORT - ${classData.name}</div>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 40px; padding-bottom: 25px; border-bottom: 1px solid #333;">
+                    ${this.currentSchool.logoUrl ? `<img src="${this.currentSchool.logoUrl}" alt="${this.currentSchool.name}" style="height: 70px; width: auto; object-fit: contain;">` : ''}
+                    <div style="text-align: center;">
+                        <h1 style="margin:0 0 8px 0; color:#1a1a1a; font-family: 'Times New Roman', serif; font-size: 26px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.1;">${this.currentSchool.name}</h1>
+                        <p style="margin:0; color:#555; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Class Performance Report - ${classData.name}</p>
+                    </div>
                 </div>
                 
                 <!-- Class Information -->
-                <div class="class-info" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 30px; padding: 15px; background: #f8f9fa; border: 1px solid #ddd;">
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Class:</span>
-                        <span>${classData.name}</span>
+                <div class="class-info" style="background: #f9fafb; border-radius: 8px; padding: 25px; margin-bottom: 40px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+                    <div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Class</div>
+                        <div style="font-size: 16px; font-weight: 700; color: #111827;">${classData.name}</div>
                     </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Term:</span>
-                        <span>${term}</span>
+                    <div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Term</div>
+                        <div style="font-size: 16px; font-weight: 700; color: #111827;">${term}</div>
                     </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Total Students:</span>
-                        <span>${statistics.totalStudents}</span>
+                    <div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Total Students</div>
+                        <div style="font-size: 16px; font-weight: 700; color: #111827;">${statistics.totalStudents}</div>
                     </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">With Marks:</span>
-                        <span>${statistics.studentsWithMarks}</span>
+                    <div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">With Marks</div>
+                        <div style="font-size: 16px; font-weight: 700; color: #111827;">${statistics.studentsWithMarks}</div>
                     </div>
                 </div>
                 
                 <!-- Performance Statistics -->
-                <div class="performance-stats" style="margin-bottom: 30px;">
-                    <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: var(--primary);">Performance Statistics</h3>
+                <div class="performance-stats" style="margin-bottom: 40px;">
+                    <h3 style="font-size: 14px; font-weight: 600; text-transform: uppercase; color: #4b5563; margin-bottom: 20px;">Performance Statistics</h3>
                     
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Class Average</div>
-                            <div style="font-size: 28px; font-weight: bold; color: var(--primary);">${statistics.classAverage}%</div>
+                        <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 8px;">Class Average</div>
+                            <div style="font-size: 24px; font-weight: 700; color: #111827;">${statistics.classAverage}%</div>
                         </div>
                         
                         ${statistics.topPerformer ? `
-                            <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Top Performer</div>
-                                <div style="font-size: 16px; font-weight: bold; color: var(--primary);">${statistics.topPerformer.student.name}</div>
-                                <div style="font-size: 14px; color: #666;">${statistics.topPerformer.summary.average}%</div>
+                            <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 8px;">Top Performer</div>
+                                <div style="font-size: 16px; font-weight: 600; color: #111827;">${statistics.topPerformer.student.name}</div>
+                                <div style="font-size: 14px; color: #059669; font-weight: 600;">${statistics.topPerformer.summary.average}%</div>
                             </div>
                         ` : ''}
                         
                         ${statistics.lowestPerformer ? `
-                            <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Lowest Performer</div>
-                                <div style="font-size: 16px; font-weight: bold; color: var(--primary);">${statistics.lowestPerformer.student.name}</div>
-                                <div style="font-size: 14px; color: #666;">${statistics.lowestPerformer.summary.average}%</div>
+                            <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 8px;">Lowest Performer</div>
+                                <div style="font-size: 16px; font-weight: 600; color: #111827;">${statistics.lowestPerformer.student.name}</div>
+                                <div style="font-size: 14px; color: #dc2626; font-weight: 600;">${statistics.lowestPerformer.summary.average}%</div>
                             </div>
                         ` : ''}
                     </div>
                 </div>
                 
                 <!-- Student Performance Table -->
-                <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: var(--primary);">Student Performance</h3>
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                <h3 style="font-size: 14px; font-weight: 600; text-transform: uppercase; color: #4b5563; margin-bottom: 20px;">Student Performance</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px;">
                     <thead>
                         <tr>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">Rank</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">Student Name</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">Average</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">Grade</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">Division</th>
+                            <th style="text-align: center; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 10px; text-transform: uppercase; font-weight: 600;">Rank</th>
+                            <th style="text-align: left; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 10px; text-transform: uppercase; font-weight: 600;">Student Name</th>
+                            <th style="text-align: center; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 10px; text-transform: uppercase; font-weight: 600;">Average</th>
+                            <th style="text-align: center; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 10px; text-transform: uppercase; font-weight: 600;">Grade</th>
+                            <th style="text-align: center; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 10px; text-transform: uppercase; font-weight: 600;">Division</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${studentReports.map((report, index) => `
                             <tr>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${index + 1}</td>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${report.student.name}</td>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${report.summary.average}%</td>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${GradingUtils.calculateGrade(report.summary.average, this.currentLevel)}</td>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${report.summary.division}</td>
+                                <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #6b7280; font-size: 12px;">${index + 1}</td>
+                                <td style="padding: 8px 12px; text-align: left; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-weight: 500; font-size: 12px;">${report.student.name}</td>
+                                <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-size: 12px;">${report.summary.average}%</td>
+                                <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-size: 12px;">${GradingUtils.calculateGrade(report.summary.average, this.currentLevel)}</td>
+                                <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-size: 12px;">${report.summary.division}</td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
                 
                 <!-- Footer -->
-                <div style="text-align: center; margin-top: 30px; font-size: 10px; color: #666;">
-                    <strong>SKORE POINT</strong> - A product of SERUSOFT | skorepoint.com
+                <div style="text-align: center; border-top: 1px solid #f3f4f6; padding-top: 20px;">
+                    <img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" style="display: block; margin: 0 auto 5px; height: 25px; width: auto; opacity: 0.7;">
+                    <div style="font-size: 10px; color: #9ca3af; letter-spacing: 0.5px;">POWERED BY SKORE POINT</div>
+                    <div style="font-size: 9px; color: #d1d5db; margin-top: 2px;">A SERUSOFT PRODUCT</div>
+                    <div style="font-size: 11px; color: #4361ee; font-weight: 600; margin-top: 4px;">skorepoint.com</div>
+                </div>
                 </div>
             </div>
         `;
@@ -1332,84 +2253,104 @@ class ReportsController {
         const { subject, marks, statistics, class: classData, term } = reportData;
         
         return `
-            <div class="report-card">
-                <!-- Skore Point Branding -->
-                <div class="skore-point-branding">
-                    <div class="skore-icon">SP</div>
-                    <div class="skore-text">SKORE POINT</div>
-                </div>
-                
+            <div class="report-card" 
+                 style="padding:40px; 
+                        max-width: 210mm; 
+                        margin: 0 auto; 
+                        ${PREMIUM_BORDER_STYLE} 
+                        font-family: 'Times New Roman', serif; 
+                        color: #111;">
+                ${this.currentSchool.logoUrl ? `
+                    <div style="position: absolute; 
+                                top: 50%; 
+                                left: 50%; 
+                                transform: translate(-50%, -50%); 
+                                width: 500px; 
+                                height: 500px; 
+                                background-image: url('${this.currentSchool.logoUrl}'); 
+                                background-size: contain; 
+                                background-repeat: no-repeat; 
+                                background-position: center; 
+                                opacity: 0.04; 
+                                filter: grayscale(100%); 
+                                pointer-events: none; 
+                                z-index: 0;"></div>
+                ` : ''}
+                <div style="position: relative; z-index: 1;">
                 <!-- Subject Header -->
-                <div class="report-header" style="text-align: center; margin-bottom: 30px;">
-                    <div class="school-name" style="font-size: 24px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">${this.currentSchool.name}</div>
-                    <div class="report-title" style="font-size: 18px; font-weight: bold; text-decoration: underline; margin-bottom: 20px;">SUBJECT ANALYSIS - ${subject.name}</div>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 40px; padding-bottom: 25px; border-bottom: 1px solid #333;">
+                    ${this.currentSchool.logoUrl ? `<img src="${this.currentSchool.logoUrl}" alt="${this.currentSchool.name}" style="height: 70px; width: auto; object-fit: contain;">` : ''}
+                    <div style="text-align: center;">
+                        <h1 style="margin:0 0 8px 0; color:#1a1a1a; font-family: 'Times New Roman', serif; font-size: 26px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.1;">${this.currentSchool.name}</h1>
+                        <p style="margin:0; color:#555; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Subject Analysis - ${subject.name}</p>
+                    </div>
                 </div>
                 
                 <!-- Subject Information -->
-                <div class="subject-info" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 30px; padding: 15px; background: #f8f9fa; border: 1px solid #ddd;">
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Subject:</span>
-                        <span>${subject.name}</span>
+                <div class="subject-info" style="background: #f9fafb; border-radius: 8px; padding: 25px; margin-bottom: 40px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+                    <div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Subject</div>
+                        <div style="font-size: 16px; font-weight: 700; color: #111827;">${subject.name}</div>
                     </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Class:</span>
-                        <span>${classData?.name || 'All Classes'}</span>
+                    <div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Class</div>
+                        <div style="font-size: 16px; font-weight: 700; color: #111827;">${classData?.name || 'All Classes'}</div>
                     </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Term:</span>
-                        <span>${term}</span>
+                    <div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Term</div>
+                        <div style="font-size: 16px; font-weight: 700; color: #111827;">${term}</div>
                     </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Total Students:</span>
-                        <span>${statistics.totalStudents}</span>
+                    <div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Total Students</div>
+                        <div style="font-size: 16px; font-weight: 700; color: #111827;">${statistics.totalStudents}</div>
                     </div>
                 </div>
                 
                 <!-- Performance Statistics -->
-                <div class="performance-stats" style="margin-bottom: 30px;">
-                    <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: var(--primary);">Subject Statistics</h3>
+                <div class="performance-stats" style="margin-bottom: 40px;">
+                    <h3 style="font-size: 14px; font-weight: 600; text-transform: uppercase; color: #4b5563; margin-bottom: 20px;">Subject Statistics</h3>
                     
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Average Score</div>
-                            <div style="font-size: 28px; font-weight: bold; color: var(--primary);">${statistics.averageScore}%</div>
+                        <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 8px;">Average Score</div>
+                            <div style="font-size: 24px; font-weight: 700; color: #111827;">${statistics.averageScore}%</div>
                         </div>
                         
-                        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Highest Score</div>
-                            <div style="font-size: 28px; font-weight: bold; color: var(--success);">${statistics.highestScore}%</div>
+                        <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 8px;">Highest Score</div>
+                            <div style="font-size: 24px; font-weight: 700; color: #059669;">${statistics.highestScore}%</div>
                         </div>
                         
-                        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Lowest Score</div>
-                            <div style="font-size: 28px; font-weight: bold; color: var(--error);">${statistics.lowestScore}%</div>
+                        <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 8px;">Lowest Score</div>
+                            <div style="font-size: 24px; font-weight: 700; color: #dc2626;">${statistics.lowestScore}%</div>
                         </div>
                         
-                        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Pass Rate</div>
-                            <div style="font-size: 28px; font-weight: bold; color: ${statistics.passRate >= 70 ? 'var(--success)' : statistics.passRate >= 50 ? 'var(--warning)' : 'var(--error)'};">${statistics.passRate}%</div>
+                        <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 8px;">Pass Rate</div>
+                            <div style="font-size: 24px; font-weight: 700; color: ${statistics.passRate >= 70 ? '#059669' : statistics.passRate >= 50 ? '#d97706' : '#dc2626'};">${statistics.passRate}%</div>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Grade Distribution -->
-                <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: var(--primary);">Grade Distribution</h3>
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                <h3 style="font-size: 14px; font-weight: 600; text-transform: uppercase; color: #4b5563; margin-bottom: 20px;">Grade Distribution</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px;">
                     <thead>
                         <tr>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">Grade</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">Count</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">Percentage</th>
+                            <th style="text-align: center; padding: 12px 0; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 600;">Grade</th>
+                            <th style="text-align: center; padding: 12px 0; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 600;">Count</th>
+                            <th style="text-align: center; padding: 12px 0; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 600;">Percentage</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${Object.entries(statistics.gradeDistribution).map(([grade, count]) => {
+                        ${Object.entries(statistics.gradeDistribution).map(([grade, count], index) => {
                             const percentage = statistics.studentsWithMarks > 0 ? Math.round((count / statistics.studentsWithMarks) * 100) : 0;
                             return `
                                 <tr>
-                                    <td style="padding: 10px; border: 1px solid #000; text-align: center; font-weight: bold;">${grade}</td>
-                                    <td style="padding: 10px; border: 1px solid #000; text-align: center;">${count}</td>
-                                    <td style="padding: 10px; border: 1px solid #000; text-align: center;">${percentage}%</td>
+                                    <td style="padding: 12px 0; text-align: center; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-weight: 600;">${grade}</td>
+                                    <td style="padding: 12px 0; text-align: center; border-bottom: 1px solid #f3f4f6; color: #1f2937;">${count}</td>
+                                    <td style="padding: 12px 0; text-align: center; border-bottom: 1px solid #f3f4f6; color: #1f2937;">${percentage}%</td>
                                 </tr>
                             `;
                         }).join('')}
@@ -1417,31 +2358,35 @@ class ReportsController {
                 </table>
                 
                 <!-- Top Performers -->
-                <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: var(--primary);">Top Performers</h3>
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                <h3 style="font-size: 14px; font-weight: 600; text-transform: uppercase; color: #4b5563; margin-bottom: 20px;">Top Performers</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px;">
                     <thead>
                         <tr>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">Rank</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">Student Name</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">Score</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">Grade</th>
+                            <th style="text-align: center; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 10px; text-transform: uppercase; font-weight: 600;">Rank</th>
+                            <th style="text-align: left; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 10px; text-transform: uppercase; font-weight: 600;">Student Name</th>
+                            <th style="text-align: center; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 10px; text-transform: uppercase; font-weight: 600;">Score</th>
+                            <th style="text-align: center; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 10px; text-transform: uppercase; font-weight: 600;">Grade</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${marks.slice(0, 10).map((mark, index) => `
                             <tr>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${index + 1}</td>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${mark.student.name}</td>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${mark.score}%</td>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center; font-weight: bold;">${mark.grade}</td>
+                                <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #6b7280; font-size: 12px;">${index + 1}</td>
+                                <td style="padding: 8px 12px; text-align: left; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-weight: 500; font-size: 12px;">${mark.student.name}</td>
+                                <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-size: 12px;">${mark.score}%</td>
+                                <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-weight: 600; font-size: 12px;">${mark.grade}</td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
                 
                 <!-- Footer -->
-                <div style="text-align: center; margin-top: 30px; font-size: 10px; color: #666;">
-                    <strong>SKORE POINT</strong> - A product of SERUSOFT | skorepoint.com
+                <div style="text-align: center; border-top: 1px solid #f3f4f6; padding-top: 20px;">
+                    <img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" style="display: block; margin: 0 auto 5px; height: 25px; width: auto; opacity: 0.7;">
+                    <div style="font-size: 10px; color: #9ca3af; letter-spacing: 0.5px;">POWERED BY SKORE POINT</div>
+                    <div style="font-size: 9px; color: #d1d5db; margin-top: 2px;">A SERUSOFT PRODUCT</div>
+                    <div style="font-size: 11px; color: #4361ee; font-weight: 600; margin-top: 4px;">skorepoint.com</div>
+                </div>
                 </div>
             </div>
         `;
@@ -1451,96 +2396,116 @@ class ReportsController {
         const { classReports, statistics, term } = reportData;
         
         return `
-            <div class="report-card">
-                <!-- Skore Point Branding -->
-                <div class="skore-point-branding">
-                    <div class="skore-icon">SP</div>
-                    <div class="skore-text">SKORE POINT</div>
-                </div>
-                
+            <div class="report-card" 
+                 style="padding:40px; 
+                        max-width: 210mm; 
+                        margin: 0 auto; 
+                        ${PREMIUM_BORDER_STYLE} 
+                        font-family: 'Times New Roman', serif; 
+                        color: #111;">
+                ${this.currentSchool.logoUrl ? `
+                    <div style="position: absolute; 
+                                top: 50%; 
+                                left: 50%; 
+                                transform: translate(-50%, -50%); 
+                                width: 500px; 
+                                height: 500px; 
+                                background-image: url('${this.currentSchool.logoUrl}'); 
+                                background-size: contain; 
+                                background-repeat: no-repeat; 
+                                background-position: center; 
+                                opacity: 0.04; 
+                                filter: grayscale(100%); 
+                                pointer-events: none; 
+                                z-index: 0;"></div>
+                ` : ''}
+                <div style="position: relative; z-index: 1;">
                 <!-- School Header -->
-                <div class="report-header" style="text-align: center; margin-bottom: 30px;">
-                    <div class="school-name" style="font-size: 24px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">${this.currentSchool.name}</div>
-                    <div class="report-title" style="font-size: 18px; font-weight: bold; text-decoration: underline; margin-bottom: 20px;">SCHOOL PERFORMANCE SUMMARY</div>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 40px; padding-bottom: 25px; border-bottom: 1px solid #333;">
+                    ${this.currentSchool.logoUrl ? `<img src="${this.currentSchool.logoUrl}" alt="${this.currentSchool.name}" style="height: 70px; width: auto; object-fit: contain;">` : ''}
+                    <div style="text-align: center;">
+                        <h1 style="margin:0 0 8px 0; color:#1a1a1a; font-family: 'Times New Roman', serif; font-size: 26px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.1;">${this.currentSchool.name}</h1>
+                        <p style="margin:0; color:#555; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">School Performance Summary</p>
+                    </div>
                 </div>
                 
                 <!-- School Information -->
-                <div class="school-info" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 30px; padding: 15px; background: #f8f9fa; border: 1px solid #ddd;">
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Academic Level:</span>
-                        <span>${this.getAvailableLevels().find(l => l.id === this.currentLevel)?.name || this.currentLevel}</span>
+                <div class="school-info" style="background: #f9fafb; border-radius: 8px; padding: 25px; margin-bottom: 40px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+                    <div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Academic Level</div>
+                        <div style="font-size: 16px; font-weight: 700; color: #111827;">${this.getAvailableLevels().find(l => l.id === this.currentLevel)?.name || this.currentLevel}</div>
                     </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Term:</span>
-                        <span>${term}</span>
+                    <div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Term</div>
+                        <div style="font-size: 16px; font-weight: 700; color: #111827;">${term}</div>
                     </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Total Classes:</span>
-                        <span>${statistics.totalClasses}</span>
+                    <div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Total Classes</div>
+                        <div style="font-size: 16px; font-weight: 700; color: #111827;">${statistics.totalClasses}</div>
                     </div>
-                    <div class="info-item">
-                        <span style="font-weight: bold; min-width: 120px;">Classes with Data:</span>
-                        <span>${statistics.classesWithData}</span>
+                    <div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Classes with Data</div>
+                        <div style="font-size: 16px; font-weight: 700; color: #111827;">${statistics.classesWithData}</div>
                     </div>
                 </div>
                 
                 <!-- School Statistics -->
-                <div class="performance-stats" style="margin-bottom: 30px;">
-                    <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: var(--primary);">School Statistics</h3>
+                <div class="performance-stats" style="margin-bottom: 40px;">
+                    <h3 style="font-size: 14px; font-weight: 600; text-transform: uppercase; color: #4b5563; margin-bottom: 20px;">School Statistics</h3>
                     
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 12px; color: #666; margin-bottom: 5px;">School Average</div>
-                            <div style="font-size: 28px; font-weight: bold; color: var(--primary);">${statistics.schoolAverage}%</div>
+                        <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 8px;">School Average</div>
+                            <div style="font-size: 24px; font-weight: 700; color: #111827;">${statistics.schoolAverage}%</div>
                         </div>
                         
                         ${statistics.bestPerformingClass ? `
-                            <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Best Performing Class</div>
-                                <div style="font-size: 16px; font-weight: bold; color: var(--primary);">${statistics.bestPerformingClass.className}</div>
-                                <div style="font-size: 14px; color: #666;">${statistics.bestPerformingClass.average}%</div>
+                            <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 8px;">Best Performing Class</div>
+                                <div style="font-size: 16px; font-weight: 600; color: #111827;">${statistics.bestPerformingClass.className}</div>
+                                <div style="font-size: 14px; color: #059669; font-weight: 600;">${statistics.bestPerformingClass.average}%</div>
                             </div>
                         ` : ''}
                         
                         ${statistics.needsImprovementClass ? `
-                            <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Needs Improvement</div>
-                                <div style="font-size: 16px; font-weight: bold; color: var(--primary);">${statistics.needsImprovementClass.className}</div>
-                                <div style="font-size: 14px; color: #666;">${statistics.needsImprovementClass.average}%</div>
+                            <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 8px;">Needs Improvement</div>
+                                <div style="font-size: 16px; font-weight: 600; color: #111827;">${statistics.needsImprovementClass.className}</div>
+                                <div style="font-size: 14px; color: #dc2626; font-weight: 600;">${statistics.needsImprovementClass.average}%</div>
                             </div>
                         ` : ''}
                     </div>
                 </div>
                 
                 <!-- Class Performance Table -->
-                <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: var(--primary);">Class Performance Ranking</h3>
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                <h3 style="font-size: 14px; font-weight: 600; text-transform: uppercase; color: #4b5563; margin-bottom: 20px;">Class Performance Ranking</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px;">
                     <thead>
                         <tr>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">Rank</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">Class</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">Total Students</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">With Marks</th>
-                            <th style="background: #f0f0f0; padding: 10px; border: 1px solid #000; text-align: center;">Average</th>
+                            <th style="text-align: center; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 10px; text-transform: uppercase; font-weight: 600;">Rank</th>
+                            <th style="text-align: center; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 10px; text-transform: uppercase; font-weight: 600;">Class</th>
+                            <th style="text-align: center; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 10px; text-transform: uppercase; font-weight: 600;">Total Students</th>
+                            <th style="text-align: center; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 10px; text-transform: uppercase; font-weight: 600;">With Marks</th>
+                            <th style="text-align: center; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 10px; text-transform: uppercase; font-weight: 600;">Average</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${classReports.map((report, index) => `
                             <tr>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${index + 1}</td>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${report.className}</td>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${report.totalStudents}</td>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center;">${report.studentsWithMarks}</td>
-                                <td style="padding: 10px; border: 1px solid #000; text-align: center; font-weight: bold;">${report.average}%</td>
+                                <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #6b7280; font-size: 12px;">${index + 1}</td>
+                                <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-weight: 500; font-size: 12px;">${report.className}</td>
+                                <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-size: 12px;">${report.totalStudents}</td>
+                                <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-size: 12px;">${report.studentsWithMarks}</td>
+                                <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-weight: 600; font-size: 12px;">${report.average}%</td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
                 
                 <!-- Recommendations -->
-                <div class="recommendations" style="background: #fff8e1; padding: 20px; border-radius: 8px; border-left: 4px solid var(--warning); margin-bottom: 30px;">
-                    <h4 style="font-size: 16px; font-weight: bold; margin-bottom: 10px; color: var(--warning);">Recommendations:</h4>
-                    <ul style="margin: 0; padding-left: 20px;">
+                <div class="recommendations" style="background: #fffbeb; padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b; margin-bottom: 40px;">
+                    <h4 style="font-size: 14px; font-weight: 600; text-transform: uppercase; color: #92400e; margin-bottom: 10px;">Recommendations</h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #92400e; font-size: 14px;">
                         ${statistics.schoolAverage < 50 ? '<li>Consider implementing remedial classes for struggling students</li>' : ''}
                         ${statistics.classesWithData < statistics.totalClasses ? '<li>Ensure all teachers enter marks for their classes</li>' : ''}
                         <li>Provide additional support for classes with averages below 50%</li>
@@ -1549,8 +2514,12 @@ class ReportsController {
                 </div>
                 
                 <!-- Footer -->
-                <div style="text-align: center; margin-top: 30px; font-size: 10px; color: #666;">
-                    <strong>SKORE POINT</strong> - A product of SERUSOFT | skorepoint.com
+                <div style="text-align: center; border-top: 1px solid #f3f4f6; padding-top: 20px;">
+                    <img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" style="display: block; margin: 0 auto 5px; height: 25px; width: auto; opacity: 0.7;">
+                    <div style="font-size: 10px; color: #9ca3af; letter-spacing: 0.5px;">POWERED BY SKORE POINT</div>
+                    <div style="font-size: 9px; color: #d1d5db; margin-top: 2px;">A SERUSOFT PRODUCT</div>
+                    <div style="font-size: 11px; color: #4361ee; font-weight: 600; margin-top: 4px;">skorepoint.com</div>
+                </div>
                 </div>
             </div>
         `;
@@ -1584,6 +2553,19 @@ class ReportsController {
                 `;
                 break;
                 
+            case 'bulk-student':
+                statsHTML = `
+                    <div class="stat-card">
+                        <div class="stat-value">${reportData.reports.length}</div>
+                        <div class="stat-label">Total Reports</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${reportData.class ? reportData.class.name : 'N/A'}</div>
+                        <div class="stat-label">Class</div>
+                    </div>
+                `;
+                break;
+
             case 'class':
                 statsHTML = `
                     <div class="stat-card">
@@ -1661,19 +2643,144 @@ class ReportsController {
         try {
             this.showLoading(`Exporting report as ${format.toUpperCase()}...`);
             
-            const result = await ReportService.exportReport(this.currentReportData, format);
-            
-            if (result.success) {
-                this.showSuccess(`Report exported successfully as ${format.toUpperCase()}`);
-            } else {
-                this.showError(`Failed to export report: ${result.message}`);
+            if (format === 'pdf') {
+                await this.exportToPDF();
+            } else if (format === 'excel') {
+                await this.exportToExcel();
             }
             
         } catch (error) {
             console.error('Error exporting report:', error);
-            this.showError('Failed to export report. Please try again.');
+            this.showError(`Failed to export report: ${error.message}`);
         } finally {
             this.hideLoading();
+        }
+    }
+
+    async exportToPDF() {
+        const element = document.getElementById('reportPreview');
+        const reportCard = element ? element.querySelector('.premium-report, .report-card') : null;
+        const targetElement = reportCard || element;
+
+        if (!targetElement) throw new Error('Nothing to export');
+
+        // Dynamically load html2pdf if needed
+        if (typeof html2pdf === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+                script.integrity = 'sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==';
+                script.crossOrigin = 'anonymous';
+                script.referrerPolicy = 'no-referrer';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        const fileName = `Premium_Report_${this.currentReportData.type}_${this.currentReportData.termType || 'term'}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+        // Clone the element for PDF generation
+        const clone = targetElement.cloneNode(true);
+        
+        // Apply A4-specific styling
+        clone.style.setProperty('width', '210mm', 'important');
+        clone.style.setProperty('min-height', '297mm', 'important');
+        clone.style.setProperty('padding', '15mm 20mm', 'important');
+        clone.style.setProperty('margin', '0', 'important');
+        clone.style.setProperty('box-shadow', 'none', 'important');
+        clone.style.setProperty('border', '2px solid #000', 'important');
+        clone.style.setProperty('background', 'white', 'important');
+        clone.style.setProperty('font-size', '11px', 'important');
+        
+        // Create temporary container
+        const container = document.createElement('div');
+        container.style.position = 'fixed';
+        container.style.left = '0';
+        container.style.top = '0';
+        container.style.width = '210mm';
+        container.style.height = '297mm';
+        container.style.zIndex = '99999';
+        container.style.backgroundColor = 'white';
+        container.style.margin = '0';
+        container.style.padding = '0';
+        container.style.opacity = '0';
+        container.style.pointerEvents = 'none';
+        
+        container.appendChild(clone);
+        document.body.appendChild(container);
+
+        const opt = {
+            margin: 0,
+            filename: fileName,
+            image: { 
+                type: 'jpeg', 
+                quality: 1.0,
+                backgroundColor: '#ffffff'
+            },
+            html2canvas: { 
+                scale: 2,
+                useCORS: true,
+                letterRendering: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                scrollX: 0,
+                scrollY: 0,
+                windowWidth: 794,
+                windowHeight: 1123,
+                x: 0,
+                y: 0
+            },
+            jsPDF: { 
+                unit: 'mm', 
+                format: 'a4', 
+                orientation: 'portrait',
+                compress: true
+            },
+            pagebreak: {
+                mode: ['avoid-all', 'css', 'legacy']
+            }
+        };
+
+        try {
+            await html2pdf()
+                .set(opt)
+                .from(clone)
+                .toPdf()
+                .get('pdf')
+                .then(pdf => {
+                    // Ensure content fits on one page
+                    const totalPages = pdf.internal.getNumberOfPages();
+                    if (totalPages > 1) {
+                        console.warn('Content spans multiple pages, consider reducing content');
+                    }
+                })
+                .save();
+            
+            this.showSuccess('Premium PDF exported successfully!');
+            
+        } catch (error) {
+            console.error('Error exporting PDF:', error);
+            throw error;
+        } finally {
+            // Clean up
+            if (document.body.contains(container)) {
+                document.body.removeChild(container);
+            }
+        }
+    }
+
+    async exportToExcel() {
+        if (typeof XLSX === 'undefined') throw new Error('Excel library not loaded');
+
+        const table = document.querySelector('#reportPreview table');
+        if (table) {
+            const wb = XLSX.utils.table_to_book(table, {sheet: "Report Data"});
+            const fileName = `Report_${this.currentReportData.type}_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            this.showSuccess('Excel exported successfully');
+        } else {
+            throw new Error('No table data found to export to Excel.');
         }
     }
     
@@ -1683,35 +2790,67 @@ class ReportsController {
             return;
         }
         
-        const printWindow = window.open('', '_blank');
+        const printWindow = window.open('', '_blank', 'height=800,width=800');
+        if (!printWindow) {
+            this.showError('Please allow pop-ups to print the report.');
+            return;
+        }
+
         const reportContent = document.getElementById('reportPreview').innerHTML;
         
+        // Get all stylesheets from the current document to maintain styling
+        const stylesheets = Array.from(document.head.querySelectorAll('link[rel="stylesheet"]'))
+            .map(link => `<link rel="stylesheet" href="${link.href}">`)
+            .join('\n');
+
         printWindow.document.write(`
             <!DOCTYPE html>
-            <html>
+            <html lang="en">
             <head>
-                <title>Report - ${this.currentReportData.type}</title>
+                <meta charset="UTF-8">
+                <title>Print Report - ${this.currentReportData.type}</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+                ${stylesheets}
                 <style>
-                    body { font-family: Arial, sans-serif; margin: 20px; }
-                    .report-card { max-width: 800px; margin: 0 auto; }
+                    body { font-family: 'Inter', sans-serif; color: #1f2937; }
+                    /* Print-specific overrides */
                     @media print {
+                        body { 
+                            -webkit-print-color-adjust: exact; /* Chrome, Safari */
+                            print-color-adjust: exact; /* Firefox */
+                            background: white;
+                        }
+                        .report-card {
+                            box-shadow: none !important;
+                            border: none !important;
+                            margin: 0;
+                            max-width: 100%;
+                            padding: 0 !important;
+                            page-break-inside: avoid;
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
                         .no-print { display: none !important; }
                     }
+                    body { margin: 0; background: #f3f4f6; }
                 </style>
             </head>
             <body>
-                ${reportContent}
+                <div style="padding: 40px; display: flex; justify-content: center;">
+                    ${reportContent}
+                </div>
                 <script>
                     window.onload = function() {
                         window.print();
-                        setTimeout(function() {
-                            window.close();
-                        }, 1000);
+                        setTimeout(function() { window.close(); }, 100);
                     };
                 </script>
             </body>
             </html>
         `);
+        printWindow.document.close(); // Important for some browsers
     }
     
     refreshPreview() {

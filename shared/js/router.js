@@ -99,8 +99,6 @@ class Router {
     
     // Handle 404
     handleNotFound() {
-        console.warn('Route not found:', window.location.pathname);
-        
         const currentPath = window.location.pathname;
 
         // CRITICAL FIX: Prevent infinite redirect loops
@@ -117,6 +115,8 @@ class Router {
             console.log('Router: Ignoring standalone page:', currentPath);
             return;
         }
+
+        console.warn('Route not found:', window.location.pathname);
 
         // Check if we're in the app pages path
         if (currentPath.includes('/pages/')) {

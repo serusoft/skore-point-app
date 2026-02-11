@@ -61,8 +61,8 @@ const GradingUtils = {
         if (score >= 70) return 'C4';
         if (score >= 65) return 'C5';
         if (score >= 60) return 'C6';
-        if (score >= 55) return 'P7';
-        if (score >= 50) return 'P8';
+        if (score >= 50) return 'P7';
+        if (score >= 40) return 'P8';
         return 'F9';
     },
     
@@ -76,7 +76,7 @@ const GradingUtils = {
                 'A': 1, 'B': 2, 'C': 3, 'D': 4, 'E': 5, 'F': 9
             },
             'upper-primary': {
-                'D1': 1, 'D2': 2, 'C3': 3, 'C4': 4, 'C5': 5, 'C6': 6, 'P7': 7, 'P8': 8, 'F9': 9
+                'D1': 1, 'D2': 2, 'C3': 3, 'C4': 4, 'C5': 5, 'C6': 6, 'P7': 7, 'P8': 8, 'P9': 9, 'F9': 9
             },
             'lower-primary': {
                 'Excellent': 1, 'V.GOOD': 2, 'Good': 3, 'Fair': 4, 'Pass': 5, 'Fail': 9
@@ -118,14 +118,15 @@ const GradingUtils = {
             'E': 'Pass',
             'O': 'Low Pass',
             'F': 'Fail',
-            'D1': 'Excellent',
+            'D1': 'Distinction',
             'D2': 'Very Good',
-            'C3': 'Good',
-            'C4': 'Average',
-            'C5': 'Below Average',
-            'C6': 'Poor',
+            'C3': 'Credit',
+            'C4': 'Credit',
+            'C5': 'Credit',
+            'C6': 'Credit',
             'P7': 'Pass',
-            'P8': 'Bare Pass',
+            'P8': 'Pass',
+            'P9': 'Pass',
             'F9': 'Fail',
             'Excellent': 'Excellent',
             'V.GOOD': 'Very Good',
