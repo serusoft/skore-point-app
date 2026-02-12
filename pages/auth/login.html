@@ -5,6 +5,17 @@ if (window.top === window.self) {
         var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = h; head.appendChild(l);
     });
     var fa = document.createElement('link'); fa.rel = 'stylesheet'; fa.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'; head.appendChild(fa);
+    
+    // Inject Viewport Meta Tag for Mobile Responsiveness
+    var meta = document.createElement('meta');
+    meta.name = "viewport";
+    meta.content = "width=device-width, initial-scale=1.0";
+    head.appendChild(meta);
+
+    // Inject Body Background to match old version
+    var style = document.createElement('style');
+    style.innerHTML = 'body { background: var(--dark, #0f172a); color: var(--light, #f8fafc); min-height: 100vh; margin: 0; } .alert { word-break: break-word; white-space: normal; }';
+    head.appendChild(style);
 }
 </script>
 
@@ -19,7 +30,7 @@ if (window.top === window.self) {
                 <h1>Skore Point</h1>
             </div>
             <h2>Welcome Back</h2>
-            <p>Sign in to your account</p>
+            <p>Log in to your account</p>
         </div>
         
         <div class="alert error" id="loginError" style="display: none;">
@@ -48,18 +59,18 @@ if (window.top === window.self) {
             </div>
             
             <button type="submit" class="btn btn-primary btn-block">
-                <i class="fas fa-sign-in-alt"></i> Sign In
+                <i class="fas fa-sign-in-alt"></i> Log in
             </button>
         </form>
         
-        <div class="auth-footer">
-            <p>
-                Don't have an account? 
-                <a href="../auth/register.html" data-page="register">Create Account</a>
-            </p>
-            <p>
+        <div class="footer-links">
+            <div>
+                <p style="margin-bottom: 8px;">Don’t have an account yet?</p>
+                <a href="../auth/register.html" class="btn btn-outline-primary btn-block">Sign up</a>
+            </div>
+            <div>
                 <a href="#" id="forgotPasswordLink">Forgot Password?</a>
-            </p>
+            </div>
         </div>
     </div>
 </div>

@@ -242,20 +242,6 @@ class AppUI {
                     <span class="brand-mark"><i class="fas fa-graduation-cap"></i></span>
                     <span class="brand-title">Skore Point</span>
                 </a>
-
-                <div class="navbar-nav desktop-only">
-                    <a href="../auth/login.html" data-page="login" class="nav-link">Sign In</a>
-                    <a href="../auth/register.html" data-page="register" class="nav-link btn btn-primary">Register</a>
-                </div>
-
-                <button class="navbar-toggle mobile-only" id="navbar-toggle" aria-label="Open menu">
-                    <i class="fas fa-bars"></i>
-                </button>
-
-                <div class="mobile-nav" id="navbar-mobile-nav" aria-hidden="true">
-                    <a href="../auth/login.html" data-page="login" class="nav-link">Sign In</a>
-                    <a href="../auth/register.html" data-page="register" class="nav-link">Register</a>
-                </div>
             </nav>
         `;
     }

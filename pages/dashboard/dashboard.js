@@ -130,6 +130,36 @@ function renderUserProfileCard() {
         userRoleElement.className = `user-role ${userRole}`; // Add role-specific class for styling
         userEmailElement.textContent = user.email;
 
+        // Add Edit Profile Button if not exists
+        if (!document.getElementById('editProfileBtn')) {
+            const editBtn = document.createElement('button');
+            editBtn.id = 'editProfileBtn';
+            editBtn.innerHTML = '<i class="fas fa-pen"></i>';
+            editBtn.title = 'Edit Profile';
+            Object.assign(editBtn.style, {
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--light)',
+                cursor: 'pointer',
+                marginLeft: 'auto',
+                transition: 'background 0.2s'
+            });
+            editBtn.addEventListener('mouseenter', () => editBtn.style.background = 'rgba(255, 255, 255, 0.2)');
+            editBtn.addEventListener('mouseleave', () => editBtn.style.background = 'rgba(255, 255, 255, 0.1)');
+            editBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showEditProfileModal();
+            });
+            
+            userDashboardDetails.appendChild(editBtn);
+        }
+
         // Ensure the card is visible (if it was hidden initially)
         userDashboardDetails.style.display = 'flex'; // Assuming flex display for the card
 
@@ -363,10 +393,18 @@ function showJoinSchoolModal() {
             if (subjectName) {
                 try {
                     // More efficient: Directly query for the lowercase subject name.
-                    const matchedSubjects = await Firebase.db.query('subjects', [
+                    let matchedSubjects = await Firebase.db.query('subjects', [
                         { field: 'schoolId', op: '==', value: school.id },
                         { field: 'name_lowercase', op: '==', value: subjectName.toLowerCase() }
                     ]);
+
+                    // Fallback: Try exact name match if lowercase failed (for legacy data)
+                    if (matchedSubjects.length === 0) {
+                        matchedSubjects = await Firebase.db.query('subjects', [
+                            { field: 'schoolId', op: '==', value: school.id },
+                            { field: 'name', op: '==', value: subjectName }
+                        ]);
+                    }
 
                     assignedSubjects = matchedSubjects.map(s => s.id);
                     
@@ -685,6 +723,7 @@ async function createDefaultStructure(schoolId, level) {
         for (const subjectName of subjects) {
             await Firebase.db.addDoc('subjects', {
                 name: subjectName,
+                name_lowercase: subjectName.toLowerCase(),
                 schoolId: schoolId,
                 level: level,
                 category: category,
@@ -708,4 +747,89 @@ function getClassCategory(className, level) {
 function getInitials(name) {
     if (!name) return 'U';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+}
+
+function showEditProfileModal() {
+    const user = AppState.currentUser;
+    const userData = AppState.currentUserData || {};
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Profile</h3>
+                <button class="close-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="editProfileForm">
+                <div class="form-group">
+                    <label><i class="fas fa-user"></i> Full Name</label>
+                    <input type="text" id="editName" value="${userData.name || user.displayName || ''}" required>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-envelope"></i> Email Address</label>
+                    <input type="email" id="editEmail" value="${user.email || ''}" required>
+                    <small style="display:block; margin-top:5px; color:var(--gray-light); font-size:0.85em;">
+                        <i class="fas fa-info-circle"></i> Changing email may require re-login.
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-book"></i> Subject</label>
+                    <input type="text" id="editSubject" value="${userData.subject || ''}" placeholder="e.g. Mathematics">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    const closeModal = () => document.body.removeChild(modal);
+    modal.querySelector('.close-modal').addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    
+    modal.querySelector('#editProfileForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const newName = document.getElementById('editName').value.trim();
+        const newEmail = document.getElementById('editEmail').value.trim();
+        const newSubject = document.getElementById('editSubject').value.trim();
+        
+        if (!newName || !newEmail) {
+            showToast('Name and Email are required', 'error');
+            return;
+        }
+        
+        try {
+            showLoading('Updating profile...');
+            
+            // Update Firestore Data
+            const updates = {
+                name: newName,
+                subject: newSubject,
+                email: newEmail
+            };
+            
+            await Firebase.db.updateDoc('users', user.uid, updates);
+            
+            // Update local state
+            AppState.currentUserData = { ...AppState.currentUserData, ...updates };
+            
+            // Refresh UI
+            renderUserProfileCard();
+            
+            hideLoading();
+            showToast('Profile updated successfully', 'success');
+            closeModal();
+            
+        } catch (error) {
+            hideLoading();
+            console.error('Profile update error:', error);
+            showToast('Failed to update profile: ' + error.message, 'error');
+        }
+    });
 }

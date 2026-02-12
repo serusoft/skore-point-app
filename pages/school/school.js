@@ -1,7 +1,7 @@
 // pages/school/school.js
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('School Page: DOMContentLoaded - Starting initialization process (v1.2.0).');
+    console.log('School Page: DOMContentLoaded - Starting initialization process (v1.2.1).');
 
     // Track initialization state
     let pageInitialized = false;
@@ -152,26 +152,46 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Check for default 'subject' string from registration
                 // We do this to ensure the default subject is assigned for the current level
                 if (userData.subject) {
-                    const subjectName = userData.subject.trim().toLowerCase();
+                    const subjectNameLower = userData.subject.trim().toLowerCase();
+                    const subjectNameOriginal = userData.subject.trim();
 
                     try {
                         let matchedSubjects = [];
 
                         // Look for the subject in the current academic level
                         if (academicLevel) {
+                            // Try lowercase match first
                             matchedSubjects = await Firebase.db.query('subjects', [
                                 { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-                                { field: 'name_lowercase', op: '==', value: subjectName },
+                                { field: 'name_lowercase', op: '==', value: subjectNameLower },
                                 { field: 'category', op: '==', value: academicLevel }
                             ]);
+
+                            // Fallback: Try exact name match if lowercase failed
+                            if (matchedSubjects.length === 0) {
+                                matchedSubjects = await Firebase.db.query('subjects', [
+                                    { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
+                                    { field: 'name', op: '==', value: subjectNameOriginal },
+                                    { field: 'category', op: '==', value: academicLevel }
+                                ]);
+                            }
                         }
 
                         // Fallback: If no subjects assigned at all and no level specified, search all levels
                         if (matchedSubjects.length === 0 && finalAssignedSubjects.length === 0 && !academicLevel) {
+                            // Try lowercase match
                             matchedSubjects = await Firebase.db.query('subjects', [
                                 { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-                                { field: 'name_lowercase', op: '==', value: subjectName }
+                                { field: 'name_lowercase', op: '==', value: subjectNameLower }
                             ]);
+
+                            // Fallback: Try exact name match
+                            if (matchedSubjects.length === 0) {
+                                matchedSubjects = await Firebase.db.query('subjects', [
+                                    { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
+                                    { field: 'name', op: '==', value: subjectNameOriginal }
+                                ]);
+                            }
                         }
 
                         if (matchedSubjects.length > 0) {
@@ -633,11 +653,86 @@ document.addEventListener('DOMContentLoaded', async () => {
             throw new Error('No school data available');
         }
         
-        // Update page title and school info
-        const titleEl = document.getElementById('schoolPortalTitle');
-        if (titleEl) {
-            titleEl.textContent = `${school.name} Portal`;
+        // --- 1. Create/Update Hero Section (Below Header) ---
+        const pageHeader = document.querySelector('.page-header');
+        const contentTabs = document.getElementById('contentTabs');
+        
+        if (pageHeader && contentTabs) {
+            let heroSection = document.getElementById('schoolHeroSection');
+            if (!heroSection) {
+                heroSection = document.createElement('div');
+                heroSection.id = 'schoolHeroSection';
+                // Insert after page header, before tabs
+                pageHeader.parentNode.insertBefore(heroSection, contentTabs);
+            }
             
+            // Premium Hero Styling
+            Object.assign(heroSection.style, {
+                background: 'linear-gradient(to right, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+                padding: '25px 30px',
+                margin: '0 0 20px 0',
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '25px',
+                flexWrap: 'wrap'
+            });
+
+            // Populate Hero Section
+            heroSection.innerHTML = `
+                <div style="position: relative; flex-shrink: 0;">
+                    <img src="${school.logoUrl || '../../assets/icons/skore-icon.jpg'}" 
+                         alt="${school.name}" 
+                         style="width: 80px; height: 80px; object-fit: contain; background: white; padding: 8px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <h1 style="margin: 0 0 8px 0; font-size: 24px; color: var(--light); font-weight: 700; line-height: 1.2;">${school.name}</h1>
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <span style="background: rgba(67, 97, 238, 0.15); color: #93c5fd; padding: 4px 12px; border-radius: 20px; font-size: 13px; border: 1px solid rgba(67, 97, 238, 0.3); display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-key" style="font-size: 11px;"></i> ${school.code}
+                        </span>
+                        <span style="background: rgba(16, 185, 129, 0.15); color: #6ee7b7; padding: 4px 12px; border-radius: 20px; font-size: 13px; border: 1px solid rgba(16, 185, 129, 0.3); display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-graduation-cap" style="font-size: 11px;"></i> ${school.level === 'primary' ? 'Primary' : 'Secondary'}
+                        </span>
+                        ${school.location ? `
+                        <span style="background: rgba(255, 255, 255, 0.05); color: var(--gray-light); padding: 4px 12px; border-radius: 20px; font-size: 13px; border: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-map-marker-alt" style="font-size: 11px;"></i> ${school.location}
+                        </span>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // --- 2. Clean up Header (Remove previous injections) ---
+        const headerContent = document.querySelector('.header-content');
+        const titleEl = document.getElementById('schoolPortalTitle');
+        
+        if (headerContent && titleEl) {
+            // Reset styles
+            headerContent.style.display = '';
+            headerContent.style.alignItems = '';
+            headerContent.style.gap = '';
+            
+            // Remove logo if it was injected there
+            const oldLogo = document.getElementById('schoolHeaderLogo');
+            if (oldLogo) oldLogo.remove();
+            
+            // Unwrap text if wrapped
+            const textWrapper = headerContent.querySelector('.header-text-wrapper');
+            if (textWrapper) {
+                while (textWrapper.firstChild) {
+                    headerContent.insertBefore(textWrapper.firstChild, textWrapper);
+                }
+                textWrapper.remove();
+            }
+            
+            titleEl.textContent = 'School Portal';
+            titleEl.style.marginBottom = '';
+            
+            // Hide the old info badge in header since we have the hero section now
+            const infoBadge = headerContent.querySelector('.school-info-badge');
+            if (infoBadge) infoBadge.style.display = 'none';
+
             // Create fixed Exit Portal button if it doesn't exist
             let fixedExitBtn = document.getElementById('exitSchoolBtn');
             if (!fixedExitBtn) {
@@ -647,25 +742,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 fixedExitBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Exit Portal';
                 document.body.appendChild(fixedExitBtn);
             }
-        }
-        
-        const codeEl = document.getElementById('currentSchoolCode');
-        if (codeEl) codeEl.textContent = school.code || 'N/A';
-        
-        // Create school level badge if not exists
-        let levelBadge = document.getElementById('schoolLevelBadge');
-        if (!levelBadge) {
-            const schoolInfoBadge = document.querySelector('.school-info-badge');
-            if (schoolInfoBadge) {
-                levelBadge = document.createElement('span');
-                levelBadge.id = 'schoolLevelBadge';
-                levelBadge.className = `school-level-badge ${school.level}`;
-                levelBadge.textContent = school.level === 'primary' ? 'Primary School' : 'Secondary School';
-                schoolInfoBadge.insertBefore(levelBadge, codeEl.parentElement);
-            }
-        } else {
-            levelBadge.textContent = school.level === 'primary' ? 'Primary School' : 'Secondary School';
-            levelBadge.className = `school-level-badge ${school.level}`;
         }
         
         // Apply role-based tab visibility
@@ -745,7 +821,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (tab) {
                 const section = tab.dataset.section;
                 if (section) {
-                    console.log(`School Page: Tab clicked (section: ${section}), is admin: ${isCurrentUserAdmin()}`);
+                    e.preventDefault(); // Prevent default action, e.g., if it were an <a> tag
+                    console.log(`School Page: Tab clicked (section: ${section})`);
+
+                    // Handle direct navigation tabs first
+                    if (section === 'enterMarks') {
+                        navigateToMarksPage();
+                        return;
+                    }
+                    if (section === 'reports' || section === 'reportCard') {
+                        showPageLoading('Opening Reports...');
+                        window.location.href = '../reports/reports.html';
+                        return;
+                    }
                     
                     // Check if teacher is trying to access restricted section
                     if (!isCurrentUserAdmin() && ['students', 'subjects', 'settings'].includes(section)) {
@@ -755,6 +843,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                     
                     switchTab(section);
+
+                    // Auto-scroll for mobile users to hide header/hero section
+                    if (window.innerWidth <= 768 && tab.classList.contains('mobile-tab')) {
+                        const levelNav = document.getElementById('levelNavigation');
+                        const contentArea = document.querySelector('.school-content');
+                        // Prefer level navigation as scroll target if visible, otherwise content area
+                        const targetEl = (levelNav && levelNav.offsetParent) ? levelNav : contentArea;
+                        
+                        if (targetEl) {
+                            setTimeout(() => {
+                                targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }, 100);
+                        }
+                    }
                 }
                 return;
             }
@@ -1052,13 +1154,6 @@ document.addEventListener('DOMContentLoaded', async () => {
      */
     function switchTab(section) {
         console.log(`School Page: switchTab() called with section: ${section} (In-page view)`);
-        
-        // Redirect to reports page if reports tab is activated
-        if (section === 'reports' || section === 'reportCard') {
-            showPageLoading('Opening Reports...');
-            window.location.href = '../reports/reports.html';
-            return;
-        }
         
         // Check if teacher is trying to access restricted section
         if (!isCurrentUserAdmin() && ['students', 'subjects', 'settings'].includes(section)) {
@@ -2831,6 +2926,55 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     /**
+     * Handles navigation to the marks entry page, including RBAC checks.
+     */
+    async function navigateToMarksPage() {
+        try {
+            const isAdmin = isCurrentUserAdmin();
+            const level = AppState.currentAcademicLevel;
+
+            showPageLoading('Opening marks entry...');
+
+            if (isAdmin) {
+                if (typeof window.navigateTo === 'function') {
+                    window.navigateTo('marks', { level, isAdmin: true, assignedSubjects: [] });
+                } else {
+                    // Fallback with query params
+                    window.location.href = `../marks/marks.html?level=${level}&isAdmin=true`;
+                }
+                return;
+            }
+
+            // Teacher flow
+            const assignedSubjects = await getTeacherAssignedSubjects(level);
+            hidePageLoading();
+
+            if (assignedSubjects.length === 0) {
+                const userDoc = await Firebase.db.getDoc('users', AppState.currentUser.uid);
+                const userData = userDoc.exists() ? userDoc.data() : {};
+                
+                if (userData.subject) {
+                    showToast(`Your registered subject "${userData.subject}" was not found for this academic level. Please contact an admin.`, 'error', 6000);
+                } else {
+                    showToast('You have no subjects assigned for this level. Please contact an admin.', 'warning', 6000);
+                }
+                return;
+            }
+
+            if (typeof window.navigateTo === 'function') {
+                window.navigateTo('marks', { level, isAdmin: false, assignedSubjects });
+            } else {
+                // Fallback with query params
+                window.location.href = `../marks/marks.html?level=${level}&isAdmin=false&assignedSubjects=${assignedSubjects.join(',')}`;
+            }
+        } catch (error) {
+            console.error('Error navigating to marks page:', error);
+            hidePageLoading();
+            showToast('Failed to open marks page. Please try again.', 'error');
+        }
+    }
+
+    /**
      * Setup Enter Marks page - wire up handler buttons
      */
     function setupEnterMarksHandlers() {
@@ -2838,51 +2982,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const viewReportCardsBtn = document.getElementById('viewReportCardsBtn');
         
         if (enterMarksBtn) {
-            enterMarksBtn.addEventListener('click', async () => {
-                // TEACHER RESTRICTION: Teachers can enter marks for their assigned subjects
-                const isAdmin = isCurrentUserAdmin();
-                
-                if (isAdmin) {
-                    showToast('Opening marks entry...', 'info');
-                    if (typeof window.navigateTo === 'function') {
-                        window.navigateTo('marks', {
-                            level: AppState.currentAcademicLevel,
-                            isAdmin: true,
-                            assignedSubjects: []
-                        });
-                    }
-                    return;
-                }
-                
-                // Teacher flow
-                showPageLoading('Checking assigned subjects...');
-                // Get all subjects, not just for this level, to allow warnings on the marks page
-                const assignedSubjects = await getTeacherAssignedSubjects();
-                hidePageLoading();
-                
-                if (assignedSubjects.length === 0) {
-                    // Try to give a specific error message
-                    const userDoc = await Firebase.db.getDoc('users', AppState.currentUser.uid);
-                    const userData = userDoc.exists() ? userDoc.data() : {};
-                    
-                    if (userData.subject) {
-                        showToast(`Your registered subject "${userData.subject}" was not found in this school. Please contact an admin.`, 'error', 5000);
-                    } else {
-                        showToast('You have no subjects assigned. Please contact an admin to assign subjects to you.', 'warning');
-                    }
-                    return;
-                }
-                
-                showToast('Opening marks entry...', 'info');
-                
-                if (typeof window.navigateTo === 'function') {
-                    window.navigateTo('marks', {
-                        level: AppState.currentAcademicLevel,
-                        isAdmin: false,
-                        assignedSubjects: assignedSubjects
-                    });
-                }
-            });
+            enterMarksBtn.addEventListener('click', navigateToMarksPage);
         }
         
         if (viewReportCardsBtn) {

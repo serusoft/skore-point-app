@@ -293,6 +293,7 @@ async function checkAuthState() {
                 if (!user && (window.location.pathname.endsWith('/') || window.location.pathname.endsWith('/index.html'))) {
                     console.log('App: onAuthStateChanged() - Redirecting unauthenticated user from root to launch page.');
                     window.location.href = 'pages/launch/launch.html';
+                    return; // Stop execution to prevent handlePostAuthNavigation from overriding
                 }
                 
                 resolve(); // Resolve the promise here, ensuring app initialization waits.
@@ -319,7 +320,10 @@ function handlePostAuthNavigation(user) {
         const isAtRootOrIndex = path === '/' || path.endsWith('/index.html');
         const isNotInPages = !path.includes('/pages/');
 
-        if (isAtRootOrIndex || isNotInPages) {
+        if (isAtRootOrIndex) {
+            // If at root, go to launch page
+            window.location.href = 'pages/launch/launch.html';
+        } else if (isNotInPages) {
             window.location.href = 'pages/auth/login.html';
         } else {
             window.location.href = '../auth/login.html';

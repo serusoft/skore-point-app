@@ -98,11 +98,17 @@ async function initializeMarksPage(level) {
     const badge = document.getElementById('marksLevelBadge');
     if (badge) badge.textContent = getLevelDisplayName(level);
     
+    // Update instruction text based on level
+    updateMarksInstruction(level);
+    
     // Populate level filter
     populateLevelFilter(level);
     
     // Setup event listeners
     setupMarksEventListeners();
+    
+    // Setup mobile save button layout
+    setupMobileSaveButton();
     
     // Load initial data
     await loadMarksData(level);
@@ -125,6 +131,7 @@ function setupMarksEventListeners() {
             AppState.currentAcademicLevel = level;
             const badge = document.getElementById('marksLevelBadge');
             if (badge) badge.textContent = getLevelDisplayName(level);
+            updateMarksInstruction(level);
             clearMarksForm();
             await loadMarksData(level);
         }
@@ -186,6 +193,35 @@ function setupMarksEventListeners() {
     if (marksGrid) {
         marksGrid.addEventListener('click', (e) => {
             // Mismatch warning removed to allow entry
+        });
+    }
+
+    // Keyboard shortcut for Save (Ctrl+S)
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            const saveBtn = document.getElementById('saveMarksBtn');
+            // Check if button exists and is visible/enabled
+            if (saveBtn && !saveBtn.disabled && saveBtn.offsetParent !== null) {
+                saveMarks();
+            }
+        }
+    });
+
+    // Collapsible Summary
+    const summaryHeader = document.getElementById('summaryHeader');
+    if (summaryHeader) {
+        summaryHeader.addEventListener('click', () => {
+            const stats = document.getElementById('summaryStats');
+            const icon = document.getElementById('summaryToggleIcon');
+            
+            if (stats.style.display === 'none') {
+                stats.style.display = ''; // Revert to CSS default
+                icon.className = 'fas fa-chevron-up';
+            } else {
+                stats.style.display = 'none';
+                icon.className = 'fas fa-chevron-down';
+            }
         });
     }
 }
@@ -521,7 +557,7 @@ function handleStudentSearch(query) {
     }
 }
 
-function selectStudent(student) {
+async function selectStudent(student) {
     // Update selected student display
     document.getElementById('selectedStudentName').textContent = student.name;
     document.getElementById('selectedStudentClass').textContent = getClassFromId(student.classId);
@@ -531,7 +567,15 @@ function selectStudent(student) {
     window.selectedStudent = student;
     
     // Load marks for this student
-    loadStudentMarks(student.id);
+    await loadStudentMarks(student.id);
+
+    // Scroll to marks form on mobile for convenience
+    if (window.innerWidth <= 768) {
+        const marksForm = document.getElementById('marksEntryForm');
+        if (marksForm && marksForm.style.display !== 'none') {
+            marksForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
 }
 
 async function loadStudentMarks(studentId) {
@@ -1038,6 +1082,40 @@ function debounce(func, wait) {
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
     };
+}
+
+function setupMobileSaveButton() {
+    const saveBtn = document.getElementById('saveMarksBtn');
+    if (!saveBtn) return;
+    
+    // Only apply on mobile devices
+    if (window.innerWidth > 768) return;
+
+    const btnRow = saveBtn.parentElement;
+    if (btnRow) {
+        // Make the button row sticky at the bottom
+        Object.assign(btnRow.style, {
+            position: 'sticky',
+            bottom: '0',
+            backgroundColor: '#0f172a', // Dark background to cover content
+            padding: '15px',
+            zIndex: '999',
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 -4px 10px rgba(0,0,0,0.3)',
+            marginTop: '20px' // Ensure separation from content
+        });
+    }
+}
+
+function updateMarksInstruction(level) {
+    const instructionEl = document.getElementById('marksEntryInstruction');
+    if (!instructionEl) return;
+
+    if (level === 'alevel') {
+        instructionEl.textContent = 'Enter marks below. For A-Level subjects, enter marks for each paper separately.';
+    } else {
+        instructionEl.textContent = 'Enter marks below (0-100).';
+    }
 }
 
 // Export for inline event handlers

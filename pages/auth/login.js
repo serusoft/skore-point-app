@@ -8,12 +8,23 @@ function initLoginPage() {
     window.loginInit = true;
     console.log('initLoginPage called');
     const loginForm = document.getElementById('loginForm');
+    
+    if (!loginForm) {
+        console.error('Login form element not found in DOM');
+        return;
+    }
+
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     const passwordToggle = document.querySelector('.password-toggle');
     const loginError = document.getElementById('loginError');
     const loginErrorText = document.getElementById('loginErrorText');
     const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+
+    // Clear error when user starts typing
+    const clearError = () => { if(loginError) loginError.style.display = 'none'; };
+    if(emailInput) emailInput.addEventListener('input', clearError);
+    if(passwordInput) passwordInput.addEventListener('input', clearError);
     
     // Password toggle
     passwordToggle?.addEventListener('click', () => {
@@ -50,7 +61,7 @@ function initLoginPage() {
             // Success - navigation handled by auth state change
             
         } catch (error) {
-            UI.hideLoading();
+            if (typeof UI !== 'undefined') UI.hideLoading();
             console.error('Login error:', error);
             
             let errorMessage = 'Login failed. Please try again.';
@@ -62,11 +73,14 @@ function initLoginPage() {
                     errorMessage = 'This account has been disabled. Please contact support for assistance.';
                     break;
                 case 'auth/user-not-found':
-                    errorMessage = 'We couldn\'t find an account with this email. Please check the spelling or register a new account.';
+                    errorMessage = 'No account exists with this email address. Please check the email or sign up.';
                     break;
                 case 'auth/wrong-password':
+                    errorMessage = 'The password you entered is incorrect. Please try again.';
+                    break;
+                case 'auth/invalid-login-credentials':
                 case 'auth/invalid-credential':
-                    errorMessage = 'Incorrect email or password. Please try again or use "Forgot Password".';
+                    errorMessage = 'Incorrect email or password. Please try again.';
                     break;
                 case 'auth/network-request-failed':
                     errorMessage = 'We couldn\'t connect to the server. Please check your internet connection.';
@@ -101,10 +115,10 @@ function showLoginError(message) {
         loginErrorText.textContent = message;
         loginError.style.display = 'flex';
         
-        // Hide after 5 seconds
-        setTimeout(() => {
-            loginError.style.display = 'none';
-        }, 5000);
+        // Scroll to error to ensure visibility
+        loginError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Auto-hide removed to ensure user sees the message
     }
 }
 

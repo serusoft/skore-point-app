@@ -101,7 +101,7 @@
                     <h3 id="selectedStudentName"></h3>
                     <span class="student-class" id="selectedStudentClass"></span>
                 </div>
-                <p>Enter marks below. For A-Level subjects, enter marks for each paper separately.</p>
+                <p id="marksEntryInstruction">Enter marks below.</p>
             </div>
         </div>
 
@@ -109,22 +109,26 @@
         <div class="marks-entry-form" id="marksEntryForm" style="display: none;">
             <div class="form-header">
                 <h4>Enter Marks</h4>
-                <div class="form-actions">
-                    <button class="btn btn-success" id="saveMarksBtn">
-                        <i class="fas fa-save"></i> Save Marks
-                    </button>
-                    <button class="btn btn-secondary" id="clearFormBtn">
-                        <i class="fas fa-eraser"></i> Clear
-                    </button>
-                </div>
             </div>
             
             <div class="marks-grid" id="marksGrid">
                 <!-- Marks inputs will be generated here -->
             </div>
             
+            <div class="form-actions" style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-secondary" id="clearFormBtn">
+                    <i class="fas fa-eraser"></i> Clear
+                </button>
+                <button class="btn btn-success" id="saveMarksBtn">
+                    <i class="fas fa-save"></i> Save Marks
+                </button>
+            </div>
+            
             <div class="marks-summary" id="marksSummary" style="display: none;">
-                <h5>Summary</h5>
+                <div class="summary-header" id="summaryHeader" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; margin-bottom: 10px; user-select: none;">
+                    <h5 style="margin: 0;">Summary</h5>
+                    <i class="fas fa-chevron-up" id="summaryToggleIcon"></i>
+                </div>
                 <div class="summary-stats" id="summaryStats"></div>
             </div>
         </div>

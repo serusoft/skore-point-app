@@ -5,6 +5,17 @@ if (window.top === window.self) {
         var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = h; head.appendChild(l);
     });
     var fa = document.createElement('link'); fa.rel = 'stylesheet'; fa.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'; head.appendChild(fa);
+
+    // Inject Viewport Meta Tag for Mobile Responsiveness
+    var meta = document.createElement('meta');
+    meta.name = "viewport";
+    meta.content = "width=device-width, initial-scale=1.0";
+    head.appendChild(meta);
+
+    // Inject Body Background to match old version
+    var style = document.createElement('style');
+    style.innerHTML = 'body { background: var(--dark, #0f172a); color: var(--light, #f8fafc); min-height: 100vh; margin: 0; } .auth-container { animation: slideInTop 0.5s ease-out; margin-top: 0; } @keyframes slideInTop { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } @media (max-width: 768px) { .has-navbar .register-page { padding-top: 100px !important; } } .phone-input-container { display: flex; align-items: center; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: rgba(0,0,0,0.2); overflow: hidden; } .phone-prefix { display: flex; align-items: center; padding: 0 12px; background: rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.1); height: 45px; gap: 8px; color: #cbd5e1; font-size: 0.95rem; } .phone-prefix img { width: 20px; height: auto; border-radius: 2px; } .phone-input-container input { border: none !important; background: transparent !important; margin: 0 !important; height: 45px !important; border-radius: 0 !important; } .phone-input-container:focus-within { border-color: var(--primary, #4361ee); box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15); }';
+    head.appendChild(style);
 }
 </script>
 
@@ -18,8 +29,8 @@ if (window.top === window.self) {
                 <i class="fas fa-graduation-cap"></i>
                 <h1>Skore Point</h1>
             </div>
-            <h2>Create Account</h2>
-            <p>Join Skore Point today</p>
+            <h2>Sign up</h2>
+            <p>Join Skore Point in 3 easy steps</p>
         </div>
         
         <div class="alert error" id="registerError" style="display: none;">
@@ -33,72 +44,98 @@ if (window.top === window.self) {
         </div>
         
         <form id="registerForm">
-            <div class="form-group">
-                <label for="regName">
-                    <i class="fas fa-user"></i> Full Name
-                </label>
-                <input type="text" id="regName" placeholder="John Doe" required>
+            <!-- Wizard Progress Indicators -->
+            <div class="wizard-progress">
+                <div class="progress-step active" data-step="1">1</div>
+                <div class="progress-step" data-step="2">2</div>
+                <div class="progress-step" data-step="3">3</div>
             </div>
-            
-            <div class="form-group">
-                <label for="regEmail">
-                    <i class="fas fa-envelope"></i> Email Address
-                </label>
-                <input type="email" id="regEmail" placeholder="john@school.edu" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="regSubject">
-                    <i class="fas fa-book"></i> Primary Teaching Subject
-                </label>
-                <input type="text" id="regSubject" placeholder="Mathematics" required>
-            </div>
-            
-            <div class="image-upload" id="profileUploadArea">
-                <i class="fas fa-user-circle"></i>
-                <p>Upload Profile Picture</p>
-                <span>Click to upload (Required)</span>
-                <div class="image-preview" id="profilePreview" style="display: none;">
-                    <img id="profilePreviewImg" src="" alt="Profile Preview">
+
+            <div class="wizard-content">
+                <!-- SECTION 1: IDENTITY -->
+                <div class="wizard-step active" id="step1">
+                    <div class="step-title">Identity Details</div>
+                    
+                    <div class="form-group">
+                        <label for="regName"><i class="fas fa-user"></i> Full Name <span class="required">*</span></label>
+                        <input type="text" id="regName" placeholder="John Doe" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="regEmail"><i class="fas fa-envelope"></i> Email Address <span class="required">*</span></label>
+                        <input type="email" id="regEmail" placeholder="john@school.edu" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="regPhone"><i class="fas fa-phone"></i> Tel No. <span class="required">*</span></label>
+                        <div class="phone-input-container">
+                            <div class="phone-prefix"><img src="https://flagcdn.com/w20/ug.png" alt="UG"> <span>+256</span></div>
+                            <input type="tel" id="regPhone" placeholder="700 000000" required maxlength="9" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                        </div>
+                    </div>
+
+                    <div class="wizard-actions">
+                        <button type="button" class="btn btn-primary btn-block next-step" data-next="2">Next <i class="fas fa-arrow-right"></i></button>
+                    </div>
                 </div>
-                <input type="file" class="file-input" id="profileFile" accept="image/*" required>
-                <input type="hidden" id="profileUrl">
-            </div>
-            
-            <div class="form-group">
-                <label for="regPassword">
-                    <i class="fas fa-lock"></i> Password
-                </label>
-                <div class="password-input">
-                    <input type="password" id="regPassword" placeholder="Minimum 6 characters" required minlength="6">
-                    <button type="button" class="password-toggle">
-                        <i class="fas fa-eye"></i>
-                    </button>
+
+                <!-- SECTION 2: TEACHING INFO -->
+                <div class="wizard-step" id="step2">
+                    <div class="step-title">Teaching Profile</div>
+                    
+                    <div class="image-upload" id="profileUploadArea">
+                        <i class="fas fa-user-circle"></i>
+                        <p>Upload Profile Picture <span class="required">*</span></p>
+                        <span>Click to upload</span>
+                        <div class="image-preview profile-preview" id="profilePreview" style="display: none;">
+                            <img id="profilePreviewImg" src="" alt="Profile Preview">
+                        </div>
+                        <input type="file" class="file-input" id="profileFile" accept="image/*">
+                        <input type="hidden" id="profileUrl">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="regSubject"><i class="fas fa-book"></i> Primary Subject <span class="required">*</span></label>
+                        <input type="text" id="regSubject" placeholder="e.g. Mathematics" required>
+                    </div>
+
+                    <div class="wizard-actions">
+                        <button type="button" class="btn btn-light prev-step" data-prev="1">Back</button>
+                        <button type="button" class="btn btn-primary next-step" data-next="3">Next <i class="fas fa-arrow-right"></i></button>
+                    </div>
+                </div>
+
+                <!-- SECTION 3: SECURITY -->
+                <div class="wizard-step" id="step3">
+                    <div class="step-title">Security</div>
+                    
+                    <div class="form-group">
+                        <label for="regPassword"><i class="fas fa-lock"></i> Password <span class="required">*</span></label>
+                        <div class="password-input">
+                            <input type="password" id="regPassword" placeholder="Min 6 characters" required minlength="6">
+                            <button type="button" class="password-toggle"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirmPassword"><i class="fas fa-lock"></i> Confirm Password <span class="required">*</span></label>
+                        <div class="password-input">
+                            <input type="password" id="confirmPassword" placeholder="Confirm password" required>
+                            <button type="button" class="password-toggle"><i class="fas fa-eye"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="wizard-actions">
+                        <button type="button" class="btn btn-light prev-step" data-prev="2">Back</button>
+                        <button type="submit" class="btn btn-success btn-block" id="submitBtn">Sign up <i class="fas fa-check"></i></button>
+                    </div>
                 </div>
             </div>
-            
-            <div class="form-group">
-                <label for="confirmPassword">
-                    <i class="fas fa-lock"></i> Confirm Password
-                </label>
-                <div class="password-input">
-                    <input type="password" id="confirmPassword" placeholder="Confirm your password" required>
-                    <button type="button" class="password-toggle">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <button type="submit" class="btn btn-primary btn-block">
-                <i class="fas fa-user-plus"></i> Create Account
-            </button>
         </form>
         
-        <div class="auth-footer">
-            <p>
-                Already have an account? 
-                <a href="../auth/login.html" data-page="login">Sign In</a>
-            </p>
+        <div class="footer-links">
+            <p>Already have an account?</p>
+            <a href="../auth/login.html" class="btn btn-outline-primary btn-block" style="margin-top: 5px;">Log in</a>
         </div>
     </div>
 </div>

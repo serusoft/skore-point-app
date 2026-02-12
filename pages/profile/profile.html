@@ -1,10 +1,9 @@
-<!-- pages/profile/profile.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skore Point - My Profile</title>
+    <title>My Profile - Skore Point</title>
     <link rel="stylesheet" href="../../shared/css/variables.css">
     <link rel="stylesheet" href="../../shared/css/base.css">
     <link rel="stylesheet" href="../../shared/css/components.css">
@@ -13,96 +12,61 @@
 </head>
 <body>
     <div id="navbar-container"></div>
-    
-    <div class="profile-page">
-        <div class="profile-header">
-            <button class="back-btn" onclick="window.history.back()">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            <h1>My Profile</h1>
-            <div class="profile-menu">
-                <button class="menu-btn" id="profileMenuBtn">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <div class="menu-dropdown" id="profileMenuDropdown">
-                    <a href="#" id="profileSettingsLink"><i class="fas fa-cog"></i> Profile Settings</a>
-                    <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
-                </div>
-            </div>
-        </div>
-        
+
+    <div class="main-container">
         <div class="profile-container">
+            <div class="page-header">
+                <h1><i class="fas fa-user-circle"></i> My Profile</h1>
+                <button class="btn btn-secondary" id="backBtn">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+            </div>
+
             <div class="profile-card">
-                <div class="user-profile-display-section">
-                    <div class="user-details-left">
-                        <span class="user-role" id="profileUserRole"></span>
-                        <h2 id="profileUserName"></h2>
-                        <p class="user-email" id="profileUserEmail"></p>
+                <form id="profileForm">
+                    <div class="profile-header-section">
+                        <div class="profile-image-wrapper">
+                            <img src="" alt="Profile" id="profileImage">
+                            <div class="profile-image-overlay" id="uploadTrigger">
+                                <i class="fas fa-camera"></i>
+                            </div>
+                            <input type="file" id="profileUpload" accept="image/*" style="display: none;">
+                        </div>
+                        <div class="profile-title">
+                            <h2 id="displayName">Loading...</h2>
+                            <span class="role-badge" id="displayRole">Teacher</span>
+                        </div>
                     </div>
-                    <div class="profile-picture-container" id="profilePictureContainer">
-                        <div class="profile-picture" id="currentProfilePicture">
-                            <!-- Profile picture will be loaded here -->
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label><i class="fas fa-user"></i> Full Name</label>
+                            <input type="text" id="fullName" required>
                         </div>
-                        <button class="edit-picture-btn" id="editProfilePictureBtn">
-                            <i class="fas fa-camera"></i>
-                        </button>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-envelope"></i> Email Address</label>
+                            <input type="email" id="email" required>
+                            <small class="text-muted">Changing email may require re-login.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-book"></i> Primary Subject</label>
+                            <input type="text" id="subject" placeholder="e.g. Mathematics">
+                        </div>
                     </div>
-                </div>
 
-                <div class="profile-options-container">
-                    <a href="#" class="btn btn-primary btn-sm">My Profile</a>
-                    <a href="#" class="btn btn-primary btn-sm">Settings</a>
-                </div>
-
-                <div class="logout-container">
-                    <a href="#" class="btn btn-danger btn-block">Log Out</a>
-                </div>
-                
-                <div class="profile-form">
-                    <form id="updateProfileForm">
-                        <div class="form-group">
-                            <label for="profileName">
-                                <i class="fas fa-user"></i> Full Name
-                            </label>
-                            <input type="text" id="profileName" placeholder="Enter your full name" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="profileSubject">
-                                <i class="fas fa-book"></i> Teaching Subject
-                            </label>
-                            <input type="text" id="profileSubject" placeholder="Enter your subject" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="profileEmail">
-                                <i class="fas fa-envelope"></i> Email Address
-                            </label>
-                            <input type="email" id="profileEmail" placeholder="your@email.com" required disabled>
-                        </div>
-                        
-                        <div class="alert error" id="profileError" style="display: none;">
-                            <i class="fas fa-exclamation-circle"></i>
-                            <span id="profileErrorText"></span>
-                        </div>
-                        
-                        <div class="alert success" id="profileSuccess" style="display: none;">
-                            <i class="fas fa-check-circle"></i>
-                            <span>Profile updated successfully!</span>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary btn-block" id="updateProfileBtn">
-                            <i class="fas fa-save"></i> Update Profile
-                        </button>
-                    </form>
-                </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="saveBtn"><i class="fas fa-save"></i> Save Changes</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
-    
+
+    <script src="../../services/cloudinary.service.js"></script>
     <script src="../../shared/js/app.js" defer></script>
     <script src="../../shared/js/ui.js" defer></script>
-    <script src="../../services/cloudinary.service.js" defer></script>
     <script src="./profile.js" defer></script>
 </body>
 </html>
