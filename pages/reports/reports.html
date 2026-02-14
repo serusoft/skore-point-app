@@ -23,6 +23,51 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        /* Ensure level selection cards are visible even if external CSS fails */
+        .level-options-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+            width: 100%;
+        }
+        
+        .level-option-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        
+        .level-option-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+            border-color: #4361ee;
+        }
+        
+        .level-option-card i {
+            font-size: 48px;
+            color: #4361ee;
+            margin-bottom: 20px;
+        }
+        
+        .level-option-card h4 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #1f2937;
+        }
+        
+        .level-option-card p {
+            color: #6b7280;
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body>
     <!-- Navigation will be injected by shared/js/ui.js -->
@@ -220,7 +265,7 @@
                 <h2>Select Academic Level</h2>
                 <p>Please select the academic level to generate reports for:</p>
                 
-                <div class="level-options-container" id="levelOptionsPrompt">
+                <div class="level-options-container" id="levelOptionsPrompt" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; width: 100%;">
                     <!-- Options will be populated by JavaScript -->
                 </div>
                 

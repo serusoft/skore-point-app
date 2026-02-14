@@ -261,7 +261,9 @@ async function checkAuthState() {
                     console.log('App: onAuthStateChanged() - Dispatched auth:state-changed (authenticated).');
 
                     // Handle initial navigation now that data is loaded
-                    if (window.location.pathname.endsWith('/') || window.location.pathname.endsWith('/index.html')) {
+                    const path = window.location.pathname;
+                    const isNotInPages = !path.includes('/pages/');
+                    if (isNotInPages) {
                         console.log('App: onAuthStateChanged() - Redirecting authenticated user from root to launch page.');
                         window.location.href = 'pages/launch/launch.html';
                     }
@@ -290,7 +292,9 @@ async function checkAuthState() {
                 initialAuthCheckDone = true;
                 
                 // Handle initial navigation for unauthenticated user from the root page
-                if (!user && (window.location.pathname.endsWith('/') || window.location.pathname.endsWith('/index.html'))) {
+                const path = window.location.pathname;
+                const isNotInPages = !path.includes('/pages/');
+                if (!user && isNotInPages) {
                     console.log('App: onAuthStateChanged() - Redirecting unauthenticated user from root to launch page.');
                     window.location.href = 'pages/launch/launch.html';
                     return; // Stop execution to prevent handlePostAuthNavigation from overriding
@@ -317,15 +321,13 @@ function handlePostAuthNavigation(user) {
         window.location.href = '../dashboard/dashboard.html';
     } else if (!user && !isAuthPage && !isLaunchPage) {
         const path = window.location.pathname;
-        const isAtRootOrIndex = path === '/' || path.endsWith('/index.html');
         const isNotInPages = !path.includes('/pages/');
 
-        if (isAtRootOrIndex) {
-            // If at root, go to launch page
+        if (isNotInPages) {
+            // If not in pages directory (e.g. root or index.html), go to launch page
             window.location.href = 'pages/launch/launch.html';
-        } else if (isNotInPages) {
-            window.location.href = 'pages/auth/login.html';
         } else {
+            // If inside pages directory but unauthorized, go to login
             window.location.href = '../auth/login.html';
         }
     }

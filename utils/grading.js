@@ -87,7 +87,7 @@ const GradingUtils = {
     },
     
     // Calculate division
-    calculateDivision(average, aggregate, level) {
+    calculateDivision(average, aggregate, level, subjectCount) {
         if (level === 'alevel') {
             if (aggregate <= 12) return 'Division 1';
             if (aggregate <= 24) return 'Division 2';
@@ -100,10 +100,12 @@ const GradingUtils = {
             if (average >= 50) return 'Division 4';
             return 'Fail';
         } else if (level === 'upper-primary') {
-            if (aggregate <= 8) return 'Division 1';
-            if (aggregate <= 16) return 'Division 2';
-            if (aggregate <= 24) return 'Division 3';
-            return 'Division 4';
+            if (subjectCount !== undefined && subjectCount < 4) return 'U';
+            if (aggregate <= 12) return 'Division 1';
+            if (aggregate <= 23) return 'Division 2';
+            if (aggregate <= 28) return 'Division 3';
+            if (aggregate <= 34) return 'Division 4';
+            return 'U';
         }
         return 'N/A';
     },

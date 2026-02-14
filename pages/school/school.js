@@ -2343,7 +2343,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             let totalScore = 0;
             let subjectCount = 0;
 
-            subjects.forEach(subject => {
+            subjects.forEach((subject, index) => {
                 const mark = marksData[subject.id];
                 if (mark !== undefined) {
                     let score = 0;
@@ -2355,13 +2355,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         score = Number(mark);
                     }
                     
-                    // Add padding and proper indentation
+                    // Add padding, proper indentation, and alternating row colors
+                    const rowBg = index % 2 !== 0 ? 'background-color: #fafafa;' : '';
                     marksHtml += `
-                        <tr style="border-bottom: 1px solid #e5e7eb;">
-                            <td style="padding:8px 15px; color: #1f2937; font-size: 11px; font-weight: 500;">${subject.name}</td>
-                            <td style="padding:8px 15px; text-align:center; font-weight: 600; color: #111827; font-size: 11px;">${Math.round(score)}</td>
-                            <td style="padding:8px 15px; text-align:center; color: #374151; font-size: 11px;">${getGrade(score)}</td>
-                            <td style="padding:8px 15px; color: #6b7280; font-size: 10px; white-space: nowrap;">${getRemark(score)}</td>
+                        <tr style="border-bottom: 1px solid #f1f5f9; ${rowBg}">
+                            <td style="padding:12px 15px; color: #334155; font-size: 11px; font-weight: 500;">${subject.name}</td>
+                            <td style="padding:12px 15px; text-align:center; font-weight: 600; color: #0f172a; font-size: 11px;">${Math.round(score)}</td>
+                            <td style="padding:12px 15px; text-align:center; color: #475569; font-size: 11px;">${getGrade(score)}</td>
+                            <td style="padding:12px 15px; color: #64748b; font-size: 10px; white-space: nowrap;">${getRemark(score)}</td>
                         </tr>
                     `;
                     totalScore += score;
@@ -2560,58 +2561,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
 
                 <!-- Marks Table with Clean Borders -->
-                <table style="width:100%; 
-                              border-collapse:collapse; 
-                              margin-bottom: 30px; 
-                              border: 1px solid #e5e7eb; 
-                              border-radius: 8px; 
-                              overflow: hidden;">
+                <table style="width:100%; border-collapse: collapse; margin-bottom: 30px;">
                     <thead>
-                        <tr style="background-color: #f3f4f6;">
-                            <th style="padding:12px 15px; 
-                                        text-align:left; 
-                                        font-size: 10px; 
-                                        text-transform: uppercase; 
-                                        letter-spacing: 1px; 
-                                        font-weight: 700; 
-                                        color: #4b5563; 
-                                        border-bottom: 2px solid #d1d5db; 
-                                        width: 40%;">
-                                Subject
-                            </th>
-                            <th style="padding:12px 15px; 
-                                        text-align:center; 
-                                        font-size: 10px; 
-                                        text-transform: uppercase; 
-                                        letter-spacing: 1px; 
-                                        font-weight: 700; 
-                                        color: #4b5563; 
-                                        border-bottom: 2px solid #d1d5db; 
-                                        width: 15%;">
-                                Score
-                            </th>
-                            <th style="padding:12px 15px; 
-                                        text-align:center; 
-                                        font-size: 10px; 
-                                        text-transform: uppercase; 
-                                        letter-spacing: 1px; 
-                                        font-weight: 700; 
-                                        color: #4b5563; 
-                                        border-bottom: 2px solid #d1d5db; 
-                                        width: 15%;">
-                                Grade
-                            </th>
-                            <th style="padding:12px 15px; 
-                                        text-align:left; 
-                                        font-size: 10px; 
-                                        text-transform: uppercase; 
-                                        letter-spacing: 1px; 
-                                        font-weight: 700; 
-                                        color: #4b5563; 
-                                        border-bottom: 2px solid #d1d5db; 
-                                        width: 30%;">
-                                Remark
-                            </th>
+                        <tr style="border-bottom: 2px solid #e2e8f0;">
+                            <th style="padding:12px 15px; text-align:left; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #64748b; width: 40%;">Subject</th>
+                            <th style="padding:12px 15px; text-align:center; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #64748b; width: 15%;">Score</th>
+                            <th style="padding:12px 15px; text-align:center; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #64748b; width: 15%;">Grade</th>
+                            <th style="padding:12px 15px; text-align:left; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #64748b; width: 30%;">Remark</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2786,11 +2742,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const reportClone = originalReportCardElement.cloneNode(true);
         
         // Apply A4-specific styling to ensure perfect fit
-        reportClone.style.setProperty('width', '210mm', 'important');
-        reportClone.style.setProperty('min-height', '297mm', 'important');
-        reportClone.style.setProperty('max-height', '297mm', 'important');
-        reportClone.style.setProperty('padding', '15mm 20mm', 'important'); // Balanced margins
-        reportClone.style.setProperty('margin', '0', 'important');
+        reportClone.style.setProperty('width', '208mm', 'important');
+        reportClone.style.setProperty('min-height', '296mm', 'important');
+        reportClone.style.setProperty('max-height', 'none', 'important');
+        reportClone.style.setProperty('padding', '12mm 15mm', 'important'); // Balanced margins
+        reportClone.style.setProperty('margin', '0 auto', 'important');
         reportClone.style.setProperty('box-shadow', 'none', 'important');
         reportClone.style.setProperty('border', '2px solid #000', 'important');
         reportClone.style.setProperty('border-radius', '0', 'important');
@@ -2808,7 +2764,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         printContainer.style.left = '0';
         printContainer.style.top = '0';
         printContainer.style.width = '210mm';
-        printContainer.style.height = '297mm';
+        printContainer.style.height = 'auto';
         printContainer.style.zIndex = '99999';
         printContainer.style.backgroundColor = 'white';
         printContainer.style.margin = '0';
@@ -2837,7 +2793,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 scrollX: 0,
                 scrollY: 0,
                 windowWidth: 794, // 210mm at 96 DPI
-                windowHeight: 1123, // 297mm at 96 DPI
+                onclone: (clonedDoc) => {
+                    // Fix SVG dimensions to prevent html2canvas errors
+                    const svgs = clonedDoc.querySelectorAll('svg');
+                    svgs.forEach(svg => {
+                        const rect = svg.getBoundingClientRect();
+                        if (!svg.getAttribute('width') && rect.width) svg.setAttribute('width', rect.width);
+                        if (!svg.getAttribute('height') && rect.height) svg.setAttribute('height', rect.height);
+                    });
+                },
                 x: 0,
                 y: 0
             },
