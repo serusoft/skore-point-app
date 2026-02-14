@@ -1,6 +1,6 @@
 // Service Worker for Skore Point PWA
 
-const CACHE_VERSION = '1.-point-v${CACHE_VERSION}`;
+const CACHE_NAME = 'skore-point-v1.1';
 const urlsToCache = [
     'index.html',
 
