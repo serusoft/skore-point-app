@@ -137,17 +137,24 @@ class ReportsController {
         const isAdmin = uid && admins.includes(uid);
         
         if (!isAdmin) {
-            // Hide class and school report tabs for teachers
-            const classTab = document.querySelector('[data-type="class"]');
-            const schoolTab = document.querySelector('[data-type="school"]');
-            
-            if (classTab) classTab.style.display = 'none';
-            if (schoolTab) schoolTab.style.display = 'none';
-            
-            // Set subject as default active tab for teachers
-            const subjectTab = document.querySelector('[data-type="subject"]');
-            if (subjectTab) {
-                subjectTab.click();
+            // Make non-subject tabs inactive/pale for teachers
+            const tabs = document.querySelectorAll('.report-tab');
+            tabs.forEach(tab => {
+                const type = tab.dataset.type;
+                if (type !== 'subject') {
+                    tab.classList.add('restricted-tab');
+                    Object.assign(tab.style, {
+                        opacity: '0.5',
+                        cursor: 'not-allowed',
+                        filter: 'grayscale(100%)'
+                    });
+                }
+            });
+
+            // Ensure subject is active if current selection is restricted
+            if (document.querySelector('.report-tab.active.restricted-tab')) {
+                const subjectTab = document.querySelector('[data-type="subject"]');
+                if (subjectTab) subjectTab.click();
             }
         }
     }
@@ -155,6 +162,20 @@ class ReportsController {
     addBackToSchoolButton() {
         const btnId = 'backToSchoolBtn';
         if (document.getElementById(btnId)) return;
+
+        // Add blinking animation style
+        if (!document.getElementById('blink-animation-style')) {
+            const styleSheet = document.createElement("style");
+            styleSheet.id = 'blink-animation-style';
+            styleSheet.innerText = `
+                @keyframes blink-red {
+                    0% { background-color: #dc2626; box-shadow: 0 0 5px rgba(220, 38, 38, 0.5); transform: scale(1); }
+                    50% { background-color: #ef4444; box-shadow: 0 0 15px rgba(239, 68, 68, 0.8); transform: scale(1.05); }
+                    100% { background-color: #dc2626; box-shadow: 0 0 5px rgba(220, 38, 38, 0.5); transform: scale(1); }
+                }
+            `;
+            document.head.appendChild(styleSheet);
+        }
 
         const btn = document.createElement('button');
         btn.id = btnId;
@@ -167,7 +188,7 @@ class ReportsController {
             right: '20px',
             zIndex: '9999',
             padding: '12px 24px',
-            backgroundColor: '#1f2937',
+            backgroundColor: '#dc2626', // Red color
             color: 'white',
             border: 'none',
             borderRadius: '30px',
@@ -178,7 +199,8 @@ class ReportsController {
             alignItems: 'center',
             gap: '8px',
             fontSize: '14px',
-            transition: 'all 0.2s ease'
+            transition: 'all 0.2s ease',
+            animation: 'blink-red 2s infinite' // Blinking animation
         });
 
         btn.addEventListener('mouseenter', () => btn.style.transform = 'translateY(-2px)');
@@ -198,7 +220,15 @@ class ReportsController {
     setupEventListeners() {
         // Report type tabs
         document.querySelectorAll('.report-tab').forEach(tab => {
-            tab.addEventListener('click', (e) => this.switchReportType(e.currentTarget.dataset.type));
+            tab.addEventListener('click', (e) => {
+                if (tab.classList.contains('restricted-tab')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.showRestrictedAccessModal();
+                    return;
+                }
+                this.switchReportType(e.currentTarget.dataset.type);
+            });
         });
         
         // Level selection
@@ -234,6 +264,55 @@ class ReportsController {
                     modal.classList.remove('active');
                 });
             });
+        });
+    }
+
+    showRestrictedAccessModal() {
+        const existing = document.getElementById('restrictedAccessModal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'restrictedAccessModal';
+        modal.className = 'modal active';
+        modal.style.cssText = 'display: flex; align-items: center; justify-content: center; z-index: 10000; background: rgba(0,0,0,0.8); position: fixed; top: 0; left: 0; width: 100%; height: 100%;';
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%; text-align: center; position: relative; animation: slideUp 0.3s ease;">
+                <div id="restrictedInitialContent">
+                    <div style="width: 60px; height: 60px; background: #fef3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                        <i class="fas fa-exclamation" style="font-size: 30px; color: #d97706;"></i>
+                    </div>
+                    <h3 style="color: #1f2937; margin-bottom: 10px; font-size: 18px; font-weight: 800; text-transform: uppercase;">YOU CANT DO IT BECAUSE NOT AN ADMIN</h3>
+                    <p style="color: #4b5563; margin-bottom: 25px; font-size: 15px;">You can only get your subject analysis.</p>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="btn btn-secondary" onclick="document.getElementById('restrictedAccessModal').remove()">Close</button>
+                        <button class="btn btn-primary" id="restrictedMoreBtn">More</button>
+                    </div>
+                </div>
+                
+                <div id="restrictedMoreContent" style="display: none;">
+                    <h4 style="color: #1f2937; margin-bottom: 15px; font-size: 16px; font-weight: 700;">Access Limitation</h4>
+                    <p style="color: #4b5563; margin-bottom: 15px; font-size: 14px; line-height: 1.5;">This limitation is done to ensure safty and authenticative use of skore point.</p>
+                    <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #dbeafe;">
+                        <p style="color: #1e40af; font-size: 13px; margin: 0; line-height: 1.5;">
+                            If want extra acces to the school portal more subject , generating report cards. check My admin tab on the school page and see your admin and contact him to assign you subject or make you an admin to have extra functionalities.
+                        </p>
+                    </div>
+                    
+                    <div style="margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                        <img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" style="height: 40px; width: auto; opacity: 0.9; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto;">
+                        <div style="font-size: 12px; font-weight: 800; color: #4361ee; letter-spacing: 1px;">THANKS FOR USING SKORE POINT</div>
+                    </div>
+                    <button class="btn btn-secondary" style="margin-top: 20px; width: 100%;" onclick="document.getElementById('restrictedAccessModal').remove()">Close</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        document.getElementById('restrictedMoreBtn').addEventListener('click', () => {
+            document.getElementById('restrictedInitialContent').style.display = 'none';
+            document.getElementById('restrictedMoreContent').style.display = 'block';
         });
     }
     
@@ -567,7 +646,7 @@ class ReportsController {
                 
                 const excelBtn = document.getElementById('exportExcelBtn');
                 if (excelBtn) {
-                    if (reportData.type === 'student' || reportData.type === 'bulk-student') {
+                    if (reportData.type === 'student' || reportData.type === 'bulk-student' || reportData.type === 'school') {
                         excelBtn.style.display = 'none';
                     } else {
                         excelBtn.style.display = 'inline-block';
@@ -839,14 +918,35 @@ class ReportsController {
     
     async generateSchoolReport() {
         const term = document.getElementById('schoolReportTerm').value;
+        const isPrimary = this.currentSchool.level === 'primary';
         
         try {
+            // Determine classes to process
+            let classesToProcess = this.classes;
+            let subjectsToProcess = this.subjects;
+
+            // For primary schools, fetch ALL classes and subjects irrespective of level
+            if (isPrimary) {
+                classesToProcess = await window.Firebase.db.query('classes', [
+                    { field: 'schoolId', op: '==', value: this.currentSchool.id }
+                ]);
+                subjectsToProcess = await window.Firebase.db.query('subjects', [
+                    { field: 'schoolId', op: '==', value: this.currentSchool.id }
+                ]);
+            }
+
+            // Create a map for subject names
+            const subjectMap = new Map();
+            subjectsToProcess.forEach(s => subjectMap.set(s.id, s.name));
+
             const classReports = [];
+            const subjectStats = {}; // Map: subjectName -> { total: 0, count: 0 }
             let schoolTotal = 0;
             let classCount = 0;
             
-            for (const classData of this.classes) {
-                const classReport = await this.generateClassSummary(classData.id, term);
+            for (const classData of classesToProcess) {
+                // We implement custom logic here instead of generateClassSummary to capture subject stats
+                const classReport = await this.processClassForSchoolReport(classData, term, subjectMap, subjectStats);
                 if (classReport) {
                     classReports.push(classReport);
                     if (classReport.average > 0) {
@@ -861,11 +961,18 @@ class ReportsController {
             
             // Sort by performance
             classReports.sort((a, b) => b.average - a.average);
+
+            // Calculate Subject Rankings
+            const subjectRankings = Object.values(subjectStats).map(s => ({
+                name: s.name,
+                average: s.count > 0 ? Math.round(s.total / s.count) : 0
+            })).sort((a, b) => b.average - a.average);
             
             return {
                 type: 'school',
                 level: this.currentLevel,
                 term: this.getTermDisplayName(term),
+                termType: term,
                 classReports: classReports,
                 statistics: {
                     totalClasses: this.classes.length,
@@ -874,6 +981,7 @@ class ReportsController {
                     bestPerformingClass: classReports[0] || null,
                     lowestPerformingClass: classReports[classReports.length - 1] || null
                 },
+                subjectRankings: subjectRankings,
                 generatedAt: new Date().toISOString(),
                 school: this.currentSchool
             };
@@ -884,9 +992,9 @@ class ReportsController {
         }
     }
     
-    async generateClassSummary(classId, term) {
+    async processClassForSchoolReport(classData, term, subjectMap, subjectStats) {
         try {
-            const students = await SchoolService.getStudentsByClass(classId);
+            const students = await SchoolService.getStudentsByClass(classData.id);
             
             if (students.length === 0) return null;
             
@@ -896,19 +1004,49 @@ class ReportsController {
             for (const student of students) {
                 const marks = await ReportService.getStudentMarks(student.id, term);
                 if (marks) {
-                    const markValues = Object.values(marks).filter(v => typeof v === 'number');
-                    if (markValues.length > 0) {
-                        const studentAverage = markValues.reduce((a, b) => a + b) / markValues.length;
+                    let studentTotal = 0;
+                    let studentSubjCount = 0;
+
+                    // Iterate over marks to calculate average and populate subject stats
+                    for (const [key, val] of Object.entries(marks)) {
+                        // Skip metadata keys
+                        if (['studentId', 'schoolId', 'classId', 'term', 'level', 'enteredBy', 'enteredByInitials', 'updatedAt'].includes(key)) continue;
+
+                        let score = 0;
+                        if (typeof val === 'number') {
+                            score = val;
+                        } else if (typeof val === 'object' && val.paper1) {
+                            // Handle papers
+                            const papers = Object.values(val).filter(p => typeof p === 'number');
+                            score = papers.length > 0 ? papers.reduce((a, b) => a + b, 0) / papers.length : 0;
+                        } else {
+                            continue;
+                        }
+
+                        if (score > 0) {
+                            studentTotal += score;
+                            studentSubjCount++;
+
+                            // Update Subject Stats
+                            const subjName = subjectMap.get(key) || key; // Use ID if name not found
+                            if (!subjectStats[subjName]) {
+                                subjectStats[subjName] = { name: subjName, total: 0, count: 0 };
+                            }
+                            subjectStats[subjName].total += score;
+                            subjectStats[subjName].count++;
+                        }
+                    }
+
+                    if (studentSubjCount > 0) {
+                        const studentAverage = studentTotal / studentSubjCount;
                         totalMarks += studentAverage;
                         studentCount++;
                     }
                 }
             }
             
-            const classData = this.classes.find(c => c.id === classId);
-            
             return {
-                classId: classId,
+                classId: classData.id,
                 className: classData?.name || 'Unknown',
                 totalStudents: students.length,
                 studentsWithMarks: studentCount,
@@ -940,8 +1078,21 @@ class ReportsController {
                 }
                 
                 if (score > 0) {
-                    const grade = GradingUtils.calculateGrade(score, this.currentLevel);
-                    const gradePoints = GradingUtils.getGradePoints(grade, this.currentLevel);
+                    let grade, gradePoints;
+                    
+                    if (this.currentLevel === 'olevel') {
+                        // Custom O-Level Grading
+                        if (score >= 90) grade = 'A';
+                        else if (score >= 80) grade = 'B';
+                        else if (score >= 70) grade = 'C';
+                        else if (score >= 55) grade = 'D';
+                        else grade = 'E';
+                        
+                        gradePoints = 0; // Not used for new O-Level Result logic
+                    } else {
+                        grade = GradingUtils.calculateGrade(score, this.currentLevel);
+                        gradePoints = GradingUtils.getGradePoints(grade, this.currentLevel);
+                    }
                     
                     processedMarks.push({
                         subjectId: subject.id,
@@ -978,6 +1129,7 @@ class ReportsController {
         const lowest = Math.min(...marks.map(m => m.score));
         
         let aggregate = 0;
+        let division;
         
         if (this.currentLevel === 'alevel') {
             // A-Level aggregate calculation
@@ -1000,21 +1152,39 @@ class ReportsController {
             if (subsidiary && subsidiary.score >= 50) {
                 aggregate += 1;
             }
+        } else if (this.currentLevel === 'olevel') {
+            // O-Level Result Calculation
+            // Result 4: No marks (Handled by marks.length check above, but let's be safe)
+            if (marks.length === 0) division = '4';
+            // Result 2: Less than 9 subjects
+            else if (marks.length < 9) division = '2';
+            else {
+                // Check grades
+                const hasPassingGrade = marks.some(m => m.score >= 55); // D or better
+                const allElementary = marks.every(m => m.score < 55); // All E
+                
+                if (allElementary) division = '3';
+                else if (hasPassingGrade) division = '1';
+                else division = '3'; // Fallback if somehow neither (should be covered by allElementary)
+            }
+            
+            aggregate = totalMarks; // Replace Aggregate with Total Score for O-Level
         } else {
             // O-Level and Primary aggregate
             aggregate = marks.reduce((sum, mark) => sum + mark.gradePoints, 0);
         }
         
-        let division;
-        if (this.currentLevel === 'upper-primary') {
-            if (marks.length < 4) division = 'U';
-            else if (aggregate <= 12) division = 'Division 1';
-            else if (aggregate <= 23) division = 'Division 2';
-            else if (aggregate <= 28) division = 'Division 3';
-            else if (aggregate <= 34) division = 'Division 4';
-            else division = 'U';
-        } else {
-            division = GradingUtils.calculateDivision(average, aggregate, this.currentLevel);
+        if (!division) {
+            if (this.currentLevel === 'upper-primary') {
+                if (marks.length < 4) division = 'U';
+                else if (aggregate <= 12) division = 'Division 1';
+                else if (aggregate <= 23) division = 'Division 2';
+                else if (aggregate <= 28) division = 'Division 3';
+                else if (aggregate <= 34) division = 'Division 4';
+                else division = 'U';
+            } else {
+                division = GradingUtils.calculateDivision(average, aggregate, this.currentLevel);
+            }
         }
         
         return {
@@ -1441,8 +1611,8 @@ class ReportsController {
     }
     
     generatePrimaryReportHTML(reportData) {
-        const { student, marks, summary, school, term, termType } = reportData;
-        const isLowerPrimary = this.currentLevel === 'lower-primary';
+        const { student, marks, summary, school, term, termType, level } = reportData;
+        const isLowerPrimary = (level || this.currentLevel) === 'lower-primary';
         
         return `
             <div class="report-card primary-report premium-report" 
@@ -1812,25 +1982,105 @@ class ReportsController {
     
     generateOLevelReportHTML(reportData) {
         const { student, marks, summary, school, term, termType } = reportData;
+
+        // Helper for remarks
+        const getRemark = (grade) => {
+            if (grade === 'A') return 'Exceptional';
+            if (grade === 'B') return 'Outstanding';
+            if (grade === 'C') return 'Satisfactory';
+            if (grade === 'D') return 'Basic';
+            return 'Elementary';
+        };
+
+        let subjectsContent = '';
         
+        if (marks.length > 10) {
+            const mid = Math.ceil(marks.length / 2);
+            const leftMarks = marks.slice(0, mid);
+            const rightMarks = marks.slice(mid);
+            
+            const renderRow = (mark) => `
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                    <td style="padding: 7px 8px; color: #1f2937; font-size: 12px; font-weight: 500;">${mark.subjectName}</td>
+                    <td style="padding: 7px 8px; text-align: center; color: #1f2937; font-size: 12px;">${mark.score}</td>
+                    <td style="padding: 7px 8px; text-align: center; font-weight: 600; color: #1f2937; font-size: 12px;">${mark.grade}</td>
+                    <td style="padding: 7px 8px; color: #6b7280; font-size: 11px;">${getRemark(mark.grade)}</td>
+                </tr>
+            `;
+
+            const tableHeader = `
+                <thead>
+                    <tr style="background-color: #f3f4f6;">
+                        <th style="text-align: left; padding: 8px 8px; border-bottom: 1px solid #d1d5db; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 700; width: 40%;">Subject</th>
+                        <th style="text-align: center; padding: 8px 8px; border-bottom: 1px solid #d1d5db; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 700; width: 15%;">Scr</th>
+                        <th style="text-align: center; padding: 8px 8px; border-bottom: 1px solid #d1d5db; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 700; width: 15%;">Grd</th>
+                        <th style="text-align: left; padding: 8px 8px; border-bottom: 1px solid #d1d5db; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 700; width: 30%;">Rmk</th>
+                    </tr>
+                </thead>
+            `;
+
+            subjectsContent = `
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb;">
+                            ${tableHeader}
+                            <tbody>${leftMarks.map(renderRow).join('')}</tbody>
+                        </table>
+                    </div>
+                    <div style="flex: 1;">
+                        <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb;">
+                            ${tableHeader}
+                            <tbody>${rightMarks.map(renderRow).join('')}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        } else {
+            // Single table (compact)
+            subjectsContent = `
+                <table class="subject-table" style="width: 100%; border-collapse: collapse; margin-bottom: 15px; border: 1px solid #e5e7eb;">
+                    <thead>
+                        <tr style="background-color: #f3f4f6;">
+                            <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid #d1d5db; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 700; width: 40%;">Subject</th>
+                            <th style="text-align: center; padding: 10px 12px; border-bottom: 1px solid #d1d5db; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 700; width: 15%;">Score</th>
+                            <th style="text-align: center; padding: 10px 12px; border-bottom: 1px solid #d1d5db; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 700; width: 15%;">Grade</th>
+                            <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid #d1d5db; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 700; width: 30%;">Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${marks.map(mark => `
+                            <tr style="border-bottom: 1px solid #f3f4f6;">
+                                <td style="padding: 10px 12px; color: #1f2937; font-size: 12px; font-weight: 500;">${mark.subjectName}</td>
+                                <td style="padding: 10px 12px; text-align: center; color: #1f2937; font-size: 12px;">${mark.score}</td>
+                                <td style="padding: 10px 12px; text-align: center; font-weight: 600; color: #1f2937; font-size: 12px;">${mark.grade}</td>
+                                <td style="padding: 10px 12px; color: #6b7280; font-size: 11px;">${getRemark(mark.grade)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
         return `
             <div class="report-card olevel-report premium-report" 
                  style="width: 210mm; 
-                        min-height: 297mm; 
-                        padding: 15mm 20mm; 
+                        min-height: 297mm;
+                        height: auto; 
+                        padding: 10mm 15mm; 
                         box-sizing: border-box; 
                         margin: 0 auto; 
                         ${PREMIUM_BORDER_STYLE} 
                         font-family: 'Times New Roman', 'Georgia', serif; 
                         color: #111;
-                        line-height: 1.4;">
+                        line-height: 1.3;
+                        display: flex; flex-direction: column;">
                 ${school.logoUrl ? `
                     <div style="position: absolute; 
                                 top: 50%; 
                                 left: 50%; 
                                 transform: translate(-50%, -50%); 
-                                width: 350px; 
-                                height: 350px; 
+                                width: 300px; 
+                                height: 300px; 
                                 background-image: url('${school.logoUrl}'); 
                                 background-size: contain; 
                                 background-repeat: no-repeat; 
@@ -1840,356 +2090,145 @@ class ReportsController {
                                 pointer-events: none; 
                                 z-index: 0;"></div>
                 ` : ''}
-                <div style="position: relative; z-index: 1;">
+                <div style="position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column;">
                 
-                <!-- Premium Header -->
-                <div style="display: flex; 
-                            align-items: center; 
-                            justify-content: space-between; 
-                            margin-bottom: 25px; 
-                            padding-bottom: 20px; 
-                            border-bottom: 2px solid #1a73e8;">
-                    <!-- School Logo -->
+                <!-- Compact Header -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #1a73e8;">
                     ${school.logoUrl 
                         ? `<img src="${school.logoUrl}" 
                                 alt="${school.name}" 
-                                style="height: 100px; width: 100px; object-fit: contain;">` 
+                                style="height: 85px; width: 85px; object-fit: contain;">` 
                         : `<img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" 
-                                style="height: 100px; width: 100px; opacity: 0.7; object-fit: contain;">`}
+                                style="height: 85px; width: 85px; opacity: 0.7; object-fit: contain;">`}
                     
-                    <!-- School Info -->
-                    <div style="text-align: center; flex: 1; padding: 0 20px;">
-                        <h1 style="margin:0 0 10px 0; 
-                                   color:#1a1a1a; 
-                                   font-size: 24px; 
-                                   font-weight: 700; 
-                                   letter-spacing: -0.5px; 
-                                   line-height: 1.1;">
-                            ${school.name}
-                        </h1>
-                        <p style="margin:0; 
-                                  color:#555; 
-                                  font-size: 12px; 
-                                  text-transform: uppercase; 
-                                  letter-spacing: 2px; 
-                                  font-weight: 600;">
-                            TERM ${this.getUgandanTerm()} STUDENT ASSESSMENT PROGRESS REPORT
-                        </p>
+                    <div style="text-align: center; flex: 1; padding: 0 15px;">
+                        <h1 style="margin:0 0 5px 0; color:#1a1a1a; font-size: 28px; font-weight: 700; line-height: 1.1;">${school.name}</h1>
+                        <p style="margin:0; color:#555; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">COMPETENT BASED TERM ${this.getUgandanTerm()} STUDENT ASSESSMENT PROGRESS REPORT</p>
                     </div>
                     
-                    <!-- Spacer for balance -->
-                    <div style="width: 100px;"></div>
+                    <div style="width: 85px;"></div>
                 </div>
                 
-                <!-- Student Information -->
-                <div class="student-info" style="margin-bottom: 30px;">
+                <!-- Compact Student Info -->
+                <div class="student-info" style="margin-bottom: 15px; display: flex; justify-content: space-between; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px;">
+                    <div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 2px;">Student Name</div>
+                        <div style="font-size: 16px; font-weight: 700; color: #111827;">${student.name}</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 2px;">Class</div>
+                        <div style="font-size: 15px; font-weight: 600; color: #374151;">${student.className}</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 2px;">Term</div>
+                        <div style="font-size: 15px; font-weight: 600; color: #374151;">${term}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 2px;">Date</div>
+                        <div style="font-size: 15px; font-weight: 600; color: #374151;">${new Date().toLocaleDateString()}</div>
+                    </div>
+                </div>
+                
+                <!-- Subjects Content (Split or Single) -->
+                ${subjectsContent}
+                
+                <!-- Compact Summary -->
+                <div class="summary-section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 6px; padding: 12px; margin-bottom: 20px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; color: white;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 10px; text-transform: uppercase; opacity: 0.9; margin-bottom: 2px;">Average Score</div>
+                        <div style="font-size: 16px; font-weight: 700;">${summary.average}%</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 10px; text-transform: uppercase; opacity: 0.9; margin-bottom: 2px;">Total Score</div>
+                        <div style="font-size: 16px; font-weight: 700;">${summary.aggregate}</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 10px; text-transform: uppercase; opacity: 0.9; margin-bottom: 2px;">Subjects</div>
+                        <div style="font-size: 16px; font-weight: 700;">${summary.totalSubjects}</div>
+                    </div>
+                    <div style="text-align: center; border-left: 1px solid rgba(255,255,255,0.3);">
+                        <div style="font-size: 10px; text-transform: uppercase; opacity: 0.9; margin-bottom: 2px;">RESULT</div>
+                        <div style="font-size: 18px; font-weight: 800; ${summary.division === 'U' ? 'color: #ff6b6b;' : ''}">${summary.division}</div>
+                    </div>
+                </div>
+                
+                <!-- Compact Remarks -->
+                <div class="remarks-section" style="margin-bottom: 15px; flex: 1;">
                     <div style="margin-bottom: 15px;">
-                        <div style="font-size: 9px; 
-                                    text-transform: uppercase; 
-                                    color: #6b7280; 
-                                    letter-spacing: 1px; 
-                                    margin-bottom: 5px; 
-                                    font-weight: 600;">
-                            Student Name
-                        </div>
-                        <div style="font-size: 18px; 
-                                    font-weight: 700; 
-                                    color: #111827; 
-                                    padding-bottom: 8px; 
-                                    border-bottom: 1px solid #e5e7eb;">
-                            ${student.name}
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 40px; padding-top: 15px;">
-                        <div>
-                            <span style="font-size: 9px; 
-                                          text-transform: uppercase; 
-                                          color: #6b7280; 
-                                          font-weight: 600;">
-                                Class
-                            </span>
-                            <div style="font-size: 13px; 
-                                        font-weight: 600; 
-                                        color: #374151; 
-                                        margin-top: 4px;">
-                                ${student.className}
-                            </div>
-                        </div>
-                        <div>
-                            <span style="font-size: 9px; 
-                                          text-transform: uppercase; 
-                                          color: #6b7280; 
-                                          font-weight: 600;">
-                                Term
-                            </span>
-                            <div style="font-size: 13px; 
-                                        font-weight: 600; 
-                                        color: #374151; 
-                                        margin-top: 4px;">
-                                ${term}
-                            </div>
-                        </div>
-                        <div>
-                            <span style="font-size: 9px; 
-                                          text-transform: uppercase; 
-                                          color: #6b7280; 
-                                          font-weight: 600;">
-                                Date
-                            </span>
-                            <div style="font-size: 13px; 
-                                        font-weight: 600; 
-                                        color: #374151; 
-                                        margin-top: 4px;">
-                                ${new Date().toLocaleDateString()}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Subjects Table -->
-                <table class="subject-table" 
-                       style="width: 100%; 
-                              border-collapse: collapse; 
-                              margin-bottom: 30px; 
-                              border: 1px solid #e5e7eb;
-                              background-color: white;">
-                    <thead>
-                        <tr style="background-color: #f3f4f6;">
-                            <th style="text-align: left; 
-                                        padding: 12px 15px; 
-                                        border-bottom: 2px solid #d1d5db; 
-                                        color: #4b5563; 
-                                        font-size: 10px; 
-                                        text-transform: uppercase; 
-                                        font-weight: 700; 
-                                        width: 40%;">
-                                Subject
-                            </th>
-                            <th style="text-align: center; 
-                                        padding: 12px 15px; 
-                                        border-bottom: 2px solid #d1d5db; 
-                                        color: #4b5563; 
-                                        font-size: 10px; 
-                                        text-transform: uppercase; 
-                                        font-weight: 700; 
-                                        width: 15%;">
-                                Score
-                            </th>
-                            <th style="text-align: center; 
-                                        padding: 12px 15px; 
-                                        border-bottom: 2px solid #d1d5db; 
-                                        color: #4b5563; 
-                                        font-size: 10px; 
-                                        text-transform: uppercase; 
-                                        font-weight: 700; 
-                                        width: 15%;">
-                                Grade
-                            </th>
-                            <th style="text-align: left; 
-                                        padding: 12px 15px; 
-                                        border-bottom: 2px solid #d1d5db; 
-                                        color: #4b5563; 
-                                        font-size: 10px; 
-                                        text-transform: uppercase; 
-                                        font-weight: 700; 
-                                        width: 30%;">
-                                Remarks
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${marks.map((mark, index) => `
-                            <tr>
-                                <td style="padding: 10px 15px; 
-                                            border-bottom: 1px solid #f3f4f6; 
-                                            color: #1f2937; 
-                                            font-size: 11px; 
-                                            font-weight: 500;">
-                                    ${mark.subjectName}
-                                </td>
-                                <td style="padding: 10px 15px; 
-                                            text-align: center; 
-                                            border-bottom: 1px solid #f3f4f6; 
-                                            color: #1f2937; 
-                                            font-weight: 500; 
-                                            font-size: 12px;">
-                                    ${mark.score}
-                                </td>
-                                <td style="padding: 10px 15px; 
-                                            text-align: center; 
-                                            border-bottom: 1px solid #f3f4f6; 
-                                            color: #1f2937; 
-                                            font-weight: 600; 
-                                            font-size: 12px;">
-                                    ${mark.grade}
-                                </td>
-                                <td style="padding: 10px 15px; 
-                                            border-bottom: 1px solid #f3f4f6; 
-                                            color: #6b7280; 
-                                            font-size: 10px;">
-                                    ${GradingUtils.getGradeRemark(mark.grade)}
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-                
-                <!-- Summary (Boxed) -->
-                <div class="summary-section" 
-                     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                            border-radius: 8px; 
-                            padding: 20px; 
-                            margin-bottom: 30px; 
-                            display: grid; 
-                            grid-template-columns: repeat(4, 1fr); 
-                            gap: 20px; 
-                            color: white;">
-                    <div style="text-align: center;">
-                        <div style="font-size: 9px; 
-                                    text-transform: uppercase; 
-                                    opacity: 0.9; 
-                                    margin-bottom: 5px;">
-                            Average Score
-                        </div>
-                        <div style="font-size: 18px; 
-                                    font-weight: 700;">
-                            ${summary.average}%
-                        </div>
-                    </div>
-                    <div style="text-align: center;">
-                        <div style="font-size: 9px; 
-                                    text-transform: uppercase; 
-                                    opacity: 0.9; 
-                                    margin-bottom: 5px;">
-                            Average Grade
-                        </div>
-                        <div style="font-size: 18px; 
-                                    font-weight: 700;">
-                            ${GradingUtils.calculateGrade(summary.average, 'olevel')}
-                        </div>
-                    </div>
-                    <div style="text-align: center;">
-                        <div style="font-size: 9px; 
-                                    text-transform: uppercase; 
-                                    opacity: 0.9; 
-                                    margin-bottom: 5px;">
-                            Aggregate
-                        </div>
-                        <div style="font-size: 18px; 
-                                    font-weight: 700;">
-                            ${summary.aggregate}
-                        </div>
-                    </div>
-                    <div style="text-align: center; 
-                                border-left: 1px solid rgba(255,255,255,0.3); 
-                                padding-left: 20px;">
-                        <div style="font-size: 9px; 
-                                    text-transform: uppercase; 
-                                    opacity: 0.9; 
-                                    margin-bottom: 5px;">
-                            Division
-                        </div>
-                        <div style="font-size: 20px; 
-                                    font-weight: 800;
-                                    ${summary.division === 'U' ? 'color: #ff6b6b;' : ''}">
-                            ${summary.division}
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Remarks Section -->
-                <div class="remarks-section" style="margin-bottom: 30px;">
-                    <div style="margin-bottom: 30px;">
-                        <div style="font-size: 10px; 
-                                    text-transform: uppercase; 
-                                    color: #4b5563; 
-                                    margin-bottom: 25px; 
-                                    font-weight: 700; 
-                                    letter-spacing: 1px;">
-                            Class Teacher's Remarks
-                        </div>
-                        <div style="border-bottom: 1px dashed #9ca3af; 
-                                    margin-bottom: 12px; 
-                                    padding-bottom: 25px; 
-                                    min-height: 40px;"></div>
-                        <div style="text-align: right; 
-                                    font-size: 10px; 
-                                    color: #9ca3af; 
-                                    font-style: italic;">
-                            Signature: ........................................
-                        </div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: #4b5563; margin-bottom: 15px; font-weight: 700;">Class Teacher's Remarks</div>
+                        <div style="border-bottom: 1px dashed #9ca3af; margin-bottom: 5px; padding-bottom: 15px;"></div>
+                        <div style="text-align: right; font-size: 11px; color: #9ca3af; font-style: italic;">Signature: ........................................</div>
                     </div>
                     <div>
-                        <div style="font-size: 10px; 
-                                    text-transform: uppercase; 
-                                    color: #4b5563; 
-                                    margin-bottom: 25px; 
-                                    font-weight: 700; 
-                                    letter-spacing: 1px;">
-                            Head Teacher's Remarks
-                        </div>
-                        <div style="border-bottom: 1px dashed #9ca3af; 
-                                    margin-bottom: 12px; 
-                                    padding-bottom: 25px; 
-                                    min-height: 40px;"></div>
-                        <div style="text-align: right; 
-                                    font-size: 10px; 
-                                    color: #9ca3af; 
-                                    font-style: italic;">
-                            Signature: ........................................
+                        <div style="font-size: 11px; text-transform: uppercase; color: #4b5563; margin-bottom: 15px; font-weight: 700;">Head Teacher's Remarks</div>
+                        <div style="border-bottom: 1px dashed #9ca3af; margin-bottom: 5px; padding-bottom: 15px;"></div>
+                        <div style="text-align: right; font-size: 11px; color: #9ca3af; font-style: italic;">Signature: ........................................</div>
+                    </div>
+                </div>
+                
+                <!-- Result Insight & Explanation -->
+                <div style="margin-bottom: 15px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 10px; border: 1px solid #e5e7eb; margin-bottom: 8px;">
+                        <tr style="background-color: #f3f4f6;">
+                            <th style="padding: 4px; border-right: 1px solid #e5e7eb; text-align: center; width: 40px; font-weight: 700;">RESULT</th>
+                            <th style="padding: 4px; text-align: left; font-weight: 700;">DESCRIPTION</th>
+                        </tr>
+                        <tr style="border-top: 1px solid #e5e7eb;">
+                            <td style="padding: 3px; border-right: 1px solid #e5e7eb; text-align: center; font-weight: 700;">1</td>
+                            <td style="padding: 3px;">Achieved Basic (D) or better in at least one subject.</td>
+                        </tr>
+                        <tr style="border-top: 1px solid #e5e7eb;">
+                            <td style="padding: 3px; border-right: 1px solid #e5e7eb; text-align: center; font-weight: 700;">2</td>
+                            <td style="padding: 3px;">Sat for less than 9 subjects.</td>
+                        </tr>
+                        <tr style="border-top: 1px solid #e5e7eb;">
+                            <td style="padding: 3px; border-right: 1px solid #e5e7eb; text-align: center; font-weight: 700;">3</td>
+                            <td style="padding: 3px;">Scored Elementary (E) in all subjects.</td>
+                        </tr>
+                         <tr style="border-top: 1px solid #e5e7eb;">
+                            <td style="padding: 3px; border-right: 1px solid #e5e7eb; text-align: center; font-weight: 700;">4</td>
+                            <td style="padding: 3px;">Did not sit for exams.</td>
+                        </tr>
+                    </table>
+                    
+                    <div style="padding: 8px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px;">
+                        <div style="font-size: 11px; font-weight: 700; color: #4b5563; margin-bottom: 2px; text-transform: uppercase;">Student Result Explanation</div>
+                        <div style="font-size: 11px; color: #1f2937;">
+                            ${(() => {
+                                if (summary.division === '1') return 'The student has achieved a Basic competency (Grade D) or higher in at least one subject.';
+                                if (summary.division === '2') return `The student sat for ${summary.totalSubjects} subjects, which is less than the required minimum of 9 subjects.`;
+                                if (summary.division === '3') return 'The student scored Elementary (Grade E) in all subjects.';
+                                if (summary.division === '4') return 'The student did not sit for any exams.';
+                                return 'Result not available.';
+                            })()}
                         </div>
                     </div>
+                </div>
+                
+                <!-- Grading Scale -->
+                <div style="margin-bottom: 15px; text-align: center; font-size: 11px; color: #555; border-top: 1px solid #e5e7eb; padding-top: 10px;">
+                    <span style="font-weight: 700; color: #111; margin-right: 5px;">GRADING SCALE:</span>
+                    <span style="margin: 0 5px;">A: 90-100 (Exceptional)</span> |
+                    <span style="margin: 0 5px;">B: 80-89 (Outstanding)</span> |
+                    <span style="margin: 0 5px;">C: 70-79 (Satisfactory)</span> |
+                    <span style="margin: 0 5px;">D: 55-69 (Basic)</span> |
+                    <span style="margin: 0 5px;">E: 0-54 (Elementary)</span>
                 </div>
                 
                 ${termType === 'end' ? `
-                <div style="text-align: center; 
-                            margin-top: 20px; 
-                            margin-bottom: 15px; 
-                            padding: 15px; 
-                            background: #f0f9ff; 
-                            border-radius: 6px; 
-                            border: 1px solid #bae6fd;">
-                    <p style="margin:0; 
-                              font-size: 11px; 
-                              color: #0369a1; 
-                              font-weight: 600;">
-                        <strong>Next Term Begins On:</strong> ________________________
-                    </p>
+                <div style="text-align: center; margin-bottom: 15px; padding: 8px; background: #f0f9ff; border-radius: 4px; border: 1px solid #bae6fd;">
+                    <p style="margin:0; font-size: 12px; color: #0369a1; font-weight: 600;"><strong>Next Term Begins On:</strong> ________________________</p>
                 </div>
                 ` : ''}
                 
                 <!-- Premium Footer -->
-                <div style="text-align: center; 
-                            border-top: 1px solid #e5e7eb; 
-                            padding-top: 20px; 
-                            margin-top: 25px;
-                            padding-bottom: 15px;">
-                    <img src="../../assets/icons/skore-icon.jpg" 
-                         alt="Skore Point" 
-                         style="display: block; 
-                                margin: 0 auto 8px; 
-                                height: 30px; 
-                                width: auto; 
-                                opacity: 0.8;">
-                    <div style="font-size: 9px; 
-                                color: #6b7280; 
-                                letter-spacing: 1px; 
-                                font-weight: 500; 
-                                margin-bottom: 2px;">
-                        POWERED BY SKORE POINT
-                    </div>
-                    <div style="font-size: 8px; 
-                                color: #9ca3af; 
-                                margin-bottom: 4px;">
-                        A SERUSOFT PRODUCT
-                    </div>
-                    <div style="font-size: 10px; 
-                                color: #4361ee; 
-                                font-weight: 700; 
-                                letter-spacing: 0.5px;">
-                        skorepoint.com
-                    </div>
+                <div style="text-align: center; border-top: 1px solid #f3f4f6; padding-top: 15px; padding-bottom: 20px; margin-top: auto;">
+                    <img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" style="display: block; margin: 0 auto 4px; height: 20px; width: auto; opacity: 0.7;">
+                    <div style="font-size: 11px; color: #9ca3af; letter-spacing: 0.5px;">POWERED BY SKORE POINT</div>
+                    <div style="font-size: 10px; color: #d1d5db; margin-top: 1px;">A SERUSOFT PRODUCT</div>
+                    <div style="font-size: 11px; color: #4361ee; font-weight: 600; margin-top: 2px;">skorepoint.com</div>
                 </div>
+                
                 </div>
             </div>
         `;
@@ -2312,7 +2351,7 @@ class ReportsController {
                         <h1 style="margin: 0; font-size: 24px; font-weight: 700; text-transform: uppercase;">${school.name}</h1>
                         <h2 style="margin: 5px 0 0; font-size: 18px; color: #444;">Class Performance Report</h2>
                         <div style="margin-top: 10px; font-size: 14px; font-weight: 600; color: #555;">
-                            ${classData.name} | ${term} | ${new Date().getFullYear()}
+                            ${classData.name} | ${term} (TERM ${this.getUgandanTerm()}) | ${new Date().getFullYear()}
                         </div>
                     </div>
                     <div style="text-align: right; width: 80px; font-size: 12px; font-weight: 600;">
@@ -2431,8 +2470,19 @@ class ReportsController {
                 </div>
 
                 <!-- Footer -->
-                <div style="text-align: center; border-top: 1px solid #eee; padding-top: 15px; margin-top: 30px; font-size: 9px; color: #888;">
-                    Generated by Skore Point | Professional School Management System
+                <div style="text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px; padding-bottom: 15px;">
+                    <img src="../../assets/icons/skore-icon.jpg" 
+                         alt="Skore Point" 
+                         style="display: block; margin: 0 auto 5px; height: 30px; width: auto; opacity: 0.8;">
+                    <div style="font-size: 10px; color: #6b7280; letter-spacing: 1px; font-weight: 700; margin-bottom: 3px; text-transform: uppercase;">
+                        POWERED BY SKORE POINT
+                    </div>
+                    <div style="font-size: 9px; color: #9ca3af; margin-bottom: 2px;">
+                        A product of serusoft
+                    </div>
+                    <div style="font-size: 9px; color: #4361ee; font-weight: 600;">
+                        skorepoint.com
+                    </div>
                 </div>
             </div>
         `;
@@ -2500,10 +2550,19 @@ class ReportsController {
                     </div>
                 </div>
                 
-                <div style="margin-top: 20px; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
-                    <img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" style="height: 30px; opacity: 0.7; display: block; margin: 0 auto;">
-                    <div style="font-size: 10px; color: #666; margin-top: 5px; font-weight: bold;">POWERED BY SKORE POINT</div>
-                    <div style="font-size: 9px; color: #888; margin-top: 2px;">a product of serusoft . skorepoint.com</div>
+                <div style="margin-top: 20px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px; padding-bottom: 15px;">
+                    <img src="../../assets/icons/skore-icon.jpg" 
+                         alt="Skore Point" 
+                         style="display: block; margin: 0 auto 5px; height: 30px; width: auto; opacity: 0.8;">
+                    <div style="font-size: 10px; color: #6b7280; letter-spacing: 1px; font-weight: 700; margin-bottom: 3px; text-transform: uppercase;">
+                        POWERED BY SKORE POINT
+                    </div>
+                    <div style="font-size: 9px; color: #9ca3af; margin-bottom: 2px;">
+                        A product of serusoft
+                    </div>
+                    <div style="font-size: 9px; color: #4361ee; font-weight: 600;">
+                        skorepoint.com
+                    </div>
                 </div>
             </div>
         `;
@@ -2598,10 +2657,13 @@ class ReportsController {
             <div class="report-card" 
                  style="padding:40px; 
                         width: 210mm; 
+                        min-height: 297mm;
+                        box-sizing: border-box;
                         margin: 0 auto; 
                         ${PREMIUM_BORDER_STYLE} 
                         font-family: 'Times New Roman', serif; 
-                        color: #111;">
+                        color: #111;
+                        display: flex; flex-direction: column;">
                 ${this.currentSchool.logoUrl ? `
                     <div style="position: absolute; 
                                 top: 50%; 
@@ -2624,23 +2686,20 @@ class ReportsController {
                     ${this.currentSchool.logoUrl ? `<img src="${this.currentSchool.logoUrl}" alt="${this.currentSchool.name}" style="height: 70px; width: auto; object-fit: contain;">` : ''}
                     <div style="text-align: center;">
                         <h1 style="margin:0 0 8px 0; color:#1a1a1a; font-family: 'Times New Roman', serif; font-size: 26px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.1;">${this.currentSchool.name}</h1>
-                        <p style="margin:0; color:#555; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Subject Analysis - ${subject.name}</p>
+                        <p style="margin:0; color:#555; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Subject Analysis - ${subject.name}</p>
+                        <div style="font-size: 12px; color: #555; margin-top: 5px;">${classData?.name || 'All Classes'} | ${term} (TERM ${this.getUgandanTerm()}) | ${new Date().getFullYear()}</div>
                     </div>
                 </div>
                 
                 <!-- Subject Information -->
                 <div class="subject-info" style="background: #f9fafb; border-radius: 8px; padding: 25px; margin-bottom: 40px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
-                    <div>
+                    <div style="display: none;">
                         <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Subject</div>
                         <div style="font-size: 16px; font-weight: 700; color: #111827;">${subject.name}</div>
                     </div>
                     <div>
                         <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Class</div>
                         <div style="font-size: 16px; font-weight: 700; color: #111827;">${classData?.name || 'All Classes'}</div>
-                    </div>
-                    <div>
-                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Term</div>
-                        <div style="font-size: 16px; font-weight: 700; color: #111827;">${term}</div>
                     </div>
                     <div>
                         <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Total Students</div>
@@ -2723,7 +2782,7 @@ class ReportsController {
                 </table>
                 
                 <!-- Footer -->
-                <div style="text-align: center; border-top: 1px solid #f3f4f6; padding-top: 20px; padding-bottom: 15px;">
+                <div style="text-align: center; border-top: 1px solid #f3f4f6; padding-top: 20px; padding-bottom: 30px; margin-top: auto;">
                     <img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" style="display: block; margin: 0 auto 5px; height: 25px; width: auto; opacity: 0.7;">
                     <div style="font-size: 10px; color: #9ca3af; letter-spacing: 0.5px;">POWERED BY SKORE POINT</div>
                     <div style="font-size: 9px; color: #d1d5db; margin-top: 2px;">A SERUSOFT PRODUCT</div>
@@ -2735,16 +2794,19 @@ class ReportsController {
     }
     
     generateSchoolReportHTML(reportData) {
-        const { classReports, statistics, term } = reportData;
+        const { classReports, statistics, term, subjectRankings } = reportData;
         
         return `
             <div class="report-card" 
                  style="padding:40px; 
                         width: 210mm; 
+                        min-height: 297mm;
+                        box-sizing: border-box;
                         margin: 0 auto; 
                         ${PREMIUM_BORDER_STYLE} 
                         font-family: 'Times New Roman', serif; 
-                        color: #111;">
+                        color: #111;
+                        display: flex; flex-direction: column;">
                 ${this.currentSchool.logoUrl ? `
                     <div style="position: absolute; 
                                 top: 50%; 
@@ -2768,6 +2830,7 @@ class ReportsController {
                     <div style="text-align: center;">
                         <h1 style="margin:0 0 8px 0; color:#1a1a1a; font-family: 'Times New Roman', serif; font-size: 26px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.1;">${this.currentSchool.name}</h1>
                         <p style="margin:0; color:#555; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">School Performance Summary</p>
+                        <div style="font-size: 12px; color: #555; margin-top: 5px;">${term} (TERM ${this.getUgandanTerm()}) | ${new Date().getFullYear()}</div>
                     </div>
                 </div>
                 
@@ -2844,6 +2907,27 @@ class ReportsController {
                     </tbody>
                 </table>
                 
+                <!-- Subject Performance Ranking -->
+                <h3 style="font-size: 14px; font-weight: 600; text-transform: uppercase; color: #4b5563; margin-bottom: 20px; margin-top: 30px;">Subject Performance Ranking</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: center; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 10px; text-transform: uppercase; font-weight: 600;">Rank</th>
+                            <th style="text-align: left; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 10px; text-transform: uppercase; font-weight: 600;">Subject</th>
+                            <th style="text-align: center; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-size: 10px; text-transform: uppercase; font-weight: 600;">Average Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${subjectRankings ? subjectRankings.map((subj, index) => `
+                            <tr>
+                                <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #6b7280; font-size: 12px;">${index + 1}</td>
+                                <td style="padding: 8px 12px; text-align: left; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-weight: 500; font-size: 12px;">${subj.name}</td>
+                                <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-weight: 600; font-size: 12px;">${subj.average}%</td>
+                            </tr>
+                        `).join('') : '<tr><td colspan="3" style="text-align:center; padding:10px;">No subject data available</td></tr>'}
+                    </tbody>
+                </table>
+
                 <!-- Recommendations -->
                 <div class="recommendations" style="background: #fffbeb; padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b; margin-bottom: 40px;">
                     <h4 style="font-size: 14px; font-weight: 600; text-transform: uppercase; color: #92400e; margin-bottom: 10px;">Recommendations</h4>
@@ -2856,7 +2940,7 @@ class ReportsController {
                 </div>
                 
                 <!-- Footer -->
-                <div style="text-align: center; border-top: 1px solid #f3f4f6; padding-top: 20px; padding-bottom: 15px;">
+                <div style="text-align: center; border-top: 1px solid #f3f4f6; padding-top: 20px; padding-bottom: 30px; margin-top: auto;">
                     <img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" style="display: block; margin: 0 auto 5px; height: 25px; width: auto; opacity: 0.7;">
                     <div style="font-size: 10px; color: #9ca3af; letter-spacing: 0.5px;">POWERED BY SKORE POINT</div>
                     <div style="font-size: 9px; color: #d1d5db; margin-top: 2px;">A SERUSOFT PRODUCT</div>
@@ -2979,6 +3063,13 @@ class ReportsController {
     async exportReport(format) {
         if (!this.currentReportData) {
             this.showError('No report data to export. Please generate a report first.');
+            return;
+        }
+        
+        // Security Check: Teachers can only export subject reports
+        const isAdmin = this.currentSchool.admins && this.currentSchool.admins.includes(this.currentUser.uid);
+        if (!isAdmin && this.currentReportData.type !== 'subject') {
+            this.showError('Access Denied: Teachers can only export Subject Analysis reports.');
             return;
         }
         
@@ -3221,6 +3312,7 @@ class ReportsController {
             clone.style.setProperty('background', 'white', 'important');
             clone.style.setProperty('font-size', '11px', 'important');
             // Reset zoom to ensure correct scaling
+            clone.style.setProperty('display', 'block', 'important'); // Fix for mobile flex containers
             clone.style.setProperty('zoom', '1', 'important');
             clone.style.setProperty('transform', 'none', 'important');
         
@@ -3262,7 +3354,7 @@ class ReportsController {
                 backgroundColor: '#ffffff',
                 scrollX: 0,
                 scrollY: 0,
-                windowWidth: 794,
+                windowWidth: 794, // A4 width at 96 DPI
                 // Only set windowHeight if NOT class report (auto height for multi-page)
                 ...(isClassReport ? {} : { windowHeight: 1123 }),
                 ignoreElements: (element) => element.classList.contains('no-print'),
@@ -3271,8 +3363,8 @@ class ReportsController {
                     const svgs = clonedDoc.querySelectorAll('svg');
                     svgs.forEach(svg => {
                         const rect = svg.getBoundingClientRect();
-                        if (!svg.getAttribute('width') && rect.width) svg.setAttribute('width', rect.width);
-                        if (!svg.getAttribute('height') && rect.height) svg.setAttribute('height', rect.height);
+                        if (!svg.getAttribute('width') && rect.width) svg.setAttribute('width', rect.width + 'px');
+                        if (!svg.getAttribute('height') && rect.height) svg.setAttribute('height', rect.height + 'px');
                     });
                 },
                 x: 0,
@@ -3322,11 +3414,25 @@ class ReportsController {
     }
 
     async exportClassReportToExcel(reportData) {
-        const { class: classData, studentReports, term, level } = reportData;
+        const { class: classData, studentReports, term, level, school } = reportData;
         const isLowerPrimary = level === 'lower-primary';
 
         // Prepare data for Excel
         const data = [];
+
+        // Add new headers
+        const schoolName = school ? school.name.toUpperCase() : 'CLASS REPORT';
+        const className = classData ? classData.name.toUpperCase() : 'CLASS';
+        const termName = term.toUpperCase();
+        const year = new Date().getFullYear();
+        const termNum = this.getUgandanTerm();
+        const analysisTitle = `${className} CLASS PERFORMANCE ANALYSIS - ${termName} TERM ${termNum} ${year}`;
+
+        data.push([schoolName]);
+        data.push([analysisTitle]);
+        data.push([`Generated: ${new Date().toLocaleDateString()}`]);
+        data.push(['']); // Spacer row
+
         
         // Headers
         const headers = ['Rank', 'Student Name'];
@@ -3382,6 +3488,14 @@ class ReportsController {
         const wscols = headers.map(h => ({ wch: Math.max(h.length + 2, 10) }));
         ws['!cols'] = wscols;
         
+        // Merge title cells
+        const totalCols = headers.length;
+        ws['!merges'] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } }, // School Name
+            { s: { r: 1, c: 0 }, e: { r: 1, c: totalCols - 1 } }, // Title
+            { s: { r: 2, c: 0 }, e: { r: 2, c: totalCols - 1 } }  // Date
+        ];
+
         XLSX.utils.book_append_sheet(wb, ws, "Class Analysis");
         
         const fileName = this.getReportFileName(reportData, 'xlsx');

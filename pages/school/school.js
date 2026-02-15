@@ -1,7 +1,7 @@
 // pages/school/school.js
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('School Page: DOMContentLoaded - Starting initialization process (v1.2.1).');
+    console.log('School Page: DOMContentLoaded - Starting initialization process (v1.2.8 - Revert Watermark).');
 
     // Track initialization state
     let pageInitialized = false;
@@ -79,6 +79,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             .join('')
             .substring(0, 2);
     }
+
+    // Setup listeners immediately to ensure UI is interactive
+    setupEventListeners();
     
     // ========== RBAC SECURITY FUNCTIONS ==========
     
@@ -149,75 +152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Start with existing assigned subjects
                 let finalAssignedSubjects = userData.assignedSubjects || [];
 
-                // Check for default 'subject' string from registration
-                // We do this to ensure the default subject is assigned for the current level
-                if (userData.subject) {
-                    const subjectNameLower = userData.subject.trim().toLowerCase();
-                    const subjectNameOriginal = userData.subject.trim();
-
-                    try {
-                        let matchedSubjects = [];
-
-                        // Look for the subject in the current academic level
-                        if (academicLevel) {
-                            // Try lowercase match first
-                            matchedSubjects = await Firebase.db.query('subjects', [
-                                { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-                                { field: 'name_lowercase', op: '==', value: subjectNameLower },
-                                { field: 'category', op: '==', value: academicLevel }
-                            ]);
-
-                            // Fallback: Try exact name match if lowercase failed
-                            if (matchedSubjects.length === 0) {
-                                matchedSubjects = await Firebase.db.query('subjects', [
-                                    { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-                                    { field: 'name', op: '==', value: subjectNameOriginal },
-                                    { field: 'category', op: '==', value: academicLevel }
-                                ]);
-                            }
-                        }
-
-                        // Fallback: If no subjects assigned at all and no level specified, search all levels
-                        if (matchedSubjects.length === 0 && finalAssignedSubjects.length === 0 && !academicLevel) {
-                            // Try lowercase match
-                            matchedSubjects = await Firebase.db.query('subjects', [
-                                { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-                                { field: 'name_lowercase', op: '==', value: subjectNameLower }
-                            ]);
-
-                            // Fallback: Try exact name match
-                            if (matchedSubjects.length === 0) {
-                                matchedSubjects = await Firebase.db.query('subjects', [
-                                    { field: 'schoolId', op: '==', value: AppState.currentSchool.id },
-                                    { field: 'name', op: '==', value: subjectNameOriginal }
-                                ]);
-                            }
-                        }
-
-                        if (matchedSubjects.length > 0) {
-                            const subjectToAssign = matchedSubjects[0]; // Take the first match
-                            const subjectId = subjectToAssign.id;
-                            
-                            // If this subject is not yet assigned, add it
-                            if (!finalAssignedSubjects.includes(subjectId)) {
-                                console.log(`Auto-assigning default subject "${userData.subject}" for level ${academicLevel}: ${subjectId}`);
-
-                                // Update DB using arrayUnion to preserve existing subjects
-                                await Firebase.db.updateDoc('users', currentUserId, {
-                                    assignedSubjects: Firebase.db.arrayUnion(subjectId)
-                                });
-
-                                // Update local list and AppState
-                                finalAssignedSubjects.push(subjectId);
-                                if (AppState.currentUserData) {
-                                    AppState.currentUserData.assignedSubjects = finalAssignedSubjects;
-                                }
-                            }
-                        }
-                    } catch (err) {
-                        console.error('Error resolving default subject:', err);
-                    }
-                }
+                // Auto-assignment logic removed as per request.
                 
                 return finalAssignedSubjects;
             }
@@ -385,17 +320,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             pageInitialized = true;
             await initializeAndLoad();
         } else {
-            console.warn('School Page: app:initialized - AppState.currentSchool is NOT available.');
-            hidePageLoading();
-            showToast('No school assigned or loaded. Please contact support.', 'warning');
+            console.warn('School Page: app:initialized - AppState.currentSchool is NOT available. Waiting for school data...');
+            // Do not fail yet. Wait for school:changed event which usually follows.
         }
     });
     
     // Listen for school changes
     document.addEventListener('school:changed', async () => {
         console.log('School Page: school:changed event received.');
-        if (pageInitialized && !schoolDataLoaded) {
-            console.log('School Page: Re-initializing page with new school.');
+        
+        // If page hasn't initialized yet, or initialized but data missing, load now.
+        if (!pageInitialized || !schoolDataLoaded) {
+            console.log('School Page: Initializing page with new school data.');
+            pageInitialized = true;
             await initializeAndLoad();
         }
     });
@@ -418,9 +355,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await initializeAndLoad();
             }
         } else {
-            console.warn('School Page: DOMContentLoaded - App already initialized but no current school found.');
-            hidePageLoading();
-            showToast('No school assigned or loaded. Please contact support.', 'warning');
+            console.warn('School Page: DOMContentLoaded - App already initialized but no current school found. Waiting for school data...');
         }
     } else {
         console.log('School Page: DOMContentLoaded - window.appInitialized is false. Waiting for app:initialized event.');
@@ -452,18 +387,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         showPageLoading('Loading school data...');
         
         try {
-            setupEventListeners();
             await initializePage();
             await loadInitialData();
             
             // Reapply tab visibility after data is loaded to ensure it's set correctly
             applyRoleBasedTabVisibility();
             
-            setupSchoolSettings();
-            setupEnterMarksHandlers();
-            // Class filters are now populated by loadClasses -> updateClassDropdowns
-            setupReportCardHandlers();
-            // Class filters are now populated by loadClasses -> updateClassDropdowns
+            // Wrap non-critical setups to prevent blocking initialization
+            try { setupSchoolSettings(); } catch (e) { console.warn("School settings setup warning:", e); }
+            try { setupEnterMarksHandlers(); } catch (e) { console.warn("Enter marks handlers setup warning:", e); }
+            try { setupReportCardHandlers(); } catch (e) { console.warn("Report card handlers setup warning:", e); }
+            
             schoolDataLoaded = true;
             
             console.log('School Page: initializeAndLoad() - Initialization completed successfully.');
@@ -739,8 +673,46 @@ document.addEventListener('DOMContentLoaded', async () => {
                 fixedExitBtn = document.createElement('button');
                 fixedExitBtn.id = 'exitSchoolBtn';
                 fixedExitBtn.className = 'fixed-exit-btn';
-                fixedExitBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Exit Portal';
                 document.body.appendChild(fixedExitBtn);
+            }
+            
+            // Update button content and style
+            fixedExitBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> EXIT SCHOOL PORTAL';
+            
+            // Inject animation styles
+            if (!document.getElementById('exit-btn-style')) {
+                const style = document.createElement('style');
+                style.id = 'exit-btn-style';
+                style.textContent = `
+                    @keyframes pulse-orange {
+                        0% { background-color: #dc2626; transform: scale(1); box-shadow: 0 4px 6px rgba(220, 38, 38, 0.3); }
+                        50% { background-color: #f97316; transform: scale(1.05); box-shadow: 0 6px 12px rgba(249, 115, 22, 0.4); }
+                        100% { background-color: #dc2626; transform: scale(1); box-shadow: 0 4px 6px rgba(220, 38, 38, 0.3); }
+                    }
+                    .fixed-exit-btn {
+                        background-color: #dc2626 !important;
+                        color: white !important;
+                        font-weight: 800 !important;
+                        letter-spacing: 1px !important;
+                        border: 2px solid rgba(255,255,255,0.2) !important;
+                        animation: pulse-orange 2s infinite !important;
+                        transition: all 0.3s ease !important;
+                        z-index: 10000 !important;
+                        padding: 12px 24px !important;
+                        border-radius: 50px !important;
+                        box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4) !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        gap: 8px !important;
+                        text-transform: uppercase !important;
+                    }
+                    .fixed-exit-btn:hover {
+                        animation: none !important;
+                        background-color: #ef4444 !important;
+                        transform: scale(1.1) !important;
+                    }
+                `;
+                document.head.appendChild(style);
             }
         }
         
@@ -830,6 +802,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         return;
                     }
                     if (section === 'reports' || section === 'reportCard') {
+                        if (!isCurrentUserAdmin()) {
+                            const assignedSubjects = await getTeacherAssignedSubjects(AppState.currentAcademicLevel);
+                            if (assignedSubjects.length === 0) {
+                                showNoSubjectsModal('reports');
+                                return;
+                            }
+                        }
+
                         showPageLoading('Opening Reports...');
                         window.location.href = '../reports/reports.html';
                         return;
@@ -856,6 +836,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
                             }, 100);
                         }
+                    }
+
+                    // Scroll for "My Admin" tab on desktop only
+                    if (window.innerWidth > 768 && section === 'teachers' && !isCurrentUserAdmin()) {
+                        setTimeout(() => {
+                            window.scrollTo({ top: 100, behavior: 'smooth' });
+                        }, 100);
                     }
                 }
                 return;
@@ -1866,7 +1853,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }).join('');
 
-        teachersList.innerHTML = infoCard + adminCards;
+        teachersList.innerHTML = adminCards + infoCard;
     }
     
     /**
@@ -2313,6 +2300,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const studentId = document.getElementById('reportCardStudentFilter')?.value;
         const term = document.getElementById('reportCardTermFilter')?.value;
         const previewArea = document.getElementById('reportCardPreview');
+        const isOLevel = AppState.currentAcademicLevel === 'olevel';
 
         if (!classId || !studentId || !term) {
             showToast('Please select class, student and term', 'warning');
@@ -2358,7 +2346,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Add padding, proper indentation, and alternating row colors
                     const rowBg = index % 2 !== 0 ? 'background-color: #fafafa;' : '';
                     marksHtml += `
-                        <tr style="border-bottom: 1px solid #f1f5f9; ${rowBg}">
+                        <tr style="border-bottom: 1px solid #f1f5f9; ${rowBg} ${isOLevel ? 'font-size: 12px;' : ''}">
                             <td style="padding:12px 15px; color: #334155; font-size: 11px; font-weight: 500;">${subject.name}</td>
                             <td style="padding:12px 15px; text-align:center; font-weight: 600; color: #0f172a; font-size: 11px;">${Math.round(score)}</td>
                             <td style="padding:12px 15px; text-align:center; color: #475569; font-size: 11px;">${getGrade(score)}</td>
@@ -2381,6 +2369,45 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const average = subjectCount > 0 ? Math.round(totalScore / subjectCount) : 0;
+            
+            // --- FIX: Define missing variables for the report card template ---
+            let result = '';
+            let resultLabel = 'Division';
+            let totalLabel = 'Total Score';
+            let totalValue = Math.round(totalScore);
+            
+            if (isOLevel) {
+                resultLabel = 'RESULT';
+                totalLabel = 'Total Score';
+                
+                if (subjectCount === 0) result = '4';
+                else if (subjectCount < 9) result = '2';
+                else {
+                    // Check grades logic for O-Level
+                    let hasPassingGrade = false;
+                    let allElementary = true;
+                    
+                    subjects.forEach(subject => {
+                        const mark = marksData[subject.id];
+                        if (mark !== undefined) {
+                            let s = typeof mark === 'object' ? (Object.values(mark).filter(v=>typeof v==='number').reduce((a,b)=>a+b,0)/Object.values(mark).filter(v=>typeof v==='number').length) : Number(mark);
+                            if (s >= 55) { hasPassingGrade = true; allElementary = false; }
+                        }
+                    });
+
+                    if (allElementary) result = '3';
+                    else if (hasPassingGrade) result = '1';
+                    else result = '3';
+                }
+            } else {
+                // Placeholder for other levels if needed
+                result = 'N/A'; 
+            }
+
+            const reportTitle = isOLevel 
+                ? `COMPETENT BASED TERM ${getUgandanTerm()} STUDENT ASSESSMENT PROGRESS REPORT`
+                : `TERM ${getUgandanTerm()} STUDENT ASSESSMENT PROGRESS REPORT`;
+            // ------------------------------------------------------------------
 
             // Premium A4 template with proper margins and formatting
             const html = `
@@ -2427,15 +2454,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ${AppState.currentSchool.logoUrl 
                         ? `<img src="${AppState.currentSchool.logoUrl}" 
                                 alt="${AppState.currentSchool.name}" 
-                                style="height: 100px; width: 100px; object-fit: contain;">` 
+                                style="height: 110px; width: 110px; object-fit: contain;">` 
                         : `<img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" 
-                                style="height: 100px; width: 100px; opacity: 0.7; object-fit: contain;">`}
+                                style="height: 110px; width: 110px; opacity: 0.7; object-fit: contain;">`}
                     
                     <!-- School Info -->
                     <div style="text-align: center; flex: 1; padding: 0 20px;">
                         <h1 style="margin:0 0 10px 0; 
                                    color:#1a1a1a; 
-                                   font-size: 26px; 
+                                   font-size: 30px; 
                                    font-weight: 700; 
                                    letter-spacing: -0.5px; 
                                    line-height: 1.1;">
@@ -2443,11 +2470,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         </h1>
                         <p style="margin:0; 
                                   color:#555; 
-                                  font-size: 12px; 
+                                  font-size: 14px; 
                                   text-transform: uppercase; 
                                   letter-spacing: 2px; 
                                   font-weight: 600;">
-                            TERM ${getUgandanTerm()} STUDENT ASSESSMENT PROGRESS REPORT
+                            ${reportTitle}
                         </p>
                     </div>
                     
@@ -2466,7 +2493,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             border: 1px solid #e5e7eb;">
                     <div>
                         <div style="margin-bottom: 15px;">
-                            <div style="font-size: 9px; 
+                            <div style="font-size: 11px; 
                                         text-transform: uppercase; 
                                         letter-spacing: 1px; 
                                         color: #6b7280; 
@@ -2474,7 +2501,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         margin-bottom: 5px;">
                                 Student Name
                             </div>
-                            <div style="font-size: 16px; 
+                            <div style="font-size: 18px; 
                                         font-weight: 700; 
                                         color: #111827; 
                                         padding-bottom: 5px; 
@@ -2483,7 +2510,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                         </div>
                         <div>
-                            <div style="font-size: 9px; 
+                            <div style="font-size: 11px; 
                                         text-transform: uppercase; 
                                         letter-spacing: 1px; 
                                         color: #6b7280; 
@@ -2491,7 +2518,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         margin-bottom: 5px;">
                                 Class
                             </div>
-                            <div style="font-size: 14px; 
+                            <div style="font-size: 16px; 
                                         font-weight: 600; 
                                         color: #374151;">
                                 ${document.getElementById('reportCardClassFilter').options[document.getElementById('reportCardClassFilter').selectedIndex].text}
@@ -2500,7 +2527,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     <div>
                         <div style="margin-bottom: 15px;">
-                            <div style="font-size: 9px; 
+                            <div style="font-size: 11px; 
                                         text-transform: uppercase; 
                                         letter-spacing: 1px; 
                                         color: #6b7280; 
@@ -2508,7 +2535,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         margin-bottom: 5px;">
                                 Term
                             </div>
-                            <div style="font-size: 14px; 
+                            <div style="font-size: 16px; 
                                         font-weight: 600; 
                                         color: #374151; 
                                         padding-bottom: 5px; 
@@ -2517,7 +2544,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                         </div>
                         <div>
-                            <div style="font-size: 9px; 
+                            <div style="font-size: 11px; 
                                         text-transform: uppercase; 
                                         letter-spacing: 1px; 
                                         color: #6b7280; 
@@ -2525,7 +2552,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         margin-bottom: 5px;">
                                 Date Generated
                             </div>
-                            <div style="font-size: 14px; 
+                            <div style="font-size: 16px; 
                                         font-weight: 600; 
                                         color: #374151;">
                                 ${new Date().toLocaleDateString('en-US', { 
@@ -2547,16 +2574,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                             border-radius: 8px; 
                             color: white;">
                     <div style="text-align: center;">
-                        <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Total Score</div>
-                        <div style="font-size: 24px; font-weight: 800; margin-top: 5px;">${Math.round(totalScore)}</div>
+                        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">${totalLabel}</div>
+                        <div style="font-size: 26px; font-weight: 800; margin-top: 5px;">${totalValue}</div>
                     </div>
                     <div style="text-align: center;">
-                        <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Average</div>
-                        <div style="font-size: 24px; font-weight: 800; margin-top: 5px;">${average}%</div>
+                        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Average</div>
+                        <div style="font-size: 26px; font-weight: 800; margin-top: 5px;">${average}%</div>
                     </div>
                     <div style="text-align: center;">
-                        <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">Subjects</div>
-                        <div style="font-size: 24px; font-weight: 800; margin-top: 5px;">${subjectCount}</div>
+                        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9;">${resultLabel}</div>
+                        <div style="font-size: 26px; font-weight: 800; margin-top: 5px;">${result}</div>
                     </div>
                 </div>
 
@@ -2564,10 +2591,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <table style="width:100%; border-collapse: collapse; margin-bottom: 30px;">
                     <thead>
                         <tr style="border-bottom: 2px solid #e2e8f0;">
-                            <th style="padding:12px 15px; text-align:left; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #64748b; width: 40%;">Subject</th>
-                            <th style="padding:12px 15px; text-align:center; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #64748b; width: 15%;">Score</th>
-                            <th style="padding:12px 15px; text-align:center; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #64748b; width: 15%;">Grade</th>
-                            <th style="padding:12px 15px; text-align:left; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #64748b; width: 30%;">Remark</th>
+                            <th style="padding:12px 15px; text-align:left; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #64748b; width: 40%;">Subject</th>
+                            <th style="padding:12px 15px; text-align:center; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #64748b; width: 15%;">Score</th>
+                            <th style="padding:12px 15px; text-align:center; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #64748b; width: 15%;">Grade</th>
+                            <th style="padding:12px 15px; text-align:left; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #64748b; width: 30%;">Remark</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2578,7 +2605,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <!-- Remarks Section -->
                 <div style="margin-top: 25px; margin-bottom: 30px;">
                     <div style="margin-bottom: 30px;">
-                        <div style="font-size: 10px; 
+                        <div style="font-size: 12px; 
                                     text-transform: uppercase; 
                                     color: #4b5563; 
                                     margin-bottom: 25px; 
@@ -2591,14 +2618,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     padding-bottom: 25px; 
                                     min-height: 40px;"></div>
                         <div style="text-align: right; 
-                                    font-size: 10px; 
+                                    font-size: 12px; 
                                     color: #9ca3af; 
                                     font-style: italic;">
                             Signature: ........................................
                         </div>
                     </div>
                     <div>
-                        <div style="font-size: 10px; 
+                        <div style="font-size: 12px; 
                                     text-transform: uppercase; 
                                     color: #4b5563; 
                                     margin-bottom: 25px; 
@@ -2611,13 +2638,63 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     padding-bottom: 25px; 
                                     min-height: 40px;"></div>
                         <div style="text-align: right; 
-                                    font-size: 10px; 
+                                    font-size: 12px; 
                                     color: #9ca3af; 
                                     font-style: italic;">
                             Signature: ........................................
                         </div>
                     </div>
                 </div>
+                
+                ${AppState.currentAcademicLevel === 'olevel' ? `
+                <!-- Result Insight & Explanation -->
+                <div style="margin-bottom: 15px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 10px; border: 1px solid #e5e7eb; margin-bottom: 8px;">
+                        <tr style="background-color: #f3f4f6;">
+                            <th style="padding: 4px; border-right: 1px solid #e5e7eb; text-align: center; width: 40px; font-weight: 700;">RESULT</th>
+                            <th style="padding: 4px; text-align: left; font-weight: 700;">DESCRIPTION</th>
+                        </tr>
+                        <tr style="border-top: 1px solid #e5e7eb;">
+                            <td style="padding: 3px; border-right: 1px solid #e5e7eb; text-align: center; font-weight: 700;">1</td>
+                            <td style="padding: 3px;">Achieved Basic (D) or better in at least one subject.</td>
+                        </tr>
+                        <tr style="border-top: 1px solid #e5e7eb;">
+                            <td style="padding: 3px; border-right: 1px solid #e5e7eb; text-align: center; font-weight: 700;">2</td>
+                            <td style="padding: 3px;">Sat for less than 9 subjects.</td>
+                        </tr>
+                        <tr style="border-top: 1px solid #e5e7eb;">
+                            <td style="padding: 3px; border-right: 1px solid #e5e7eb; text-align: center; font-weight: 700;">3</td>
+                            <td style="padding: 3px;">Scored Elementary (E) in all subjects.</td>
+                        </tr>
+                         <tr style="border-top: 1px solid #e5e7eb;">
+                            <td style="padding: 3px; border-right: 1px solid #e5e7eb; text-align: center; font-weight: 700;">4</td>
+                            <td style="padding: 3px;">Did not sit for exams.</td>
+                        </tr>
+                    </table>
+                    
+                    <div style="padding: 8px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px;">
+                        <div style="font-size: 11px; font-weight: 700; color: #4b5563; margin-bottom: 2px; text-transform: uppercase;">Student Result Explanation</div>
+                        <div style="font-size: 11px; color: #1f2937;">
+                            ${(() => {
+                                if (result === '1') return 'The student has achieved a Basic competency (Grade D) or higher in at least one subject.';
+                                if (result === '2') return `The student sat for ${subjectCount} subjects, which is less than the required minimum of 9 subjects.`;
+                                if (result === '3') return 'The student scored Elementary (Grade E) in all subjects.';
+                                if (result === '4') return 'The student did not sit for any exams.';
+                                return 'Result not available.';
+                            })()}
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px; text-align: center; font-size: 11px; color: #555; border-top: 1px solid #e5e7eb; padding-top: 10px;">
+                    <span style="font-weight: 700; color: #111; margin-right: 5px;">GRADING SCALE:</span>
+                    <span style="margin: 0 5px;">A: 90-100 (Exceptional)</span> |
+                    <span style="margin: 0 5px;">B: 80-89 (Outstanding)</span> |
+                    <span style="margin: 0 5px;">C: 70-79 (Satisfactory)</span> |
+                    <span style="margin: 0 5px;">D: 55-69 (Basic)</span> |
+                    <span style="margin: 0 5px;">E: 0-54 (Elementary)</span>
+                </div>
+                ` : ''}
                 
                 ${term === 'end' ? `
                 <div style="text-align: center; 
@@ -2628,7 +2705,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             border-radius: 6px; 
                             border: 1px solid #bae6fd;">
                     <p style="margin:0; 
-                              font-size: 11px; 
+                              font-size: 13px; 
                               color: #0369a1; 
                               font-weight: 600;">
                         <strong>Next Term Begins On:</strong> ________________________________
@@ -2648,19 +2725,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 height: 30px; 
                                 width: auto; 
                                 opacity: 0.8;">
-                    <div style="font-size: 9px; 
+                    <div style="font-size: 11px; 
                                 color: #6b7280; 
                                 letter-spacing: 1px; 
                                 font-weight: 500; 
                                 margin-bottom: 2px;">
                         POWERED BY SKORE POINT
                     </div>
-                    <div style="font-size: 8px; 
+                    <div style="font-size: 10px; 
                                 color: #9ca3af; 
                                 margin-bottom: 4px;">
                         A SERUSOFT PRODUCT
                     </div>
-                    <div style="font-size: 10px; 
+                    <div style="font-size: 12px; 
                                 color: #4361ee; 
                                 font-weight: 700; 
                                 letter-spacing: 0.5px;">
@@ -2849,6 +2926,59 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    /**
+     * Print the generated report card preview
+     */
+    function printReportCardPreview() {
+        const previewArea = document.getElementById('reportCardPreview');
+        if (!previewArea) return;
+        
+        const reportCard = previewArea.querySelector('.premium-report, .report-card');
+        if (!reportCard) {
+            showToast('Please generate a report to print.', 'warning');
+            return;
+        }
+        
+        const printWindow = window.open('', '_blank', 'height=800,width=800');
+        if (!printWindow) {
+            showToast('Please allow pop-ups to print the report.', 'error');
+            return;
+        }
+
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Print Report Card</title>
+                <style>
+                    body { margin: 0; padding: 0; background: white; font-family: 'Times New Roman', serif; }
+                    @media print {
+                        @page { size: A4; margin: 0; }
+                        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        .report-card {
+                            width: 210mm !important;
+                            min-height: 297mm !important;
+                            margin: 0 auto !important;
+                            box-shadow: none !important;
+                            border: none !important;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                ${reportCard.outerHTML}
+                <script>
+                    window.onload = function() {
+                        window.print();
+                        setTimeout(function() { window.close(); }, 500);
+                    };
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    }
+
     function getGrade(score) {
         if (AppState.currentAcademicLevel === 'upper-primary') {
             if (score >= 90) return 'D1';
@@ -2860,6 +2990,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (score >= 50) return 'P7';
             if (score >= 40) return 'P8';
             return 'F9';
+        }
+        if (AppState.currentAcademicLevel === 'olevel') {
+            if (score >= 90) return 'A';
+            if (score >= 80) return 'B';
+            if (score >= 70) return 'C';
+            if (score >= 55) return 'D';
+            return 'E';
         }
         if (score >= 80) return 'A';
         if (score >= 70) return 'B';
@@ -2880,6 +3017,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (score >= 50) return 'Pass';
             if (score >= 40) return 'Pass';
             return 'Fail';
+        }
+        if (AppState.currentAcademicLevel === 'olevel') {
+            if (score >= 90) return 'Exceptional';
+            if (score >= 80) return 'Outstanding';
+            if (score >= 70) return 'Satisfactory';
+            if (score >= 55) return 'Basic';
+            return 'Elementary';
         }
         if (score >= 80) return 'Excellent';
         if (score >= 70) return 'Very Good';
@@ -2914,14 +3058,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             hidePageLoading();
 
             if (assignedSubjects.length === 0) {
-                const userDoc = await Firebase.db.getDoc('users', AppState.currentUser.uid);
-                const userData = userDoc.exists() ? userDoc.data() : {};
-                
-                if (userData.subject) {
-                    showToast(`Your registered subject "${userData.subject}" was not found for this academic level. Please contact an admin.`, 'error', 6000);
-                } else {
-                    showToast('You have no subjects assigned for this level. Please contact an admin.', 'warning', 6000);
-                }
+                showNoSubjectsModal('marks');
                 return;
             }
 
@@ -2936,6 +3073,112 @@ document.addEventListener('DOMContentLoaded', async () => {
             hidePageLoading();
             showToast('Failed to open marks page. Please try again.', 'error');
         }
+    }
+
+    function showNoSubjectsModal(context) {
+        const existing = document.getElementById('restrictedAccessModal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'restrictedAccessModal';
+        modal.className = 'modal active';
+        modal.style.cssText = 'display: flex; align-items: center; justify-content: center; z-index: 10000; background: rgba(0,0,0,0.8); position: fixed; top: 0; left: 0; width: 100%; height: 100%;';
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%; text-align: center; position: relative; animation: slideUp 0.3s ease;">
+                <div id="restrictedInitialContent">
+                    <div style="width: 60px; height: 60px; background: #fef3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                        <i class="fas fa-exclamation" style="font-size: 30px; color: #d97706;"></i>
+                    </div>
+                    <h3 style="color: #1f2937; margin-bottom: 10px; font-size: 18px; font-weight: 800; text-transform: uppercase;">YOU CANT DO IT BECAUSE NOT AN ADMIN</h3>
+                    <p style="color: #4b5563; margin-bottom: 25px; font-size: 15px;">You can only get your subject analysis.</p>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="btn btn-secondary" onclick="document.getElementById('restrictedAccessModal').remove()">Close</button>
+                        <button class="btn btn-primary" id="restrictedMoreBtn">More</button>
+                    </div>
+                </div>
+                
+                <div id="restrictedMoreContent" style="display: none;">
+                    <h4 style="color: #1f2937; margin-bottom: 15px; font-size: 16px; font-weight: 700;">Access Limitation</h4>
+                    <p style="color: #4b5563; margin-bottom: 15px; font-size: 14px; line-height: 1.5;">This limitation is done to ensure safty and authenticative use of skore point.</p>
+                    <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #dbeafe;">
+                        <p style="color: #1e40af; font-size: 13px; margin: 0; line-height: 1.5;">
+                            If want extra acces to the school portal more subject , generating report cards. check My admin tab on the school page and see your admin and contact him to assign you subject or make you an admin to have extra functionalities.
+                        </p>
+                    </div>
+                    
+                    <div style="margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                        <img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" style="height: 40px; width: auto; opacity: 0.9; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto;">
+                        <div style="font-size: 12px; font-weight: 800; color: #4361ee; letter-spacing: 1px;">THANKS FOR USING SKORE POINT</div>
+                    </div>
+                    <button class="btn btn-secondary" style="margin-top: 20px; width: 100%;" onclick="document.getElementById('restrictedAccessModal').remove()">Close</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        document.getElementById('restrictedMoreBtn').addEventListener('click', () => {
+            document.getElementById('restrictedInitialContent').style.display = 'none';
+            document.getElementById('restrictedMoreContent').style.display = 'block';
+        });
+    }
+
+    function showNoSubjectsModal(ignoredParam) {
+        const existing = document.getElementById('restrictedAccessModal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'restrictedAccessModal';
+        modal.className = 'modal active';
+        modal.style.cssText = 'display: flex; align-items: center; justify-content: center; z-index: 10000; background: rgba(0,0,0,0.8); position: fixed; top: 0; left: 0; width: 100%; height: 100%;';
+        
+        const title = "PERMISSION DENIED";
+        let message = "Sorry you cant access this section because you have no permission from your school portal admin.";
+        
+        if (context === 'marks') {
+            message = "Sorry you cant access the Mark section because you have no permission from your school portal admin.";
+        } else if (context === 'reports') {
+            message = "Sorry you cant access the Analysis section because you have no permission from your school portal admin.";
+        }
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%; text-align: center; position: relative; animation: slideUp 0.3s ease;">
+                <div id="restrictedInitialContent">
+                    <div style="width: 60px; height: 60px; background: #fef3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                        <i class="fas fa-exclamation" style="font-size: 30px; color: #d97706;"></i>
+                    </div>
+                    <h3 style="color: #1f2937; margin-bottom: 10px; font-size: 18px; font-weight: 800; text-transform: uppercase;">${title}</h3>
+                    <p style="color: #4b5563; margin-bottom: 25px; font-size: 15px;">${message}</p>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="btn btn-secondary" onclick="document.getElementById('restrictedAccessModal').remove()">Close</button>
+                        <button class="btn btn-primary" id="restrictedMoreBtn">More</button>
+                    </div>
+                </div>
+                
+                <div id="restrictedMoreContent" style="display: none;">
+                    <h4 style="color: #1f2937; margin-bottom: 15px; font-size: 16px; font-weight: 700;">How to get access</h4>
+                    <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #dbeafe;">
+                        <p style="color: #1e40af; font-size: 13px; margin: 0; line-height: 1.5;">
+                            exit and go to the My admin tab a get to know you admin and tell him to assign you you subject under the teachers tab .
+                        </p>
+                    </div>
+                    
+                    <div style="margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                        <img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" style="height: 40px; width: auto; opacity: 0.9; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto;">
+                        <div style="font-size: 12px; font-weight: 800; color: #4361ee; letter-spacing: 1px;">THANKS FOR USING SKORE POINT</div>
+                    </div>
+                    <button class="btn btn-secondary" style="margin-top: 20px; width: 100%;" onclick="document.getElementById('restrictedAccessModal').remove()">Close</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        document.getElementById('restrictedMoreBtn').addEventListener('click', () => {
+            document.getElementById('restrictedInitialContent').style.display = 'none';
+            document.getElementById('restrictedMoreContent').style.display = 'block';
+        });
     }
 
     /**
@@ -3026,10 +3269,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const currentAssignedSubjectIds = teacher.assignedSubjects || [];
-            const subjectOptions = allSubjects.map(s => ({
-                value: s.id,
-                label: s.name,
-                selected: currentAssignedSubjectIds.includes(s.id)
+            
+            // Group subjects by name to show unique list
+            const subjectsByName = {};
+            allSubjects.forEach(s => {
+                const name = s.name.trim();
+                if (!subjectsByName[name]) {
+                    subjectsByName[name] = [];
+                }
+                subjectsByName[name].push(s.id);
+            });
+
+            // Create options based on unique names
+            const uniqueSubjectNames = Object.keys(subjectsByName).sort();
+            const selectedNames = uniqueSubjectNames.filter(name => {
+                const ids = subjectsByName[name];
+                return ids.some(id => currentAssignedSubjectIds.includes(id));
+            });
+
+            const subjectOptions = uniqueSubjectNames.map(name => ({
+                value: name,
+                label: name
             }));
 
             hidePageLoading();
@@ -3041,15 +3301,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                         label: `Assign Subjects to ${teacher.name}`,
                         type: 'multiselect', // Assuming a custom multiselect type for UI.form
                         options: subjectOptions,
-                        value: currentAssignedSubjectIds
+                        value: selectedNames
                     }
                 ],
                 `Assign Subjects to ${teacher.name}`,
                 'Assign',
                 async (formData) => {
                     showPageLoading('Updating assigned subjects...');
+                    
+                    // Map selected names back to all IDs for those subjects
+                    const selectedSubjectNames = formData.subjects || [];
+                    let newAssignedIds = [];
+                    
+                    selectedSubjectNames.forEach(name => {
+                        if (subjectsByName[name]) {
+                            newAssignedIds = [...newAssignedIds, ...subjectsByName[name]];
+                        }
+                    });
+                    
+                    // Deduplicate IDs
+                    newAssignedIds = [...new Set(newAssignedIds)];
+
                     await Firebase.db.updateDoc('users', teacherId, {
-                        assignedSubjects: formData.subjects || []
+                        assignedSubjects: newAssignedIds
                     });
                     showToast('Subjects assigned successfully.', 'success');
                     await loadTeachers(); // Reload teachers to reflect changes

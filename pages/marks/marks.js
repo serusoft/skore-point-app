@@ -116,13 +116,38 @@ async function initializeMarksPage(level) {
 
 function setupMarksEventListeners() {
     // Back to School
-    document.getElementById('backToSchoolBtn')?.addEventListener('click', () => {
-        if (typeof window.navigateTo === 'function') {
-            window.navigateTo('school');
-        } else {
-            window.location.href = '../school/school.html';
+    const backBtn = document.getElementById('backToSchoolBtn');
+    if (backBtn) {
+        // Add blinking animation style if not present
+        if (!document.getElementById('blink-animation-style')) {
+            const styleSheet = document.createElement("style");
+            styleSheet.id = 'blink-animation-style';
+            styleSheet.innerText = `
+                @keyframes blink-red {
+                    0% { background-color: #dc2626; box-shadow: 0 0 5px rgba(220, 38, 38, 0.5); transform: scale(1); }
+                    50% { background-color: #ef4444; box-shadow: 0 0 15px rgba(239, 68, 68, 0.8); transform: scale(1.05); }
+                    100% { background-color: #dc2626; box-shadow: 0 0 5px rgba(220, 38, 38, 0.5); transform: scale(1); }
+                }
+            `;
+            document.head.appendChild(styleSheet);
         }
-    });
+
+        // Apply red blinking style
+        Object.assign(backBtn.style, {
+            backgroundColor: '#dc2626',
+            color: 'white',
+            animation: 'blink-red 2s infinite',
+            border: 'none'
+        });
+
+        backBtn.addEventListener('click', () => {
+            if (typeof window.navigateTo === 'function') {
+                window.navigateTo('school');
+            } else {
+                window.location.href = '../school/school.html';
+            }
+        });
+    }
 
     // Level selection
     document.getElementById('marksLevel')?.addEventListener('change', async (e) => {
@@ -337,8 +362,18 @@ async function loadSubjectsForMarks(level) {
                 { field: 'schoolId', op: '==', value: AppState.currentSchool.id }
             ]);
 
-            // Filter to get only the teacher's assigned subjects
-            subjects = allSchoolSubjects.filter(s => userSubjectIds.includes(s.id));
+            // 1. Get names of assigned subjects (resolving IDs to names)
+            const assignedSubjectNames = new Set();
+            allSchoolSubjects.forEach(s => {
+                if (userSubjectIds.includes(s.id)) {
+                    assignedSubjectNames.add(s.name.trim());
+                }
+            });
+
+            // 2. Filter subjects for the CURRENT level that match assigned NAMES
+            subjects = allSchoolSubjects.filter(s => 
+                s.category === level && assignedSubjectNames.has(s.name.trim())
+            );
         }
 
         if (subjects.length === 0 && !isAdmin) {
@@ -349,8 +384,7 @@ async function loadSubjectsForMarks(level) {
         const defaultOption = isAdmin ? 'All Subjects' : 'Select Subject';
         subjectSelect.innerHTML = `<option value="">${defaultOption}</option>` + 
             subjects.map(s => {
-                const isMismatched = s.category !== level;
-                return `<option value="${s.id}" data-mismatched="${isMismatched}">${s.name}</option>`;
+                return `<option value="${s.id}">${s.name}</option>`;
             }).join('');
             
     } catch (error) {
@@ -678,12 +712,6 @@ function generateRegularInput(subject, existingMark, isMismatched) {
                       if(this.value>100){ this.value = 100; }
                       else if(this.value<0){ this.value = 0; }
                    "
-                   maxlength="3"
-                   onkeypress="return (event.charCode >= 48 && event.charCode <= 57) || event.charCode == 46"
-                   onkeyup="
-                      if(this.value>100){ this.value = 100; }
-                      else if(this.value<0){ this.value = 0; }
-                   "
                    oninput="updateMarksSummary()"
                    ${disabledAttr}>
         </div>
@@ -703,13 +731,7 @@ function generateALevelInputs(subject, existingMark, isMismatched) {
         for (let i = 1; i <= paperCount; i++) {
             const paperMark = existingMark && existingMark[`paper${i}`] ? existingMark[`paper${i}`] : '';
             inputs += `
-                <div class="paper-input">100"
-                           maxlength="3"
-                           onkeypress="return (event.charCode >= 48 && event.charCode <= 57) || event.charCode == 46"
-                           onkeyup="
-                              if(this.value>100){ this.value = ; }
-                              else if(this.value<0){ this.value = 0; }
-                           
+                <div class="paper-input">
                     <span class="paper-label">Paper ${i}:</span>
                     <input type="number" class="mark-input paper-mark" 
                            data-paper="${i}"
@@ -720,13 +742,7 @@ function generateALevelInputs(subject, existingMark, isMismatched) {
                            onkeypress="return (event.charCode >= 48 && event.charCode <= 57) || event.charCode == 46"
                            onkeyup="
                               if(this.value>100){ this.value = 100; }
-                              else if(this.valu" 
-                   maxlength="3"
-                   onkeypress="return (event.charCode >= 48 && event.charCode <= 57) || event.charCode == 46"
-                   onkeyup=e
-                   <  if(this.value>100){ this.value = 100; }
                       else if(this.value<0){ this.value = 0; }
-                   "0){ this.value = 0; }
                            "
                            oninput="updateMarksSummary()"
                            ${disabledAttr}>

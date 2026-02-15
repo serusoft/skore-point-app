@@ -1,6 +1,17 @@
 // Report Generation Service
 import GradingUtils from '../utils/grading.js';
 
+/**
+ * Get the current Ugandan school term based on the month.
+ * @returns {string} 'I', 'II', or 'III'
+ */
+function getUgandanTerm() {
+    const month = new Date().getMonth() + 1; // getMonth() is 0-indexed
+    if (month >= 2 && month <= 4) return 'I';      // Term I: Feb - Apr
+    if (month >= 5 && month <= 8) return 'II';     // Term II: May - Aug
+    return 'III';                                  // Term III: Sep - Dec (and Jan holidays)
+}
+
 // Helper to use global Firebase instance
 const db = {
     get: async (collection, id) => {
@@ -39,8 +50,19 @@ const ReportService = {
                 const mark = marks[subject.id];
                 if (mark !== undefined) {
                     const score = this.calculateScore(mark, subject);
-                    const grade = GradingUtils.calculateGrade(score, level);
-                    const gradePoints = GradingUtils.getGradePoints(grade, level);
+                    let grade, gradePoints;
+                    
+                    if (level === 'olevel') {
+                        if (score >= 90) grade = 'A';
+                        else if (score >= 80) grade = 'B';
+                        else if (score >= 70) grade = 'C';
+                        else if (score >= 55) grade = 'D';
+                        else grade = 'E';
+                        gradePoints = 0;
+                    } else {
+                        grade = GradingUtils.calculateGrade(score, level);
+                        gradePoints = GradingUtils.getGradePoints(grade, level);
+                    }
                     
                     processedMarks.push({
                         subjectId: subject.id,
@@ -336,14 +358,36 @@ const ReportService = {
         const lowest = Math.min(...marks.map(m => m.score));
         
         let aggregate = 0;
+        let division;
         
         if (level === 'alevel') {
             aggregate = GradingUtils.calculateALevelAggregate(marks);
+        } else if (level === 'olevel') {
+            // O-Level Result Logic
+            if (marks.length === 0) division = '4';
+            else if (marks.length < 9) division = '2';
+            else {
+                const hasPassing = marks.some(m => m.score >= 55);
+                const allE = marks.every(m => m.score < 55);
+                if (allE) division = '3';
+                else if (hasPassing) division = '1';
+                else division = '3';
+            }
+            aggregate = totalMarks; // Use Total Score for O-Level
+            return {
+                totalSubjects: marks.length,
+                totalMarks: totalMarks,
+                average: average,
+                highest: highest,
+                lowest: lowest,
+                aggregate: aggregate,
+                division: division
+            };
         } else {
             aggregate = marks.reduce((sum, mark) => sum + mark.gradePoints, 0);
         }
         
-        const division = GradingUtils.calculateDivision(average, aggregate, level, marks.length);
+        division = GradingUtils.calculateDivision(average, aggregate, level, marks.length);
         
         return {
             totalSubjects: marks.length,
@@ -378,14 +422,17 @@ const ReportService = {
     
     createStudentWorksheet(reportData) {
         const schoolName = reportData.school ? reportData.school.name.toUpperCase() : 'STUDENT REPORT';
+        const termName = reportData.term.toUpperCase();
+        const year = new Date().getFullYear();
+        const termNum = getUgandanTerm();
+        const analysisTitle = `STUDENT PROGRESS REPORT - ${termName} TERM ${termNum} ${year}`;
         
         const data = [
             [schoolName],
-            ['STUDENT PROGRESS REPORT'],
             ['Generated with Skore Point'],
             [''],
             ['STUDENT INFORMATION'],
-            ['Name:', reportData.student.name, '', 'Term:', reportData.term],
+            ['Name:', reportData.student.name, '', 'Term:', `${reportData.term} (TERM ${termNum}, ${year})`],
             ['Class:', reportData.student.className, '', 'Date:', new Date().toLocaleDateString()],
             [''],
             ['PERFORMANCE SUMMARY'],
@@ -437,7 +484,7 @@ const ReportService = {
         if (month >= 2 && month <= 4) termNumber = 'I';
         if (month >= 5 && month <= 8) termNumber = 'II';
         
-        const analysisTitle = `${className} CLASS PERFORMANCE ANALYSIS - ${termName} ${termNumber} ${year}`;
+        const analysisTitle = `${className} CLASS PERFORMANCE ANALYSIS ${termName} ${termNumber} ${year}`;
 
         const data = [
             [schoolName],
@@ -522,8 +569,8 @@ const ReportService = {
         ];
 
         // Attempt to set styles (works if library supports it)
-        if (ws['A1']) ws['A1'].s = { font: { name: "Arial Black", sz: 24, bold: true }, alignment: { horizontal: "center" } };
-        if (ws['A2']) ws['A2'].s = { font: { name: "Algerian", sz: 16, bold: true }, alignment: { horizontal: "center" } };
+        if (ws['A1']) ws['A1'].s = { font: { name: "Arial Black", sz: 26, bold: true }, alignment: { horizontal: "center" } };
+        if (ws['A2']) ws['A2'].s = { font: { name: "Algerian", sz: 20, bold: true }, alignment: { horizontal: "center" } };
         if (ws['A3']) ws['A3'].s = { alignment: { horizontal: "center" } };
         
         const headerRowIndex = 4;
@@ -568,14 +615,18 @@ const ReportService = {
 
     createSubjectWorksheet(reportData) {
         const schoolName = reportData.school ? reportData.school.name.toUpperCase() : 'SUBJECT REPORT';
+        const subjectName = reportData.subject ? reportData.subject.name.toUpperCase() : 'SUBJECT';
+        const termName = reportData.term.toUpperCase();
+        const year = new Date().getFullYear();
+        const termNum = getUgandanTerm();
+        const analysisTitle = `${subjectName} SUBJECT ANALYSIS ${termName} ${termNum} ${year}`;
         
         const data = [
             [schoolName],
-            ['SUBJECT ANALYSIS REPORT'],
+            [analysisTitle],
             ['Generated with Skore Point'],
-            [''],
             ['SUBJECT INFORMATION'],
-            ['Subject:', reportData.subject.name, '', 'Term:', reportData.term],
+            ['Subject:', reportData.subject.name, '', 'Term:', `${reportData.term} (TERM ${termNum}, ${year})`],
             ['Class:', reportData.class?.name || 'All Classes', '', 'Date:', new Date().toLocaleDateString()],
             [''],
             ['STATISTICS'],
@@ -619,7 +670,19 @@ const ReportService = {
         data.push(['']);
         data.push(['Generated by Skore Point']);
         
-        return XLSX.utils.aoa_to_sheet(data);
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        
+        // Merge Headers
+        ws['!merges'] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }, // School Name
+            { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } }  // Title
+        ];
+
+        // Set styles for bigger fonts
+        if (ws['A1']) ws['A1'].s = { font: { name: "Arial Black", sz: 26, bold: true }, alignment: { horizontal: "center" } };
+        if (ws['A2']) ws['A2'].s = { font: { name: "Algerian", sz: 20, bold: true }, alignment: { horizontal: "center" } };
+
+        return ws;
     }
 };
 
