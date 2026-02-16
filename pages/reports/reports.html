@@ -67,6 +67,28 @@
             color: #6b7280;
             font-size: 14px;
         }
+
+        /* Fallback styles for level selection prompt */
+        .level-selection-prompt {
+            background: #1e293b;
+            color: white;
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            margin: 20px auto;
+            max-width: 800px;
+        }
+
+        /* Spinner for level options */
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .spinner-border {
+            width: 30px; height: 30px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #4361ee;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
     </style>
 </head>
 <body>
@@ -259,7 +281,7 @@
         </div>
 
         <!-- Level Selection Prompt -->
-        <div class="level-selection-prompt" id="levelSelectionPrompt">
+        <div class="level-selection-prompt" id="levelSelectionPrompt" style="display: block;">
             <div class="prompt-content">
                 <i class="fas fa-graduation-cap"></i>
                 <h2>Select Academic Level</h2>
@@ -267,6 +289,10 @@
                 
                 <div class="level-options-container" id="levelOptionsPrompt" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; width: 100%;">
                     <!-- Options will be populated by JavaScript -->
+                    <div style="text-align: center; width: 100%; padding: 20px;">
+                        <div class="spinner-border"></div>
+                        <div style="color: #cbd5e1;">Loading options...</div>
+                    </div>
                 </div>
                 
                 <p class="prompt-note">
@@ -286,20 +312,20 @@
     </div>
 
     <!-- Shared JavaScript -->
-    <script type="module" src="../../shared/js/app.js"></script>
-    <script type="module" src="../../shared/js/router.js"></script>
-    <script type="module" src="../../shared/js/auth-guard.js"></script>
-    <script src="../../shared/js/ui.js"></script>
+    <script type="module" src="../../shared/js/app.js?v=20260217"></script>
+    <script type="module" src="../../shared/js/router.js?v=20260217"></script>
+    <script type="module" src="../../shared/js/auth-guard.js?v=20260217"></script>
+    <script src="../../shared/js/ui.js?v=20260217"></script>
 
     <!-- Services -->
-    <script type="module" src="../../services/report.service.js"></script>
-    <script type="module" src="../../services/school.service.js"></script>
+    <script type="module" src="../../services/report.service.js?v=20260217"></script>
+    <script type="module" src="../../services/school.service.js?v=20260217"></script>
 
     <!-- Utils -->
-    <script type="module" src="../../utils/grading.js"></script>
-    <script type="module" src="../../utils/helpers.js"></script>
+    <script type="module" src="../../utils/grading.js?v=20260217"></script>
+    <script type="module" src="../../utils/helpers.js?v=20260217"></script>
 
     <!-- Page-specific JavaScript -->
-    <script type="module" src="reports.js"></script>
+    <script type="module" src="reports.js?v=20260221"></script>
 </body>
 </html>

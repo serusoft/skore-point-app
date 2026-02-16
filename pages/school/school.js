@@ -1,7 +1,7 @@
 // pages/school/school.js
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('School Page: DOMContentLoaded - Starting initialization process (v1.2.8 - Revert Watermark).');
+    console.log('School Page: DOMContentLoaded - Starting initialization process (v1.3.5 - Paper Structure).');
 
     // Track initialization state
     let pageInitialized = false;
@@ -320,8 +320,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             pageInitialized = true;
             await initializeAndLoad();
         } else {
-            console.warn('School Page: app:initialized - AppState.currentSchool is NOT available. Waiting for school data...');
-            // Do not fail yet. Wait for school:changed event which usually follows.
+            console.warn('School Page: app:initialized - AppState.currentSchool is NOT available. Attempting recovery...');
+            
+            // Attempt to recover by reloading user schools
+            try {
+                if (typeof window.loadUserSchools === 'function') {
+                    // If user is logged in but no schools, try reloading user data first
+                    if (AppState.currentUser && (!AppState.userSchools || AppState.userSchools.length === 0)) {
+                         console.log('School Page: Recovery - Reloading user data and schools...');
+                         if (typeof window.loadUserData === 'function') await window.loadUserData(AppState.currentUser.uid);
+                    }
+
+                    await window.loadUserSchools();
+                    
+                    // Try to set default school if available
+                    if (AppState.userSchools && AppState.userSchools.length > 0) {
+                        // Use the first school found
+                        const school = AppState.userSchools[0];
+                        // Manually trigger the change since we're in a recovery flow
+                        AppState.currentSchool = school;
+                        AppState.currentSchoolLevel = school.level;
+                        pageInitialized = true;
+                        await initializeAndLoad();
+                    } else {
+                        console.warn('School Page: Recovery - No schools found for user.');
+                    }
+                }
+            } catch (err) {
+                console.error('School Page: Recovery failed', err);
+            }
         }
     });
     
@@ -355,7 +382,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await initializeAndLoad();
             }
         } else {
-            console.warn('School Page: DOMContentLoaded - App already initialized but no current school found. Waiting for school data...');
+            console.warn('School Page: DOMContentLoaded - App initialized but no school. Attempting recovery...');
+            // Same recovery logic for DOMContentLoaded case
+            try {
+                if (AppState.currentUser && (!AppState.userSchools || AppState.userSchools.length === 0)) {
+                     console.log('School Page: Recovery (DOM) - Reloading user data...');
+                     if (typeof window.loadUserData === 'function') await window.loadUserData(AppState.currentUser.uid);
+                }
+
+                if (typeof window.loadUserSchools === 'function') {
+                    await window.loadUserSchools();
+                    if (AppState.userSchools && AppState.userSchools.length > 0) {
+                        const school = AppState.userSchools[0];
+                        AppState.currentSchool = school;
+                        AppState.currentSchoolLevel = school.level;
+                        pageInitialized = true;
+                        await initializeAndLoad();
+                    }
+                }
+            } catch (err) {
+                console.error('School Page: Recovery failed', err);
+            }
         }
     } else {
         console.log('School Page: DOMContentLoaded - window.appInitialized is false. Waiting for app:initialized event.');
@@ -710,6 +757,39 @@ document.addEventListener('DOMContentLoaded', async () => {
                         animation: none !important;
                         background-color: #ef4444 !important;
                         transform: scale(1.1) !important;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            // Inject badge styles for subjects
+            if (!document.getElementById('badge-styles')) {
+                const style = document.createElement('style');
+                style.id = 'badge-styles';
+                style.textContent = `
+                    .badge {
+                        font-size: 10px;
+                        font-weight: 700;
+                        padding: 2px 8px;
+                        border-radius: 12px;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                        display: inline-block;
+                    }
+                    .gp-badge {
+                        background-color: #dbeafe;
+                        color: #1e40af;
+                        border: 1px solid #93c5fd;
+                    }
+                    .sub-badge {
+                        background-color: #fef3c7;
+                        color: #92400e;
+                        border: 1px solid #fcd34d;
+                    }
+                    .principal-badge {
+                        background-color: #dcfce7;
+                        color: #166534;
+                        border: 1px solid #86efac;
                     }
                 `;
                 document.head.appendChild(style);
@@ -1586,20 +1666,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const isAdmin = isCurrentUserAdmin();
 
-        subjectsList.innerHTML = subjects.map(subject => `
+        subjectsList.innerHTML = subjects.map(subject => {
+            let badgeHtml = '';
+            // Robust check for A-Level subjects: check category OR if type exists
+            if (subject.category === 'alevel' || subject.type) {
+                if (subject.type === 'principal') {
+                    badgeHtml = '<span class="badge principal-badge">Principal</span>';
+                } else if (subject.type === 'subsidiary') {
+                    badgeHtml = '<span class="badge sub-badge">Sub</span>';
+                } else if (subject.type === 'general') {
+                    badgeHtml = '<span class="badge gp-badge">GP</span>';
+                }
+            }
+
+            return `
             <div class="subject-card" data-subject-id="${subject.id}">
                 <div style="flex: 1;">
                     <div class="subject-icon"><i class="fas fa-book"></i></div>
                     <div class="subject-info">
-                        <h4 class="subject-name">${subject.name}</h4>
-                        <p style="color: var(--gray-light); font-size: 0.85rem; margin: 0;">${subject.code || 'No code'}</p>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <h4 class="subject-name" style="margin: 0;">${subject.name}</h4>
+                            ${badgeHtml}
+                        </div>
+                        <p style="color: var(--gray-light); font-size: 0.85rem; margin: 5px 0 0 0;">${subject.code || 'No code'}</p>
                     </div>
                 </div>
                 ${isAdmin ? `<button class="btn btn-sm btn-danger btn-delete" data-subject-id="${subject.id}">
                     <i class="fas fa-trash"></i> Delete
                 </button>` : ''}
             </div>
-        `).join('');
+        `}).join('');
         
         // Add delete button listeners
         subjectsList.querySelectorAll('.btn-delete').forEach(btn => {
@@ -2112,43 +2208,130 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         const currentLevel = AppState.currentAcademicLevel;
         
-        if (typeof ui === 'undefined' || typeof ui.form !== 'function') {
-            showToast('UI components not loaded. Please refresh the page.', 'error');
-            return;
-        }
+        const isALevel = currentLevel === 'alevel';
+
+        // Create modal manually to handle interactivity (disabling name until category selected)
+        const modalId = 'addSubjectModalCustom';
+        const existing = document.getElementById(modalId);
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = modalId;
+        modal.className = 'modal active';
         
-        ui.form([
-            { 
-                name: 'name', 
-                label: 'Subject Name', 
-                type: 'text', 
-                required: true 
-            },
-            { 
-                name: 'code', 
-                label: 'Subject Code (Optional)', 
-                type: 'text',
-                placeholder: 'e.g. MAT, ENG, SCI'
-            }
-        ], 'Add New Subject', 'Add Subject', async (formData) => {
+        let categoryFieldHtml = '';
+        if (isALevel) {
+            categoryFieldHtml = `
+                <div class="form-group">
+                    <label for="subjectType">Subject Category <span class="required">*</span></label>
+                    <select id="subjectType" class="form-control" required>
+                        <option value="" selected disabled>Select Category</option>
+                        <option value="principal">Principal Pass Subject</option>
+                        <option value="subsidiary">Subsidiary Subject</option>
+                        <option value="general">Compulsory Subject (e.g., General Paper)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="paperCountGroup" style="display:none;">
+                    <label for="paperCount">Number of Papers <span class="required">*</span></label>
+                    <input type="number" id="paperCount" class="form-control" min="1" max="6" value="2">
+                    <small class="form-text text-muted">Enter the number of papers for this subject.</small>
+                </div>
+            `;
+        }
+
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Add New Subject</h3>
+                    <button type="button" class="close-modal"><i class="fas fa-times"></i></button>
+                </div>
+                <form id="addSubjectFormCustom">
+                    ${categoryFieldHtml}
+                    <div class="form-group">
+                        <label for="subjectName">Subject Name <span class="required">*</span></label>
+                        <input type="text" id="subjectName" class="form-control" placeholder="e.g. Mathematics" required ${isALevel ? 'disabled' : ''}>
+                    </div>
+                    <div class="form-group">
+                        <label for="subjectCode">Subject Code (Optional)</label>
+                        <input type="text" id="subjectCode" class="form-control" placeholder="e.g. MAT">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary close-modal-btn">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Subject</button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Event Listeners
+        const closeModal = () => modal.remove();
+        modal.querySelectorAll('.close-modal, .close-modal-btn').forEach(btn => btn.addEventListener('click', closeModal));
+        
+        // Close on backdrop click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        const subjectTypeSelect = modal.querySelector('#subjectType');
+        const subjectNameInput = modal.querySelector('#subjectName');
+        const paperCountGroup = modal.querySelector('#paperCountGroup');
+        const paperCountInput = modal.querySelector('#paperCount');
+
+        if (isALevel && subjectTypeSelect && subjectNameInput) {
+            subjectTypeSelect.addEventListener('change', () => {
+                if (subjectTypeSelect.value) {
+                    subjectNameInput.disabled = false;
+                    subjectNameInput.focus();
+                    
+                    if (subjectTypeSelect.value === 'principal') {
+                        if (paperCountGroup) paperCountGroup.style.display = 'block';
+                        if (paperCountInput) paperCountInput.value = 2;
+                    } else {
+                        if (paperCountGroup) paperCountGroup.style.display = 'none';
+                        if (paperCountInput) paperCountInput.value = 1;
+                    }
+                } else {
+                    subjectNameInput.disabled = true;
+                    if (paperCountGroup) paperCountGroup.style.display = 'none';
+                }
+            });
+        }
+
+        const form = modal.querySelector('#addSubjectFormCustom');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const name = subjectNameInput.value.trim();
+            const code = modal.querySelector('#subjectCode').value.trim();
+            const type = isALevel ? subjectTypeSelect.value : null;
+            const paperCount = isALevel ? parseInt(paperCountInput.value) : 1;
+
             showPageLoading('Adding subject...');
             try {
-                await Firebase.db.addDoc('subjects', {
-                    name: formData.name,
-                    name_lowercase: formData.name.toLowerCase(), // For case-insensitive search
-                    code: formData.code || '',
+                const subjectData = {
+                    name: name,
+                    name_lowercase: name.toLowerCase(), // For case-insensitive search
+                    code: code || '',
                     schoolId: AppState.currentSchool.id,
                     level: AppState.currentSchool.level,
                     category: currentLevel,
                     createdAt: new Date().toISOString()
-                });
+                };
+
+                if (currentLevel === 'alevel') {
+                    subjectData.type = type;
+                    subjectData.paperCount = paperCount;
+                }
+
+                await Firebase.db.addDoc('subjects', subjectData);
                 showToast('Subject added successfully', 'success');
                 await loadSubjects(currentLevel);
-                return true;
+                closeModal();
             } catch(e) {
                 console.error(e);
                 showToast('Error adding subject', 'error');
-                throw e;
             } finally {
                 hidePageLoading();
             }

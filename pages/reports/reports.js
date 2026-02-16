@@ -41,7 +41,7 @@ const PREMIUM_BORDER_STYLE = `
 class ReportsController {
     constructor() {
         console.log('ReportsController initialized');
-        console.log('ReportsController initialized - v1.1 (Cache Bust)');
+        console.log('ReportsController initialized - v1.10 (O-Level Table Compact)');
         this.currentLevel = null;
         this.currentSchool = null;
         this.currentUser = null;
@@ -90,42 +90,74 @@ class ReportsController {
     }
     
     async initialize() {
-        // Wait for app state to be ready
-        if (!window.appInitialized) {
-            // Add timeout to prevent infinite loading
-            await Promise.race([
-                new Promise(resolve => {
-                    document.addEventListener('app:initialized', resolve, { once: true });
-                }),
-                new Promise(resolve => setTimeout(() => {
-                    console.warn('App initialization timed out in Reports');
-                    resolve();
-                }, 60000))
-            ]);
+        const optionsContainer = document.getElementById('levelOptionsPrompt');
+
+        try {
+            console.log('ReportsController: initialize() started');
+            
+            // Wait for app state to be ready
+            if (!window.appInitialized) {
+                if (optionsContainer) optionsContainer.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="spinner-border"></div><div style="color: #94a3b8;">Loading application data...</div></div>';
+                
+                // Add timeout to prevent infinite loading
+                await Promise.race([
+                    new Promise(resolve => {
+                        document.addEventListener('app:initialized', resolve, { once: true });
+                    }),
+                    new Promise(resolve => setTimeout(() => {
+                        console.warn('App initialization timed out in Reports');
+                        resolve();
+                    }, 5000)) // Reduced timeout to 5s for faster feedback
+                ]);
+            }
+            
+            if (!window.AppState) {
+                console.error('AppState not initialized');
+                if (optionsContainer) optionsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #ef4444;">Application failed to initialize. Please refresh.</div>';
+                window.location.href = '../../index.html';
+                return;
+            }
+            
+            this.currentUser = window.AppState.currentUser;
+            this.currentSchool = window.AppState.currentSchool;
+            console.log('ReportsController: School loaded:', this.currentSchool?.name);
+
+            // Attempt recovery if school is missing but user exists
+            if (!this.currentSchool && this.currentUser) {
+                if (optionsContainer) optionsContainer.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="spinner-border"></div><div style="color: #94a3b8;">Retrieving school data...</div></div>';
+                console.warn('ReportsController: School data missing, attempting recovery...');
+                if (typeof window.loadUserSchools === 'function') {
+                    await window.loadUserSchools();
+                    if (window.AppState.userSchools && window.AppState.userSchools.length > 0) {
+                        this.currentSchool = window.AppState.userSchools[0];
+                        window.AppState.currentSchool = this.currentSchool;
+                    }
+                }
+            }
+            
+            if (!this.currentSchool || !this.currentUser) {
+                if (optionsContainer) optionsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #f59e0b;">No school selected. Redirecting...</div>';
+                console.warn('Missing school or user data, redirecting to dashboard');
+                setTimeout(() => {
+                    if (typeof window.navigateTo === 'function') window.navigateTo('dashboard');
+                    else window.location.href = '../dashboard/dashboard.html';
+                }, 1000);
+                return;
+            }
+            
+            // Apply role-based tab visibility
+            this.applyRoleBasedReportVisibility();
+            
+            this.setupEventListeners();
+            this.showLevelSelection();
+            this.addBackToSchoolButton();
+        } catch (error) {
+            console.error('Error initializing ReportsController:', error);
+            if (optionsContainer) optionsContainer.innerHTML = `<div style="text-align: center; padding: 20px; color: #ef4444;">Error: ${error.message}</div>`;
+            this.showError('Failed to initialize reports page: ' + error.message);
+        } finally {
+            this.hideLoading();
         }
-        
-        if (!window.AppState) {
-            console.error('AppState not initialized');
-            window.location.href = '../../index.html';
-            return;
-        }
-        
-        this.currentUser = window.AppState.currentUser;
-        this.currentSchool = window.AppState.currentSchool;
-        
-        if (!this.currentSchool || !this.currentUser) {
-            if (typeof window.navigateTo === 'function') window.navigateTo('dashboard');
-            else window.location.href = '../dashboard/dashboard.html';
-            return;
-        }
-        
-        // Apply role-based tab visibility
-        this.applyRoleBasedReportVisibility();
-        
-        this.setupEventListeners();
-        this.showLevelSelection();
-        this.addBackToSchoolButton();
-        this.hideLoading();
     }
     
     /**
@@ -321,19 +353,35 @@ class ReportsController {
         const interfaceEl = document.getElementById('reportsInterface');
         const optionsContainer = document.getElementById('levelOptionsPrompt');
         
+        if (!prompt) {
+            console.error('Level selection prompt element not found');
+            return;
+        }
+
+        // Force display block immediately to ensure visibility
+        prompt.style.setProperty('display', 'block', 'important');
+        if (interfaceEl) interfaceEl.style.display = 'none';
+
+        // Clear previous options immediately to remove "Loading..." text
+        if (optionsContainer) optionsContainer.innerHTML = '';
+
         if (!this.currentSchool || !optionsContainer) {
             if (!this.currentSchool) {
                 if (typeof window.navigateTo === 'function') window.navigateTo('dashboard');
                 else window.location.href = '../dashboard/dashboard.html';
             }
+            if (!optionsContainer) console.error('Level options container not found');
             return;
         }
         
-        // Clear previous options
-        optionsContainer.innerHTML = '';
-        
         // Create level options based on school type
         const levels = this.getAvailableLevels();
+        console.log('ReportsController: Populating levels:', levels);
+
+        if (!levels || levels.length === 0) {
+            optionsContainer.innerHTML = '<div style="text-align: center; width: 100%; padding: 20px; color: #cbd5e1;">No academic levels configuration found for this school.</div>';
+            return;
+        }
         
         levels.forEach(level => {
             const option = document.createElement('div');
@@ -380,12 +428,12 @@ class ReportsController {
             optionsContainer.appendChild(option);
         });
         
-        // Show prompt and hide interface
-        if (prompt) prompt.style.display = 'block';
-        if (interfaceEl) interfaceEl.style.display = 'none';
+        // Ensure prompt is visible (redundant check)
+        prompt.style.display = 'block';
     }
     
     getAvailableLevels() {
+        if (!this.currentSchool) return [];
         const schoolLevel = (this.currentSchool && this.currentSchool.level) ? this.currentSchool.level.toLowerCase() : 'secondary';
         if (schoolLevel === 'primary') {
             return [
@@ -487,6 +535,8 @@ class ReportsController {
             }
             
             this.subjects = subjects;
+            // Sort subjects alphabetically for consistent report order
+            this.subjects = subjects.sort((a, b) => a.name.localeCompare(b.name));
             
             // Update subject selectors
             this.updateSubjectSelectors();
@@ -1067,6 +1117,7 @@ class ReportsController {
             if (mark !== undefined) {
                 let score = 0;
                 let papers = null;
+                let paperDetails = [];
                 
                 if (typeof mark === 'object' && mark.paper1 !== undefined) {
                     // A-Level paper scores
@@ -1089,6 +1140,36 @@ class ReportsController {
                         else grade = 'E';
                         
                         gradePoints = 0; // Not used for new O-Level Result logic
+                    } else if (this.currentLevel === 'alevel') {
+                        if (subject.type === 'principal') {
+                            // Principal Subject: Balance papers
+                            if (typeof mark === 'object') {
+                                const paperGrades = [];
+                                Object.keys(mark).sort().forEach(key => {
+                                    if (key.startsWith('paper') && typeof mark[key] === 'number') {
+                                        const pScore = mark[key];
+                                        const pGrade = GradingUtils.calculateALevelPaperScoreToGrade(pScore);
+                                        paperGrades.push(pGrade);
+                                        paperDetails.push(`${key.replace('paper', 'P')}: ${pScore}`);
+                                    }
+                                });
+                                
+                                if (paperGrades.length > 0) {
+                                    grade = GradingUtils.calculateALevelPaperGrade(paperGrades);
+                                    gradePoints = GradingUtils.getGradePoints(grade, this.currentLevel);
+                                } else {
+                                    grade = 'F'; gradePoints = 0;
+                                }
+                            } else {
+                                // Fallback for single score principal
+                                grade = GradingUtils.calculateGrade(score, this.currentLevel);
+                                gradePoints = GradingUtils.getGradePoints(grade, this.currentLevel);
+                            }
+                        } else {
+                            // Subsidiary / GP: Pass/Fail
+                            grade = score >= 50 ? 'Pass' : 'Fail';
+                            gradePoints = score >= 50 ? 1 : 0;
+                        }
                     } else {
                         grade = GradingUtils.calculateGrade(score, this.currentLevel);
                         gradePoints = GradingUtils.getGradePoints(grade, this.currentLevel);
@@ -1101,6 +1182,7 @@ class ReportsController {
                         grade: grade,
                         gradePoints: gradePoints,
                         papers: papers,
+                        paperDetails: paperDetails,
                         type: subject.type || 'regular'
                     });
                 }
@@ -1293,9 +1375,15 @@ class ReportsController {
         const { student, marks, summary, school, term, termType } = reportData;
         
         // Get A-Level combination
-        const principalSubjects = marks.filter(m => m.type === 'principal');
+        const principalSubjects = marks.filter(m => m.type === 'principal').sort((a, b) => a.subjectName.localeCompare(b.subjectName));
         const combination = principalSubjects.map(m => m.subjectName.charAt(0)).join('');
         
+        // Helper to format paper scores
+        const formatPapers = (mark) => {
+            if (!mark.paperDetails || mark.paperDetails.length === 0) return '';
+            return `<div style="font-size: 9px; color: #666; margin-top: 2px;">${mark.paperDetails.join(', ')}</div>`;
+        };
+
         return `
             <div class="report-card alevel-report premium-report" 
                  style="width: 210mm; 
@@ -1447,6 +1535,7 @@ class ReportsController {
                             <tr style="border-bottom: 1px solid #f1f5f9; ${rowBg}">
                                 <td style="padding: 12px 15px; color: #334155; font-size: 11px; font-weight: 500;">
                                     ${mark.subjectName}
+                                    ${formatPapers(mark)}
                                 </td>
                                 <td style="padding: 12px 15px; text-align: center; color: #0f172a; font-weight: 600; font-size: 11px;">
                                     ${mark.grade}
@@ -2041,19 +2130,19 @@ class ReportsController {
                 <table class="subject-table" style="width: 100%; border-collapse: collapse; margin-bottom: 15px; border: 1px solid #e5e7eb;">
                     <thead>
                         <tr style="background-color: #f3f4f6;">
-                            <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid #d1d5db; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 700; width: 40%;">Subject</th>
-                            <th style="text-align: center; padding: 10px 12px; border-bottom: 1px solid #d1d5db; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 700; width: 15%;">Score</th>
-                            <th style="text-align: center; padding: 10px 12px; border-bottom: 1px solid #d1d5db; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 700; width: 15%;">Grade</th>
-                            <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid #d1d5db; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 700; width: 30%;">Remarks</th>
+                            <th style="text-align: left; padding: 7px 10px; border-bottom: 1px solid #d1d5db; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 700; width: 40%;">Subject</th>
+                            <th style="text-align: center; padding: 7px 10px; border-bottom: 1px solid #d1d5db; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 700; width: 15%;">Score</th>
+                            <th style="text-align: center; padding: 7px 10px; border-bottom: 1px solid #d1d5db; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 700; width: 15%;">Grade</th>
+                            <th style="text-align: left; padding: 7px 10px; border-bottom: 1px solid #d1d5db; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 700; width: 30%;">Remarks</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${marks.map(mark => `
                             <tr style="border-bottom: 1px solid #f3f4f6;">
-                                <td style="padding: 10px 12px; color: #1f2937; font-size: 12px; font-weight: 500;">${mark.subjectName}</td>
-                                <td style="padding: 10px 12px; text-align: center; color: #1f2937; font-size: 12px;">${mark.score}</td>
-                                <td style="padding: 10px 12px; text-align: center; font-weight: 600; color: #1f2937; font-size: 12px;">${mark.grade}</td>
-                                <td style="padding: 10px 12px; color: #6b7280; font-size: 11px;">${getRemark(mark.grade)}</td>
+                                <td style="padding: 7px 10px; color: #1f2937; font-size: 12px; font-weight: 500;">${mark.subjectName}</td>
+                                <td style="padding: 7px 10px; text-align: center; color: #1f2937; font-size: 12px;">${mark.score}</td>
+                                <td style="padding: 7px 10px; text-align: center; font-weight: 600; color: #1f2937; font-size: 12px;">${mark.grade}</td>
+                                <td style="padding: 7px 10px; color: #6b7280; font-size: 11px;">${getRemark(mark.grade)}</td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -3097,14 +3186,15 @@ class ReportsController {
         const isBulk = this.currentReportData.type === 'bulk-student';
         const isClassReport = this.currentReportData.type === 'class';
         
-        if (!isBulk) {
-            if (isClassReport) {
-                const container = element ? element.querySelector('.class-report-container') : null;
-                targetElement = container || element;
-            } else {
-                const reportCard = element ? element.querySelector('.premium-report, .report-card') : null;
-                targetElement = reportCard || element;
-            }
+        // Treat Class Report as iterative (like bulk) to handle multi-page charts/tables better
+        const useIterativeRendering = isBulk || isClassReport;
+        
+        if (!useIterativeRendering) {
+            const reportCard = element ? element.querySelector('.premium-report, .report-card') : null;
+            targetElement = reportCard || element;
+        } else if (isClassReport) {
+            const container = element ? element.querySelector('.class-report-container') : null;
+            targetElement = container || element;
         }
 
         if (!targetElement) throw new Error('Nothing to export');
@@ -3155,7 +3245,7 @@ class ReportsController {
         try {
             const fileName = this.getReportFileName(this.currentReportData, 'pdf');
 
-            if (isBulk) {
+            if (useIterativeRendering) {
                 // --- BULK EXPORT LOGIC (Iterative) ---
                 
                 // Load dependencies manually if needed
@@ -3179,11 +3269,19 @@ class ReportsController {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('p', 'mm', 'a4');
                 
-                // Filter out style tags and ensure we only get elements with report cards
-                const reports = Array.from(targetElement.children).filter(child => 
-                    child.tagName !== 'STYLE' && 
-                    (child.classList.contains('report-card') || child.querySelector('.report-card'))
-                );
+                let reports = [];
+                if (isClassReport) {
+                    // For class report, the container's children are the pages (report cards)
+                    reports = Array.from(targetElement.children).filter(child => 
+                        child.classList.contains('report-card')
+                    );
+                } else {
+                    // For bulk student reports
+                    reports = Array.from(targetElement.children).filter(child => 
+                        child.tagName !== 'STYLE' && 
+                        (child.classList.contains('report-card') || child.querySelector('.report-card'))
+                    );
+                }
                 
                 const total = reports.length;
 
@@ -3206,17 +3304,38 @@ class ReportsController {
                     clone.style.minHeight = '297mm';
                     clone.style.margin = '0';
                     clone.style.boxShadow = 'none';
-                    clone.style.border = '2px solid #000'; // Keep border
+                    clone.style.border = 'none'; // Remove border to prevent double lines/overflow
                     clone.style.zoom = '1'; // Reset zoom to prevent mobile scaling issues
+                    
+                    // Handle Canvas Elements (Charts) in clone
+                    const originalCanvases = card.querySelectorAll('canvas');
+                    const clonedCanvases = clone.querySelectorAll('canvas');
+                    
+                    originalCanvases.forEach((originalCanvas, idx) => {
+                        if (clonedCanvases[idx]) {
+                            try {
+                                if (originalCanvas.width > 0 && originalCanvas.height > 0) {
+                                    const imgData = originalCanvas.toDataURL('image/jpeg', 1.0);
+                                    const img = document.createElement('img');
+                                    img.src = imgData;
+                                    img.style.width = '100%';
+                                    img.style.display = 'block';
+                                    clonedCanvases[idx].parentNode.replaceChild(img, clonedCanvases[idx]);
+                                }
+                            } catch (e) {
+                                console.warn('Failed to convert canvas in iterative export', e);
+                            }
+                        }
+                    });
                     
                     tempContainer.appendChild(clone);
                     document.body.appendChild(tempContainer);
 
                     // Wait for DOM layout to settle before rendering
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await new Promise(resolve => setTimeout(resolve, 200));
 
                     const canvas = await html2canvas(tempContainer, {
-                        scale: 2, // High quality
+                        scale: window.innerWidth <= 768 ? 1.5 : 2, // Optimize scale for mobile
                         useCORS: true,
                         logging: false,
                         backgroundColor: '#ffffff',
@@ -3224,7 +3343,7 @@ class ReportsController {
                         windowHeight: 1123
                     });
 
-                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                    const imgData = canvas.toDataURL('image/jpeg', 0.90);
                     const imgWidth = 210;
                     const imgHeight = canvas.height * imgWidth / canvas.width;
 
@@ -3238,7 +3357,7 @@ class ReportsController {
                 }
 
                 doc.save(fileName);
-                this.showSuccess(`Successfully exported ${total} reports!`);
+                this.showSuccess(`Successfully exported report!`);
 
             } else {
                 // --- SINGLE EXPORT LOGIC (Existing) ---
@@ -3298,15 +3417,10 @@ class ReportsController {
             // Apply A4-specific styling for single report
             clone.style.setProperty('width', '210mm', 'important');
             
-            if (!isClassReport) {
-                clone.style.setProperty('min-height', '296mm', 'important');
-                clone.style.setProperty('padding', '15mm 20mm', 'important');
-                clone.style.setProperty('border', '2px solid #000', 'important');
-            } else {
-                // For class reports, remove container padding/border as inner cards handle it
-                clone.style.setProperty('padding', '0', 'important');
-                clone.style.setProperty('border', 'none', 'important');
-            }
+            clone.style.setProperty('min-height', '296mm', 'important');
+            clone.style.setProperty('padding', '15mm 20mm', 'important');
+            clone.style.setProperty('border', '2px solid #000', 'important');
+
             clone.style.setProperty('margin', '0', 'important');
             clone.style.setProperty('box-shadow', 'none', 'important');
             clone.style.setProperty('background', 'white', 'important');
@@ -3323,7 +3437,7 @@ class ReportsController {
         container.style.top = '0';
         container.style.width = '210mm';
         // For class reports, allow container to be tall enough for multiple pages
-        container.style.height = isClassReport ? 'auto' : '297mm';
+        container.style.height = '297mm';
         container.style.zIndex = '99999';
         container.style.backgroundColor = 'white';
         container.style.margin = '0';
@@ -3348,15 +3462,14 @@ class ReportsController {
                 backgroundColor: '#ffffff'
             },
             html2canvas: { 
-                scale: isClassReport ? 1.4 : 2, // Reduced scale for class reports
+                scale: 2,
                 useCORS: true,
                 allowTaint: true,
                 backgroundColor: '#ffffff',
                 scrollX: 0,
                 scrollY: 0,
                 windowWidth: 794, // A4 width at 96 DPI
-                // Only set windowHeight if NOT class report (auto height for multi-page)
-                ...(isClassReport ? {} : { windowHeight: 1123 }),
+                windowHeight: 1123,
                 ignoreElements: (element) => element.classList.contains('no-print'),
                 onclone: (clonedDoc) => {
                     // Fix SVG dimensions to prevent html2canvas errors
@@ -3390,7 +3503,7 @@ class ReportsController {
                 .then(pdf => {
                     // Ensure content fits on one page
                     const totalPages = pdf.internal.getNumberOfPages();
-                    if (totalPages > 1 && !isClassReport) {
+                    if (totalPages > 1) {
                         console.warn('Content spans multiple pages, consider reducing content');
                     }
                 })
@@ -3724,6 +3837,12 @@ class ReportsController {
 }
 
 // Initialize the controller when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
+const initReports = () => {
     new ReportsController();
-});
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initReports);
+} else {
+    initReports();
+}

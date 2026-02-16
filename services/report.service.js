@@ -51,6 +51,7 @@ const ReportService = {
                 if (mark !== undefined) {
                     const score = this.calculateScore(mark, subject);
                     let grade, gradePoints;
+                    let paperDetails = [];
                     
                     if (level === 'olevel') {
                         if (score >= 90) grade = 'A';
@@ -59,6 +60,35 @@ const ReportService = {
                         else if (score >= 55) grade = 'D';
                         else grade = 'E';
                         gradePoints = 0;
+                    } else if (level === 'alevel') {
+                        if (subject.type === 'principal') {
+                            // Principal Subject Logic
+                            if (typeof mark === 'object') {
+                                const paperGrades = [];
+                                Object.keys(mark).sort().forEach(key => {
+                                    if (key.startsWith('paper') && typeof mark[key] === 'number') {
+                                        const pScore = mark[key];
+                                        const pGrade = GradingUtils.calculateALevelPaperScoreToGrade(pScore);
+                                        paperGrades.push(pGrade);
+                                        paperDetails.push(`${key.replace('paper', 'P')}: ${pScore}`);
+                                    }
+                                });
+                                
+                                if (paperGrades.length > 0) {
+                                    grade = GradingUtils.calculateALevelPaperGrade(paperGrades);
+                                    gradePoints = GradingUtils.getGradePoints(grade, level);
+                                } else {
+                                    grade = 'F'; gradePoints = 0;
+                                }
+                            } else {
+                                grade = GradingUtils.calculateGrade(score, level);
+                                gradePoints = GradingUtils.getGradePoints(grade, level);
+                            }
+                        } else {
+                            // Subsidiary / GP
+                            grade = score >= 50 ? 'Pass' : 'Fail';
+                            gradePoints = score >= 50 ? 1 : 0;
+                        }
                     } else {
                         grade = GradingUtils.calculateGrade(score, level);
                         gradePoints = GradingUtils.getGradePoints(grade, level);
@@ -71,6 +101,7 @@ const ReportService = {
                         grade: grade,
                         gradePoints: gradePoints,
                         papers: typeof mark === 'object' ? mark : null,
+                        paperDetails: paperDetails,
                         type: subject.type || 'regular'
                     });
                 }

@@ -690,15 +690,31 @@ async function createDefaultStructure(schoolId, level) {
         }
         : {
             'olevel': [
-                'Entrepreneurship', 'Biology', 'History', 'Agriculture', 'Chemistry',
-                'Physics', 'Mathematics', 'French', 'Kiswahili', 'Geography',
-                'English Language', 'ICT', 'Religious Education'
+                'Entrepreneurship', 'Biology', 'History', 'Agriculture', 'Chemistry', 'Physics', 
+                'Mathematics', 'French', 'Kiswahili', 'Geography', 'English Language', 'ICT', 
+                'Religious Education', 'Islamic Religious Education', 'Luganda', 'Fine art', 'Physical education'
             ],
             'alevel': [
-                'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Agriculture',
-                'Economics', 'History', 'Geography', 'Divinity', 'Islamic Religious Education',
-                'Literature in English', 'Fine Art', 'Entrepreneurship Education', 'Luganda',
-                'General Paper', 'Subsidiary Mathematics', 'Subsidiary ICT'
+                // Principal Pass Subjects
+                { name: 'Mathematics', type: 'principal', paperCount: 2 },
+                { name: 'Physics', type: 'principal', paperCount: 2 },
+                { name: 'Chemistry', type: 'principal', paperCount: 2 },
+                { name: 'Biology', type: 'principal', paperCount: 2 },
+                { name: 'Agriculture', type: 'principal', paperCount: 2 },
+                { name: 'Economics', type: 'principal', paperCount: 2 },
+                { name: 'History', type: 'principal', paperCount: 2 },
+                { name: 'Geography', type: 'principal', paperCount: 2 },
+                { name: 'Divinity', type: 'principal', paperCount: 2 },
+                { name: 'Islamic Religious Education', type: 'principal', paperCount: 2 },
+                { name: 'Literature in English', type: 'principal', paperCount: 2 },
+                { name: 'Fine Art', type: 'principal', paperCount: 2 },
+                { name: 'Entrepreneurship Education', type: 'principal', paperCount: 2 },
+                { name: 'Luganda', type: 'principal', paperCount: 2 },
+                // Subsidiary Subjects
+                { name: 'Subsidiary Math (Sub math)', type: 'subsidiary' },
+                { name: 'Sub ICT', type: 'subsidiary' },
+                // Compulsory Subject
+                { name: 'General paper (GP)', type: 'general' }
             ]
         };
     
@@ -720,15 +736,25 @@ async function createDefaultStructure(schoolId, level) {
     
     for (const category of subjectCategories) {
         const subjects = defaultSubjects[category];
-        for (const subjectName of subjects) {
-            await Firebase.db.addDoc('subjects', {
+        for (const subject of subjects) {
+            const isAlevelObject = typeof subject === 'object';
+            const subjectName = isAlevelObject ? subject.name : subject;
+
+            const subjectData = {
                 name: subjectName,
                 name_lowercase: subjectName.toLowerCase(),
                 schoolId: schoolId,
                 level: level,
                 category: category,
                 createdAt: Firebase.db.serverTimestamp()
-            });
+            };
+
+            if (isAlevelObject) {
+                subjectData.type = subject.type;
+                if (subject.paperCount) subjectData.paperCount = subject.paperCount;
+            }
+
+            await Firebase.db.addDoc('subjects', subjectData);
         }
     }
 }

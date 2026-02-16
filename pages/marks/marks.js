@@ -720,7 +720,8 @@ function generateRegularInput(subject, existingMark, isMismatched) {
 
 function generateALevelInputs(subject, existingMark, isMismatched) {
     const disabledAttr = '';
-    const paperCount = subject.paperCount || 1;
+    // Default to 2 papers for principal subjects if not specified, otherwise 1
+    const paperCount = subject.paperCount || (subject.type === 'principal' ? 2 : 1);
     const isGeneralPaper = subject.type === 'general';
     const isSubsidiary = subject.type === 'subsidiary';
     
@@ -770,10 +771,13 @@ function generateALevelInputs(subject, existingMark, isMismatched) {
     return `
         <div class="mark-input-group ${isMismatched ? 'mismatched' : ''}" data-subject-id="${subject.id}" 
              data-subject-type="${subject.type}">
-            <label>
-                ${subject.name}
-                ${isGeneralPaper ? '<span class="badge">GP</span>' : ''}
-                ${isSubsidiary ? '<span class="badge">Sub</span>' : ''}
+            <label style="display: flex; align-items: center; justify-content: space-between;">
+                <span class="subject-name-text" style="margin-right: 8px;">${subject.name}</span>
+                <div class="badges">
+                    ${isGeneralPaper ? '<span class="badge gp-badge">GP</span>' : ''}
+                    ${isSubsidiary ? '<span class="badge sub-badge">Sub</span>' : ''}
+                    ${subject.type === 'principal' ? '<span class="badge principal-badge">Principal</span>' : ''}
+                </div>
             </label>
             <div class="paper-inputs">
                 ${inputs}
