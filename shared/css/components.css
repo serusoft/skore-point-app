@@ -1070,6 +1070,33 @@ select option:checked {
     text-align: center;
 }
 
+/* --- Window Controls Overlay for PWA on Desktop --- */
+@media (display-mode: window-controls-overlay) {
+    /* Make the navbar a draggable region, like a native title bar */
+    #navbar-container .navbar {
+        app-region: drag;
+        /* These paddings create a "safe area" for content, pushing it away from
+           the window controls (minimize, maximize, close) on either left or right. */
+        padding-left: env(titlebar-area-x, 20px);
+        padding-right: calc(100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px));
+    }
+
+    /* Make all interactive elements within the navbar non-draggable so they remain clickable */
+    .navbar-brand,
+    .navbar-nav,
+    .nav-link,
+    .navbar-toggle,
+    .navbar-controls,
+    .user-profile,
+    .logout-btn,
+    .nav-auth-btn,
+    .btn,
+    .dropdown-toggle,
+    .profile-placeholder {
+        app-region: no-drag;
+    }
+}
+
 .text-right {
     text-align: right;
 }

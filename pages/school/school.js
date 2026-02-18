@@ -1,18 +1,12 @@
 // pages/school/school.js
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('School Page: DOMContentLoaded - Starting initialization process (v1.3.5 - Paper Structure).');
+    console.log('School Page: DOMContentLoaded - Starting initialization process (v1.4.2 - Paper Structure).');
 
     // Track initialization state
     let pageInitialized = false;
     let schoolDataLoaded = false;
     let listenersSetup = false;
-    
-    // Border style with repeating open book icons
-    const BOOK_ICON = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA1NzYgNTEyJyB3aWR0aD0nMjQnIGhlaWdodD0nMjQnPjxwYXRoIGZpbGw9JyMxYTczZTgnIGZpbGwtb3BhY2l0eT0nMC44JyBkPSdNNTQyLjIyIDMyLjA1Yy01NC44IDMuMTEtMTYzLjcyIDE0LjQzLTIzMC45NiA1NS41OS00LjY0IDIuODQtNy4yNyA3Ljg5LTcuMjcgMTMuMTd2MzYzLjg3YzAgMTEuNTUgMTIuNjMgMTguODUgMjMuMjggMTMuNDkgNjkuMTgtMzQuODIgMTY5LjIzLTQ0LjMyIDIxOC43LTQ2LjkyIDE2Ljg5LS44OSAzMC4wMi0xNC40MyAzMC4wMi0zMS4xMlY2Mi42OGMwLTE3LjA0LTE0LjMyLTMwLjczLTMzLjc3LTMwLjYzek0yNjQuNzMgODcuNjRDMTk3LjUgNDYuNDggODguNTggMzUuMTcgMzMuNzggMzIuMDUgMTQuMzMgMzEuOTUgMCA0NS42NCAwIDYyLjY4djI4NS4xM2MwIDE2LjY5IDEzLjEzIDMwLjIzIDMwLjAyIDMxLjEyIDQ5LjQ3IDIuNiAxNDkuNTIgMTIuMSAyMTguNyA0Ni45MiAxMC42NSA1LjM2IDIzLjI4LTEuOTQgMjMuMjgtMTMuNDlWMTAwLjgxYzAtNS4yOS0yLjYzLTEwLjM0LTcuMjctMTMuMTd6Jy8+PC9zdmc+";
-    const BOOK_ICON_FLIPPED = "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20576%20512%27%20width%3D%2724%27%20height%3D%2724%27%3E%3Cg%20transform%3D%27scale(-1%2C%201)%20translate(-576%2C%200)%27%3E%3Cpath%20fill%3D%27%231a73e8%27%20fill-opacity%3D%270.8%27%20d%3D%27M542.22%2032.05c-54.8%203.11-163.72%2014.43-230.96%2055.59-4.64%202.84-7.27%207.89-7.27%2013.17v363.87c0%2011.55%2012.63%2018.85%2023.28%2013.49%2069.18-34.82%20169.23-44.32%20218.7-46.92%2016.89-.89%2030.02-14.43%2030.02-31.12V62.68c0-17.04-14.32-30.73-33.77-30.62zM264.73%2087.64C197.5%2046.48%2088.58%2035.17%2033.78%2032.05%2014.33%2031.95%200%2045.64%200%2062.68v285.13c0%2016.69%2013.13%2030.23%2030.02%2031.12%2049.47%202.6%20149.52%2012.1%20218.7%2046.92%2010.65%205.36%2023.28-1.94%2023.28-13.49V100.81c0-5.29-2.63-10.34-7.27-13.17z%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E";
-    const BOOK_ICON_ROTATED = "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%20576%20512%27%20width%3D%2724%27%20height%3D%2724%27%3E%3Cg%20transform%3D%27rotate(-90%20288%20256)%20scale(-1%2C%201)%20translate(-576%2C%200)%27%3E%3Cpath%20fill%3D%27%231a73e8%27%20fill-opacity%3D%270.8%27%20d%3D%27M542.22%2032.05c-54.8%203.11-163.72%2014.43-230.96%2055.59-4.64%202.84-7.27%207.89-7.27%2013.17v363.87c0%2011.55%2012.63%2018.85%2023.28%2013.49%2069.18-34.82%20169.23-44.32%20218.7-46.92%2016.89-.89%2030.02-14.43%2030.02-31.12V62.68c0-17.04-14.32-30.73-33.77-30.62zM264.73%2087.64C197.5%2046.48%2088.58%2035.17%2033.78%2032.05%2014.33%2031.95%200%2045.64%200%2062.68v285.13c0%2016.69%2013.13%2030.23%2030.02%2031.12%2049.47%202.6%20149.52%2012.1%20218.7%2046.92%2010.65%205.36%2023.28-1.94%2023.28-13.49V100.81c0-5.29-2.63-10.34-7.27-13.17z%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E";
-    const BOOK_BORDER_STYLE = `border: 24px solid transparent; background-clip: padding-box, border-box, border-box, border-box, border-box; background-origin: padding-box, border-box, border-box, border-box, border-box; background-image: linear-gradient(white, white), url('${BOOK_ICON_ROTATED}'), url('${BOOK_ICON_ROTATED}'), url('${BOOK_ICON_FLIPPED}'), url('${BOOK_ICON_FLIPPED}'); background-position: 0 0, top left, bottom left, top left, top right; background-repeat: no-repeat, repeat-x, repeat-x, repeat-y, repeat-y; background-size: cover, 24px 24px, 24px 24px, 24px 24px, 24px 24px; box-shadow: 0 0 0 1px #e0e0e0;`;
 
     // Performance optimization: Debounce function
     function debounce(func, wait) {
@@ -82,6 +76,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Setup listeners immediately to ensure UI is interactive
     setupEventListeners();
+    
+    // Unlock UI immediately with role-based visibility
+    function unlockUI() {
+        console.log('School Page: Unlocking UI with role-based visibility...');
+        try {
+            applyRoleBasedTabVisibility();
+        } catch (error) {
+            console.error('School Page: Error unlocking UI:', error);
+            // Forcefully remove class as fallback
+            document.documentElement.classList.remove('rbac-pending');
+        }
+    }
     
     // ========== RBAC SECURITY FUNCTIONS ==========
     
@@ -317,6 +323,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (window.AppState && window.AppState.currentSchool) {
             console.log('School Page: app:initialized - AppState.currentSchool is available.');
+            // Unlock UI immediately
+            unlockUI();
             pageInitialized = true;
             await initializeAndLoad();
         } else {
@@ -340,6 +348,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         // Manually trigger the change since we're in a recovery flow
                         AppState.currentSchool = school;
                         AppState.currentSchoolLevel = school.level;
+                        // Unlock UI
+                        unlockUI();
                         pageInitialized = true;
                         await initializeAndLoad();
                     } else {
@@ -377,6 +387,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('School Page: DOMContentLoaded - window.appInitialized is true.');
         if (window.AppState && window.AppState.currentSchool) {
             console.log('School Page: DOMContentLoaded - AppState.currentSchool available.');
+            // Unlock UI immediately
+            unlockUI();
             if (!pageInitialized) {
                 pageInitialized = true;
                 await initializeAndLoad();
@@ -396,12 +408,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const school = AppState.userSchools[0];
                         AppState.currentSchool = school;
                         AppState.currentSchoolLevel = school.level;
+                        // Unlock UI
+                        unlockUI();
                         pageInitialized = true;
                         await initializeAndLoad();
                     }
                 }
             } catch (err) {
                 console.error('School Page: Recovery failed', err);
+                // Force unlock UI even on error
+                document.documentElement.classList.remove('rbac-pending');
+
             }
         }
     } else {
@@ -462,165 +479,93 @@ document.addEventListener('DOMContentLoaded', async () => {
      * Show/hide tabs based on user role
      */
     function applyRoleBasedTabVisibility() {
-        const isAdmin = isCurrentUserAdmin();
-        console.log('=== applyRoleBasedTabVisibility() STARTING ===');
-        console.log('User is Admin:', isAdmin);
-        
-        // Define restricted sections for teachers
-        const teacherHiddenSections = ['students', 'subjects', 'settings'];
-        
-        // Update desktop tabs
-        const desktopTabs = document.querySelectorAll('.content-tab');
-        desktopTabs.forEach(tab => {
-            const section = tab.dataset.section;
+        try {
+            const isAdmin = isCurrentUserAdmin();
+            console.log('=== applyRoleBasedTabVisibility() STARTING ===');
+            console.log('User is Admin:', isAdmin);
             
-            if (!isAdmin && teacherHiddenSections.includes(section)) {
-                tab.style.display = 'none';
-                console.log(`Hiding desktop tab: ${section}`);
-            } else {
-                tab.style.display = '';
+            // Define restricted sections for teachers
+            const teacherHiddenSections = ['students', 'subjects', 'settings'];
+            
+            // Update desktop tabs
+            const desktopTabs = document.querySelectorAll('.content-tab');
+            desktopTabs.forEach(tab => {
+                const section = tab.dataset.section;
                 
-                // Update labels for teachers
-                if (!isAdmin) {
-                    if (section === 'teachers') {
+                if (!isAdmin && teacherHiddenSections.includes(section)) {
+                    tab.style.display = 'none';
+                    console.log(`Hiding desktop tab: ${section}`);
+                } else {
+                    tab.style.display = '';
+                    
+                    if (!isAdmin && section === 'teachers') {
                         const icon = tab.querySelector('i');
-                        if (icon) {
-                            icon.className = 'fas fa-crown';
-                        }
+                        if (icon) icon.className = 'fas fa-crown';
                         const span = tab.querySelector('span');
                         if (span) {
-                            span.textContent = ' My Admin';
-                        } else {
-                            // Fallback: Update text node directly if span doesn't exist
-                            Array.from(tab.childNodes).forEach(node => {
-                                if (node.nodeType === 3 && node.textContent.trim().length > 0) { // 3 is TEXT_NODE
-                                    node.textContent = ' My Admin';
-                                }
-                            });
+                            span.textContent = 'My Admin';
                         }
-                    } else if (section === 'reports') {
-                        const icon = tab.querySelector('i');
-                        if (icon) {
-                            icon.className = 'fas fa-chart-line';
-                        }
-                        const span = tab.querySelector('span');
-                        if (span) span.textContent = ' My Analysis';
-                        else {
-                            Array.from(tab.childNodes).forEach(node => {
-                                if (node.nodeType === 3 && node.textContent.trim().length > 0) {
-                                    node.textContent = ' My Analysis';
-                                }
-                            });
-                        }
-                    } else if (section === 'reportCard') {
-                        const icon = tab.querySelector('i');
-                        if (icon) {
-                            icon.className = 'fas fa-chart-pie';
-                        }
-                        const span = tab.querySelector('span');
-                        if (span) span.textContent = ' Analysis';
                     }
                 }
-            }
-        });
-        
-        // Update mobile tabs
-        const mobileTabs = document.querySelectorAll('.mobile-tab');
-        mobileTabs.forEach(tab => {
-            const section = tab.dataset.section;
+            });
             
-            if (!isAdmin && teacherHiddenSections.includes(section)) {
-                tab.style.display = 'none';
-                console.log(`Hiding mobile tab: ${section}`);
-            } else {
-                tab.style.display = '';
+            // Update mobile tabs
+            const mobileTabs = document.querySelectorAll('.mobile-tab');
+            mobileTabs.forEach(tab => {
+                const section = tab.dataset.section;
                 
-                // Update labels for teachers
-                if (!isAdmin) {
-                    if (section === 'teachers') {
+                if (!isAdmin && teacherHiddenSections.includes(section)) {
+                    tab.style.display = 'none';
+                } else {
+                    tab.style.display = '';
+                    
+                    if (!isAdmin && section === 'teachers') {
                         const icon = tab.querySelector('i');
-                        if (icon) {
-                            icon.className = 'fas fa-crown';
-                        }
+                        if (icon) icon.className = 'fas fa-crown';
                         const span = tab.querySelector('span');
                         if (span) {
-                            span.textContent = ' My Admin';
-                        } else {
-                            // Fallback: Update text node directly if span doesn't exist
-                            Array.from(tab.childNodes).forEach(node => {
-                                if (node.nodeType === 3 && node.textContent.trim().length > 0) { // 3 is TEXT_NODE
-                                    node.textContent = ' My Admin';
-                                }
-                            });
+                            span.textContent = 'My Admin';
                         }
-                    } else if (section === 'reports') {
-                        const icon = tab.querySelector('i');
-                        if (icon) {
-                            icon.className = 'fas fa-chart-line';
-                        }
-                        const span = tab.querySelector('span');
-                        if (span) span.textContent = ' My Analysis';
-                        else {
-                            Array.from(tab.childNodes).forEach(node => {
-                                if (node.nodeType === 3 && node.textContent.trim().length > 0) {
-                                    node.textContent = ' My Analysis';
-                                }
-                            });
-                        }
-                    } else if (section === 'reportCard') {
-                        const icon = tab.querySelector('i');
-                        if (icon) {
-                            icon.className = 'fas fa-chart-pie';
-                        }
-                        const span = tab.querySelector('span');
-                        if (span) span.textContent = ' Analysis';
                     }
                 }
-            }
-        });
-        
-        // Update content sections visibility
-        document.querySelectorAll('.content-section').forEach(section => {
-            const sectionId = section.id.replace('Section', '');
-            if (!isAdmin && teacherHiddenSections.includes(sectionId)) {
-                section.style.display = 'none';
-                section.classList.remove('active');
-            }
-        });
-        
-        // Hide admin-only buttons
-        const adminOnlyButtons = [
-            'addClassBtn',
-            'addStudentBtn', 
-            'addSubjectBtn',
-            'addTeacherBtn',
-            'assignSubjectsBtn',
-            'settingsTabBtn'
-        ];
-        
-        adminOnlyButtons.forEach(btnId => {
-            const btn = document.getElementById(btnId);
-            if (btn) {
-                btn.style.display = isAdmin ? '' : 'none';
-                console.log(`${isAdmin ? 'Showing' : 'Hiding'} admin button: ${btnId}`);
-            }
-        });
-        
-        // For teachers, ensure classes tab is active by default
-        if (!isAdmin) {
-            const classesTab = document.querySelector('.content-tab[data-section="classes"], .mobile-tab[data-section="classes"]');
-            if (classesTab) {
-                classesTab.classList.add('active');
-                switchTab('classes');
-            }
+            });
+            
+            // Update content sections visibility
+            document.querySelectorAll('.content-section').forEach(section => {
+                const sectionId = section.id.replace('Section', '');
+                if (!isAdmin && teacherHiddenSections.includes(sectionId)) {
+                    section.style.display = 'none';
+                    section.classList.remove('active');
+                }
+            });
+            
+            // Hide admin-only buttons
+            const adminOnlyButtons = [
+                'addClassBtn',
+                'addStudentBtn', 
+                'addSubjectBtn',
+                'addTeacherBtn',
+                'assignSubjectsBtn',
+                'settingsTabBtn'
+            ];
+            
+            adminOnlyButtons.forEach(btnId => {
+                const btn = document.getElementById(btnId);
+                if (btn) {
+                    btn.style.display = isAdmin ? '' : 'none';
+                }
+            });
+            
+            console.log('=== applyRoleBasedTabVisibility() COMPLETE ===');
+            
+            // Remove the pending class to show the correctly configured UI
+            document.documentElement.classList.remove('rbac-pending');
+            
+        } catch (error) {
+            console.error('Error in applyRoleBasedTabVisibility:', error);
+            // Ensure UI is revealed even if there's an error
+            document.documentElement.classList.remove('rbac-pending');
         }
-        
-        console.log('=== applyRoleBasedTabVisibility() COMPLETE ===');
-
-        // --- START FLICKER FIX ---
-        // Remove the pending class to show the correctly configured UI all at once.
-        document.documentElement.classList.remove('rbac-pending');
-        // --- END FLICKER FIX ---
     }
     
     /**
@@ -882,16 +827,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                         return;
                     }
                     if (section === 'reports' || section === 'reportCard') {
-                        if (!isCurrentUserAdmin()) {
-                            const assignedSubjects = await getTeacherAssignedSubjects(AppState.currentAcademicLevel);
-                            if (assignedSubjects.length === 0) {
-                                showNoSubjectsModal('reports');
-                                return;
+                        try {
+                            if (!isCurrentUserAdmin()) {
+                                const assignedSubjects = await getTeacherAssignedSubjects(AppState.currentAcademicLevel);
+                                if (assignedSubjects.length === 0) {
+                                    showNoSubjectsModal('reports');
+                                    return;
+                                }
                             }
-                        }
 
-                        showPageLoading('Opening Reports...');
-                        window.location.href = '../reports/reports.html';
+                            showPageLoading('Opening Reports...');
+                            window.location.href = '../reports/reports.html';
+                        } catch (error) {
+                            console.error('Error accessing reports:', error);
+                            showToast('Access denied. Please check your admin in the My Admin tab and contact them to assign you a subject.', 'error');
+                        }
                         return;
                     }
                     
@@ -3221,12 +3171,16 @@ document.addEventListener('DOMContentLoaded', async () => {
      */
     async function navigateToMarksPage() {
         try {
+            console.log('navigateToMarksPage: Starting navigation check');
             const isAdmin = isCurrentUserAdmin();
             const level = AppState.currentAcademicLevel;
+
+            console.log('navigateToMarksPage: isAdmin =', isAdmin, 'level =', level);
 
             showPageLoading('Opening marks entry...');
 
             if (isAdmin) {
+                console.log('navigateToMarksPage: User is admin, proceeding to marks page');
                 if (typeof window.navigateTo === 'function') {
                     window.navigateTo('marks', { level, isAdmin: true, assignedSubjects: [] });
                 } else {
@@ -3237,14 +3191,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // Teacher flow
-            const assignedSubjects = await getTeacherAssignedSubjects(level);
+            console.log('navigateToMarksPage: User is teacher, checking assigned subjects');
+            let assignedSubjects = [];
+            try {
+                assignedSubjects = await getTeacherAssignedSubjects(level);
+                console.log('navigateToMarksPage: assignedSubjects =', assignedSubjects);
+            } catch (subjectsError) {
+                console.error('navigateToMarksPage: Error getting assigned subjects:', subjectsError);
+                assignedSubjects = []; // Default to empty array on error
+            }
+
             hidePageLoading();
 
             if (assignedSubjects.length === 0) {
-                showNoSubjectsModal('marks');
+                console.log('navigateToMarksPage: No subjects assigned, showing modal');
+                try {
+                    showNoSubjectsModal('marks');
+                } catch (modalError) {
+                    console.error('navigateToMarksPage: Error showing modal:', modalError);
+                    showToast('Access denied. Please check your admin in the My Admin tab and contact them to assign you a subject.', 'warning');
+                }
                 return;
             }
 
+            console.log('navigateToMarksPage: Has subjects, proceeding to marks page');
             if (typeof window.navigateTo === 'function') {
                 window.navigateTo('marks', { level, isAdmin: false, assignedSubjects });
             } else {
@@ -3254,114 +3224,77 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (error) {
             console.error('Error navigating to marks page:', error);
             hidePageLoading();
-            showToast('Failed to open marks page. Please try again.', 'error');
+            showToast('Access denied. Please check your admin in the My Admin tab and contact them to assign you a subject.', 'error');
         }
     }
 
     function showNoSubjectsModal(context) {
-        const existing = document.getElementById('restrictedAccessModal');
-        if (existing) existing.remove();
+        try {
+            const existing = document.getElementById('restrictedAccessModal');
+            if (existing) existing.remove();
 
-        const modal = document.createElement('div');
-        modal.id = 'restrictedAccessModal';
-        modal.className = 'modal active';
-        modal.style.cssText = 'display: flex; align-items: center; justify-content: center; z-index: 10000; background: rgba(0,0,0,0.8); position: fixed; top: 0; left: 0; width: 100%; height: 100%;';
-        
-        modal.innerHTML = `
-            <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%; text-align: center; position: relative; animation: slideUp 0.3s ease;">
-                <div id="restrictedInitialContent">
-                    <div style="width: 60px; height: 60px; background: #fef3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
-                        <i class="fas fa-exclamation" style="font-size: 30px; color: #d97706;"></i>
+            const modal = document.createElement('div');
+            modal.id = 'restrictedAccessModal';
+            modal.className = 'modal active';
+            modal.style.cssText = 'display: flex; align-items: center; justify-content: center; z-index: 10000; background: rgba(0,0,0,0.8); position: fixed; top: 0; left: 0; width: 100%; height: 100%;';
+
+            const title = "PERMISSION DENIED";
+            let message = "Sorry you cant access this section because you have no permission from your school portal admin.";
+
+            if (context === 'marks') {
+                message = "Sorry you cant access the Marks section because you have no subjects assigned. Please contact your school administrator to assign subjects.";
+            } else if (context === 'reports') {
+                message = "Sorry you cant access the Analysis section because you have no subjects assigned. Please contact your school administrator to assign subjects.";
+            }
+
+            modal.innerHTML = `
+                <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%; text-align: center; position: relative; animation: slideUp 0.3s ease;">
+                    <div id="restrictedInitialContent">
+                        <div style="width: 60px; height: 60px; background: #fef3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                            <i class="fas fa-exclamation" style="font-size: 30px; color: #d97706;"></i>
+                        </div>
+                        <h3 style="color: #1f2937; margin-bottom: 10px; font-size: 18px; font-weight: 800; text-transform: uppercase;">${title}</h3>
+                        <p style="color: #4b5563; margin-bottom: 25px; font-size: 15px;">${message}</p>
+                        <div style="display: flex; gap: 10px; justify-content: center;">
+                            <button class="btn btn-secondary" onclick="document.getElementById('restrictedAccessModal').remove()">Close</button>
+                            <button class="btn btn-primary" id="restrictedMoreBtn">More</button>
+                        </div>
                     </div>
-                    <h3 style="color: #1f2937; margin-bottom: 10px; font-size: 18px; font-weight: 800; text-transform: uppercase;">YOU CANT DO IT BECAUSE NOT AN ADMIN</h3>
-                    <p style="color: #4b5563; margin-bottom: 25px; font-size: 15px;">You can only get your subject analysis.</p>
-                    <div style="display: flex; gap: 10px; justify-content: center;">
-                        <button class="btn btn-secondary" onclick="document.getElementById('restrictedAccessModal').remove()">Close</button>
-                        <button class="btn btn-primary" id="restrictedMoreBtn">More</button>
+
+                    <div id="restrictedMoreContent" style="display: none;">
+                        <h4 style="color: #1f2937; margin-bottom: 15px; font-size: 16px; font-weight: 700;">How to get access</h4>
+                        <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #dbeafe;">
+                            <p style="color: #1e40af; font-size: 13px; margin: 0; line-height: 1.5;">
+                                Go to the "My Admin" tab to find your school administrator and ask them to assign you subjects under the teachers section.
+                            </p>
+                        </div>
+
+                        <div style="margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                            <img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" style="height: 40px; width: auto; opacity: 0.9; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto;">
+                            <div style="font-size: 12px; font-weight: 800; color: #4361ee; letter-spacing: 1px;">THANKS FOR USING SKORE POINT</div>
+                        </div>
+                        <button class="btn btn-secondary" style="margin-top: 20px; width: 100%;" onclick="document.getElementById('restrictedAccessModal').remove()">Close</button>
                     </div>
                 </div>
-                
-                <div id="restrictedMoreContent" style="display: none;">
-                    <h4 style="color: #1f2937; margin-bottom: 15px; font-size: 16px; font-weight: 700;">Access Limitation</h4>
-                    <p style="color: #4b5563; margin-bottom: 15px; font-size: 14px; line-height: 1.5;">This limitation is done to ensure safty and authenticative use of skore point.</p>
-                    <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #dbeafe;">
-                        <p style="color: #1e40af; font-size: 13px; margin: 0; line-height: 1.5;">
-                            If want extra acces to the school portal more subject , generating report cards. check My admin tab on the school page and see your admin and contact him to assign you subject or make you an admin to have extra functionalities.
-                        </p>
-                    </div>
-                    
-                    <div style="margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-                        <img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" style="height: 40px; width: auto; opacity: 0.9; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto;">
-                        <div style="font-size: 12px; font-weight: 800; color: #4361ee; letter-spacing: 1px;">THANKS FOR USING SKORE POINT</div>
-                    </div>
-                    <button class="btn btn-secondary" style="margin-top: 20px; width: 100%;" onclick="document.getElementById('restrictedAccessModal').remove()">Close</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        document.getElementById('restrictedMoreBtn').addEventListener('click', () => {
-            document.getElementById('restrictedInitialContent').style.display = 'none';
-            document.getElementById('restrictedMoreContent').style.display = 'block';
-        });
-    }
+            `;
 
-    function showNoSubjectsModal(ignoredParam) {
-        const existing = document.getElementById('restrictedAccessModal');
-        if (existing) existing.remove();
+            document.body.appendChild(modal);
 
-        const modal = document.createElement('div');
-        modal.id = 'restrictedAccessModal';
-        modal.className = 'modal active';
-        modal.style.cssText = 'display: flex; align-items: center; justify-content: center; z-index: 10000; background: rgba(0,0,0,0.8); position: fixed; top: 0; left: 0; width: 100%; height: 100%;';
-        
-        const title = "PERMISSION DENIED";
-        let message = "Sorry you cant access this section because you have no permission from your school portal admin.";
-        
-        if (context === 'marks') {
-            message = "Sorry you cant access the Mark section because you have no permission from your school portal admin.";
-        } else if (context === 'reports') {
-            message = "Sorry you cant access the Analysis section because you have no permission from your school portal admin.";
+            // Add event listener with error handling
+            const moreBtn = document.getElementById('restrictedMoreBtn');
+            if (moreBtn) {
+                moreBtn.addEventListener('click', () => {
+                    const initialContent = document.getElementById('restrictedInitialContent');
+                    const moreContent = document.getElementById('restrictedMoreContent');
+                    if (initialContent) initialContent.style.display = 'none';
+                    if (moreContent) moreContent.style.display = 'block';
+                });
+            }
+        } catch (error) {
+            console.error('Error showing no subjects modal:', error);
+            // Fallback: show toast if modal fails
+            showToast('Access denied. Please check your admin in the My Admin tab and contact them to assign you a subject.', 'warning');
         }
-        
-        modal.innerHTML = `
-            <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%; text-align: center; position: relative; animation: slideUp 0.3s ease;">
-                <div id="restrictedInitialContent">
-                    <div style="width: 60px; height: 60px; background: #fef3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
-                        <i class="fas fa-exclamation" style="font-size: 30px; color: #d97706;"></i>
-                    </div>
-                    <h3 style="color: #1f2937; margin-bottom: 10px; font-size: 18px; font-weight: 800; text-transform: uppercase;">${title}</h3>
-                    <p style="color: #4b5563; margin-bottom: 25px; font-size: 15px;">${message}</p>
-                    <div style="display: flex; gap: 10px; justify-content: center;">
-                        <button class="btn btn-secondary" onclick="document.getElementById('restrictedAccessModal').remove()">Close</button>
-                        <button class="btn btn-primary" id="restrictedMoreBtn">More</button>
-                    </div>
-                </div>
-                
-                <div id="restrictedMoreContent" style="display: none;">
-                    <h4 style="color: #1f2937; margin-bottom: 15px; font-size: 16px; font-weight: 700;">How to get access</h4>
-                    <div style="background: #eff6ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #dbeafe;">
-                        <p style="color: #1e40af; font-size: 13px; margin: 0; line-height: 1.5;">
-                            exit and go to the My admin tab a get to know you admin and tell him to assign you you subject under the teachers tab .
-                        </p>
-                    </div>
-                    
-                    <div style="margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-                        <img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" style="height: 40px; width: auto; opacity: 0.9; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto;">
-                        <div style="font-size: 12px; font-weight: 800; color: #4361ee; letter-spacing: 1px;">THANKS FOR USING SKORE POINT</div>
-                    </div>
-                    <button class="btn btn-secondary" style="margin-top: 20px; width: 100%;" onclick="document.getElementById('restrictedAccessModal').remove()">Close</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        document.getElementById('restrictedMoreBtn').addEventListener('click', () => {
-            document.getElementById('restrictedInitialContent').style.display = 'none';
-            document.getElementById('restrictedMoreContent').style.display = 'block';
-        });
     }
 
     /**

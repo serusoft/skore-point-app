@@ -458,6 +458,8 @@ const ReportService = {
         const termNum = getUgandanTerm();
         const analysisTitle = `STUDENT PROGRESS REPORT - ${termName} TERM ${termNum} ${year}`;
         
+        const isALevel = reportData.level === 'alevel';
+
         const data = [
             [schoolName],
             ['Generated with Skore Point'],
@@ -467,7 +469,7 @@ const ReportService = {
             ['Class:', reportData.student.className, '', 'Date:', new Date().toLocaleDateString()],
             [''],
             ['PERFORMANCE SUMMARY'],
-            ['Total Marks', 'Average', 'Aggregate', 'Division'],
+            ['Total Marks', 'Average', isALevel ? 'Points' : 'Aggregate', 'Division'],
             [
                 reportData.summary.totalMarks,
                 `${reportData.summary.average}%`,
@@ -496,6 +498,7 @@ const ReportService = {
     },
     
     createClassWorksheet(reportData) {
+        const isALevel = reportData.level === 'alevel';
         // Collect all unique subjects across all students
         const allSubjects = new Set();
         reportData.studentReports.forEach(report => {
@@ -532,7 +535,7 @@ const ReportService = {
         });
         headerRow.push('Total');
         headerRow.push('Average');
-        headerRow.push('Aggregate');
+        headerRow.push(isALevel ? 'Points' : 'Aggregate');
         headerRow.push('Division');
         
         data.push(headerRow);

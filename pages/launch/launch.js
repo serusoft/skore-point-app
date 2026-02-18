@@ -38,25 +38,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (installAppBtn) {
         installAppBtn.addEventListener('click', function() {
-            if (AppState.deferredPrompt) {
-                installPWA();
+            if (typeof window.installPWA === 'function') {
+                window.installPWA();
             } else {
-                if (typeof showToast === 'function') {
-                    showToast('To install the app, look for the "Add to Home Screen" option in your browser menu.', 'info');
-                } else {
-                    alert('To install the app, look for the "Add to Home Screen" option in your browser menu.');
-                }
+                // Fallback: show instructions
+                alert('To install this app, open the browser menu and choose "Install" or "Add to Home screen".');
             }
         });
-        
-        // Hide install button if app is already installed
-        const checkInstallState = () => {
-            if (AppState.isAppInstalled) {
-                installAppBtn.style.display = 'none';
-            }
-        };
-        checkInstallState();
-        document.addEventListener('app:initialized', checkInstallState);
+    }
+    
+    // Initial check for PWA button state (handled by app.js, but trigger update here to be safe)
+    if (typeof window.updatePWAButtonUI === 'function') {
+        window.updatePWAButtonUI();
     }
     
     // Simulate loading progress
@@ -72,14 +65,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Show buttons with animation
                 setTimeout(() => {
+                    // Update PWA button state right before showing to catch late events
+                    if (typeof window.updatePWAButtonUI === 'function') {
+                        window.updatePWAButtonUI();
+                    }
+
                     const launchButtons = document.querySelector('.launch-buttons');
                     if (launchButtons) {
                         launchButtons.style.opacity = '1';
                         launchButtons.style.transform = 'translateY(0)';
                     }
-                }, 500);
+                }, 200);
             }
-        }, 200);
+        }, 80);
     }
     
     // Add animation to tagline
@@ -95,7 +93,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            if (isAuthenticated) {
+            const isAuthNow = localStorage.getItem('isAuthenticated') === 'true';
+            if (isAuthNow) {
                 window.location.href = '../dashboard/dashboard.html';
             } else {
                 window.location.href = '../auth/login.html';

@@ -13,8 +13,12 @@ const AppState = {
     isAuthenticated: false,
     deferredPrompt: null,
     isAppInstalled: false,
+    installInProgress: false,
     authListenerRegistered: false
 };
+
+// --- PUSH NOTIFICATION CONFIG ---
+const VAPID_PUBLIC_KEY = 'YOUR_VAPID_PUBLIC_KEY'; // <-- REPLACE WITH YOUR GENERATED PUBLIC KEY
 
 // Firebase Modules (lazy loaded)
 let firebaseApp, firebaseAuth, firestoreDB;
@@ -30,7 +34,9 @@ const DOM = {
 
 // Initialize application
 async function initializeApp() {
+    const startTime = performance.now();
     console.log('App: initializeApp() - Start');
+    console.log('App: Version 1.4.2');
     
     try {
         // Initialize PWA
@@ -62,6 +68,10 @@ async function initializeApp() {
         window.appInitialized = true;
         document.dispatchEvent(new CustomEvent('app:initialized'));
         console.log('App: initializeApp() - Dispatched app:initialized event.');
+
+        const endTime = performance.now();
+        const duration = (endTime - startTime).toFixed(2);
+        console.log(`%c[Performance] App initialized in ${duration} ms`, 'color: #4361ee; font-weight: bold;');
 
     } catch (error) {
         console.error('App: initializeApp() - App initialization error:', error);
@@ -483,38 +493,38 @@ function setAcademicLevel(level) {
 }
 
 // Define a constant for the base URL of your application
-const BASE_URL = ""; // Adjust this if your app is not hosted in a subfolder
+const BASE_URL = "/"; // Use root scope for the service worker
 
 // Initialize PWA
 function initializePWA() {
     // Check if app is installed
     checkIfAppInstalled();
     
-    // Listen for beforeinstallprompt event
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        AppState.deferredPrompt = e;
-        
-        if (!AppState.isAppInstalled) {
-            showInstallPrompts();
-        }
-        
-        console.log('PWA install prompt available');
-    });
-    
     // Listen for app installed event
     window.addEventListener('appinstalled', () => {
         console.log('PWA was installed');
         AppState.isAppInstalled = true;
-        hideInstallPrompts();
         localStorage.setItem('pwaInstalled', 'true');
+        AppState.deferredPrompt = null;
+        updatePWAButtonUI();
         showToast('App installed successfully!', 'success');
+        
+        // Try to open the app after installation
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            console.log('App is now running in standalone mode');
+        } else {
+            // If available, attempt to launch the app
+            if (navigator.windowControlsOverlay && navigator.windowControlsOverlay.visible) {
+                console.log('Running in window controls overlay mode');
+            }
+        }
     });
     
     // Check standalone mode
     if (window.matchMedia('(display-mode: standalone)').matches) {
         console.log('Running in standalone mode');
         AppState.isAppInstalled = true;
+        updatePWAButtonUI();
     }
     
     // Register service worker
@@ -533,80 +543,169 @@ function initializePWA() {
 
 // Check if app is installed
 function checkIfAppInstalled() {
-    if (localStorage.getItem('pwaInstalled') === 'true') {
-        AppState.isAppInstalled = true;
-        return true;
-    }
-    
-    if (window.navigator.standalone === true) {
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
         AppState.isAppInstalled = true;
         localStorage.setItem('pwaInstalled', 'true');
+        updatePWAButtonUI();
+        return true;
+    }
+
+    if (localStorage.getItem('pwaInstalled') === 'true') {
+        AppState.isAppInstalled = true;
+        updatePWAButtonUI();
         return true;
     }
     
     return false;
 }
 
-// Show install prompts
-function showInstallPrompts() {
-    if (AppState.isAppInstalled || !AppState.deferredPrompt) {
-        return;
-    }
-    
-    const lastDismissed = localStorage.getItem('pwaPromptDismissedDate');
-    if (lastDismissed) {
-        const lastDismissedDate = new Date(lastDismissed);
-        const hoursSinceDismissal = (new Date() - lastDismissedDate) / (1000 * 60 * 60);
-        if (hoursSinceDismissal < 24) {
-            return;
+// Update PWA Button UI
+function updatePWAButtonUI() {
+    const installAppBtn = document.getElementById('installAppBtn');
+    const installBtn = document.getElementById('installBtn');
+
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+        // Update the launch page install button
+        if (installAppBtn) {
+                if (AppState.isAppInstalled || isStandalone) {
+                        installAppBtn.textContent = 'Installed';
+                        installAppBtn.disabled = true;
+                        installAppBtn.classList.add('installed');
+                } else if (AppState.installInProgress) {
+                        installAppBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Installing...';
+                        installAppBtn.disabled = true;
+                } else {
+                        installAppBtn.innerHTML = '<i class="fas fa-download"></i> Install App';
+                        installAppBtn.disabled = false;
+                }
         }
-    }
-    
-    // Show install button
-    const installBtn = document.getElementById('installAppBtn');
-    if (installBtn) {
-        installBtn.style.display = 'flex';
-    }
-}
 
-// Hide install prompts
-function hideInstallPrompts() {
-    const installBtn = document.getElementById('installAppBtn');
-    if (installBtn) {
-        installBtn.style.display = 'none';
-    }
+        // Update any other install button by id (e.g., header/button elsewhere)
+        if (installBtn) {
+                if (AppState.isAppInstalled || isStandalone) {
+                        installBtn.textContent = 'Installed';
+                        installBtn.disabled = true;
+                        installBtn.classList.add('installed');
+                } else if (AppState.installInProgress) {
+                        installBtn.textContent = 'Installing...';
+                        installBtn.disabled = true;
+                } else {
+                        installBtn.textContent = 'Install App';
+                        installBtn.disabled = false;
+                }
+        }
 }
-
 // Install PWA
 async function installPWA() {
-    if (!AppState.deferredPrompt) {
-        alert('Your browser does not support PWA installation. Please try using Chrome, Edge, or Safari on iOS.');
-        return;
-    }
+    const installBtn = document.getElementById('installAppBtn');
     
     try {
-        AppState.deferredPrompt.prompt();
-        const choiceResult = await AppState.deferredPrompt.userChoice;
-        
-        if (choiceResult.outcome === 'accepted') {
-            console.log('User accepted the install prompt');
-            AppState.isAppInstalled = true;
-            localStorage.setItem('pwaInstalled', 'true');
-            hideInstallPrompts();
-            showToast('App installed successfully!', 'success');
-        } else {
-            console.log('User dismissed the install prompt');
-            localStorage.setItem('pwaPromptDismissed', 'true');
-            localStorage.setItem('pwaPromptDismissedDate', new Date().toISOString());
-            hideInstallPrompts();
+        // Update button state to "Installing..."
+        if (installBtn) {
+            installBtn.disabled = true;
+            installBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Installing...';
         }
-        
-        AppState.deferredPrompt = null;
+
+        // If we have a deferred prompt, use it
+        if (AppState.deferredPrompt) {
+            AppState.deferredPrompt.prompt();
+            const { outcome } = await AppState.deferredPrompt.userChoice;
+            
+            // The prompt is single-use, so clear it.
+            AppState.deferredPrompt = null;
+
+            if (outcome === 'accepted') {
+                console.log('User accepted the install prompt');
+                // Don't do anything here. The 'appinstalled' event will fire and update the UI.
+                // The button will remain in "Installing..." state until the app is fully installed.
+            } else {
+                console.log('User dismissed the install prompt');
+                // If dismissed, update the UI to show the instructional button again.
+                updatePWAButtonUI();
+            }
+        } else {
+            // No deferred prompt available
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            if (isIOS) {
+                showToast('To install: tap Share <i class="fas fa-share-square"></i> and select "Add to Home Screen"', 'info', 5000);
+                updatePWAButtonUI();
+            } else {
+                showToast('To install: Look for the install icon in your browser address bar.', 'info');
+                updatePWAButtonUI();
+            }
+        }
         
     } catch (error) {
         console.error('Error installing PWA:', error);
         showError('Error installing app. Please try again.');
+        
+        // Restore button on error
+        updatePWAButtonUI();
     }
+}
+
+// Helper function to convert VAPID key
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+// Subscribe user to push notifications
+async function subscribeUserToPush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        showToast('Push notifications are not supported by your browser.', 'error');
+        return;
+    }
+
+    try {
+        const swRegistration = await navigator.serviceWorker.ready;
+        const permission = await Notification.requestPermission();
+
+        if (permission !== 'granted') {
+            showToast('Push notification permission denied.', 'warning');
+            throw new Error('Permission not granted for Notification');
+        }
+
+        showLoading('Subscribing to notifications...');
+
+        const subscription = await swRegistration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+
+        console.log('User is subscribed:', subscription);
+
+        await saveSubscriptionToFirestore(subscription);
+        showToast('Successfully subscribed to notifications!', 'success');
+
+    } catch (error) {
+        console.error('Failed to subscribe the user: ', error);
+        showToast('Failed to subscribe to notifications.', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function saveSubscriptionToFirestore(subscription) {
+    if (!AppState.currentUser) throw new Error('User not authenticated.');
+    
+    const userId = AppState.currentUser.uid;
+    const subCollection = 'pushSubscriptions';
+    
+    // The subscription object needs to be converted to a plain JSON object to be stored
+    await Firebase.db.setDoc(subCollection, userId, subscription.toJSON());
+    console.log('Push subscription saved to Firestore.');
 }
 
 // Initialize offline detection
@@ -980,6 +1079,8 @@ window.showError = showError;
 window.showConfirm = showConfirm;
 window.navigateTo = navigateTo;
 window.installPWA = installPWA;
+window.subscribeUserToPush = subscribeUserToPush;
+window.updatePWAButtonUI = updatePWAButtonUI;
 window.showLevelSelection = showLevelSelection;
 window.formatDate = formatDate;
 window.getInitials = getInitials;
@@ -988,6 +1089,19 @@ window.validateEmail = validateEmail;
 window.validatePassword = validatePassword;
 window.updateNavbarUserInfo = updateNavbarUserInfo;
 window.loadUserSchools = loadUserSchools;
+
+// Listen for beforeinstallprompt event immediately to avoid missing it
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    AppState.deferredPrompt = e;
+    AppState.isAppInstalled = false;
+    localStorage.removeItem('pwaInstalled');
+    
+    if (typeof window.updatePWAButtonUI === 'function') {
+        window.updatePWAButtonUI();
+    }
+    console.log('PWA install prompt available');
+});
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', initializeApp);

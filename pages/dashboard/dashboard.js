@@ -213,11 +213,6 @@ function setupEventListeners() {
         }
     });
     
-    // Switch School button
-    document.getElementById('switchSchoolBtn')?.addEventListener('click', () => {
-        showSchoolSwitchModal();
-    });
-
     // Logout button
     document.getElementById('dashboardLogoutBtn')?.addEventListener('click', async () => {
         try {

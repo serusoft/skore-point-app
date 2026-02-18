@@ -38,6 +38,78 @@ const PREMIUM_BORDER_STYLE = `
     print-color-adjust: exact;
 `;
 
+// A-Level Combination Mapping - Maps subject sets to their exact codes
+const ALEVEL_COMBINATIONS = {
+    'Physics,Mathematics,Chemistry': 'PCM',
+    'Physics,Mathematics,Biology': 'PMB',
+    'Physics,Chemistry,Biology': 'PCB',
+    'Physics,Mathematics,Economics': 'PEM',
+    'Physics,Mathematics,Geography': 'PMG',
+    'Physics,Mathematics,Entrepreneurship': 'PEM',
+    'Biology,Chemistry,Mathematics': 'BCM',
+    'Biology,Chemistry,Geography': 'BCG',
+    'Biology,Chemistry,Economics': 'BCE',
+    'Biology,Chemistry,Agriculture': 'BCA',
+    'Mathematics,Economics,Geography': 'MEG',
+    'Mathematics,Economics,Entrepreneurship': 'MEE',
+    'Economics,Geography,History': 'HEG',
+    'Economics,Geography,Divinity': 'EGD',
+    'Economics,Geography,Entrepreneurship': 'GEE',
+    'Economics,Geography,Literature': 'LEG',
+    'History,Economics,Geography': 'HEG',
+    'History,Economics,Divinity': 'HED',
+    'History,Economics,Literature': 'HEL',
+    'History,Geography,Divinity': 'HDG',
+    'History,Geography,Literature': 'HGL',
+    'Literature,Economics,Geography': 'LEG',
+    'Literature,Economics,Divinity': 'LED',
+    'Literature,History,Geography': 'LHG',
+    'Divinity,Economics,Geography': 'DEG',
+    'Divinity,History,Geography': 'DHG',
+    'Divinity,Literature,Geography': 'DLG',
+    'Art,Economics,Geography': 'GEA',
+    'Art,History,Geography': 'HAG',
+    'Music,Economics,Geography': 'MEG',
+    'Music,History,Geography': 'MGH',
+    'Agriculture,Chemistry,Biology': 'BAC',
+    'Agriculture,Economics,Geography': 'GEA',
+    'Agriculture,Biology,Geography': 'BAG'
+};
+
+// A-Level Subject Codes - For generating combinations not in the standard list
+const ALEVEL_SUBJECT_CODES = {
+    'Physics': 'P',
+    'Mathematics': 'M',
+    'Chemistry': 'C',
+    'Biology': 'B',
+    'Economics': 'E',
+    'Geography': 'G',
+    'History': 'H',
+    'Entrepreneurship': 'E',
+    'Agriculture': 'A',
+    'Art': 'A',
+    'Music': 'M',
+    'Literature': 'L',
+    'Divinity': 'D'
+};
+
+// Helper function to get A-Level combination code
+function getALevelCombination(subjectNames) {
+    if (!subjectNames || subjectNames.length !== 3) return 'N/A';
+    
+    // Normalize and sort subject names for lookup
+    const sorted = subjectNames.sort().join(',');
+    
+    // Check if combination exists in mapping
+    if (ALEVEL_COMBINATIONS[sorted]) {
+        return ALEVEL_COMBINATIONS[sorted];
+    }
+    
+    // Generate combination from subject codes if not found
+    const codes = subjectNames.map(name => ALEVEL_SUBJECT_CODES[name] || name.charAt(0).toUpperCase()).sort();
+    return codes.join('');
+}
+
 class ReportsController {
     constructor() {
         console.log('ReportsController initialized');
@@ -113,8 +185,35 @@ class ReportsController {
             
             if (!window.AppState) {
                 console.error('AppState not initialized');
-                if (optionsContainer) optionsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #ef4444;">Application failed to initialize. Please refresh.</div>';
-                window.location.href = '../../index.html';
+                if (optionsContainer) optionsContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #ef4444;">
+                        <div style="font-weight:700; margin-bottom:8px;">Application failed to initialize.</div>
+                        <div style="margin-bottom:12px;color:#ffe4e6;">This usually happens when the app bundle or session data didn't load on hard refresh.</div>
+                        <div style="display:flex; gap:8px; justify-content:center;">
+                            <button id="reportsRetryInit" style="padding:8px 12px; background:#4361ee; color:#fff; border:none; border-radius:6px; cursor:pointer;">Retry Initialization</button>
+                            <button id="reportsGoHome" style="padding:8px 12px; background:#ef4444; color:#fff; border:none; border-radius:6px; cursor:pointer;">Go Home</button>
+                        </div>
+                    </div>
+                `;
+
+                // Attach handlers for the buttons if present
+                setTimeout(() => {
+                    const retryBtn = document.getElementById('reportsRetryInit');
+                    const homeBtn = document.getElementById('reportsGoHome');
+                    if (retryBtn) retryBtn.addEventListener('click', async () => {
+                        // try a soft reload of the app scripts/state
+                        if (typeof window.initApp === 'function') {
+                            try { await window.initApp(); } catch (e) { console.error('Retry init failed', e); }
+                        }
+                        // try reloading the page to re-run normal init
+                        window.location.reload();
+                    });
+                    if (homeBtn) homeBtn.addEventListener('click', () => {
+                        if (typeof window.navigateTo === 'function') window.navigateTo('dashboard');
+                        else window.location.href = '../../index.html';
+                    });
+                }, 50);
+
                 return;
             }
             
@@ -136,12 +235,43 @@ class ReportsController {
             }
             
             if (!this.currentSchool || !this.currentUser) {
-                if (optionsContainer) optionsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #f59e0b;">No school selected. Redirecting...</div>';
-                console.warn('Missing school or user data, redirecting to dashboard');
+                console.warn('Missing school or user data in ReportsController', { currentSchool: this.currentSchool, currentUser: this.currentUser });
+                if (optionsContainer) optionsContainer.innerHTML = `
+                    <div style="text-align:center; padding:20px; color:#f59e0b;">
+                        <div style="font-weight:700; margin-bottom:8px;">No school selected.</div>
+                        <div style="margin-bottom:12px;color:#724b00;">The reports page requires a selected school and a signed-in user.</div>
+                        <div style="display:flex; gap:8px; justify-content:center;">
+                            <button id="reportsRetrySchool" style="padding:8px 12px; background:#10b981; color:#fff; border:none; border-radius:6px; cursor:pointer;">Retry</button>
+                            <button id="reportsChooseSchool" style="padding:8px 12px; background:#3b82f6; color:#fff; border:none; border-radius:6px; cursor:pointer;">Choose School</button>
+                        </div>
+                    </div>
+                `;
+
                 setTimeout(() => {
-                    if (typeof window.navigateTo === 'function') window.navigateTo('dashboard');
-                    else window.location.href = '../dashboard/dashboard.html';
-                }, 1000);
+                    const retryBtn = document.getElementById('reportsRetrySchool');
+                    const chooseBtn = document.getElementById('reportsChooseSchool');
+                    if (retryBtn) retryBtn.addEventListener('click', async () => {
+                        if (typeof window.loadUserSchools === 'function') {
+                            try {
+                                await window.loadUserSchools();
+                                if (window.AppState && window.AppState.userSchools && window.AppState.userSchools.length > 0) {
+                                    this.currentSchool = window.AppState.userSchools[0];
+                                    window.AppState.currentSchool = this.currentSchool;
+                                    // attempt to show levels now
+                                    this.showLevelSelection();
+                                    return;
+                                }
+                            } catch (e) { console.error('Retry loadUserSchools failed', e); }
+                        }
+                        // fallback: reload the page
+                        window.location.reload();
+                    });
+                    if (chooseBtn) chooseBtn.addEventListener('click', () => {
+                        if (typeof window.navigateTo === 'function') window.navigateTo('dashboard');
+                        else window.location.href = '../dashboard/dashboard.html';
+                    });
+                }, 50);
+
                 return;
             }
             
@@ -850,8 +980,32 @@ class ReportsController {
             // Calculate class statistics
             const classAverage = studentCount > 0 ? classTotal / studentCount : 0;
             
-            // Sort by performance
-            studentReports.sort((a, b) => b.summary.average - a.summary.average);
+            // Sort by performance and assign ranks
+            studentReports.sort((a, b) => {
+                if (this.currentLevel === 'alevel') {
+                    // A-Level: Rank by Points (desc), then Average (desc)
+                    if (b.summary.totalPoints !== a.summary.totalPoints) {
+                        return b.summary.totalPoints - a.summary.totalPoints;
+                    }
+                    return b.summary.average - a.summary.average;
+                }
+                // Default: Rank by Average (desc)
+                return b.summary.average - a.summary.average;
+            });
+
+            // Calculate ranks with tie-breaking
+            let currentRank = 1;
+            studentReports.forEach((report, index) => {
+                if (index > 0) {
+                    const prev = studentReports[index - 1];
+                    const isTied = this.currentLevel === 'alevel' 
+                        ? (report.summary.totalPoints === prev.summary.totalPoints && report.summary.average === prev.summary.average)
+                        : (report.summary.average === prev.summary.average);
+                    
+                    if (!isTied) currentRank = index + 1;
+                }
+                report.rank = currentRank;
+            });
             
             return {
                 type: 'class',
@@ -876,6 +1030,7 @@ class ReportsController {
             throw error;
         }
     }
+            
     
     async generateSubjectReport() {
         const classId = document.getElementById('subjectReportClass').value;
@@ -1200,8 +1355,8 @@ class ReportsController {
                 average: 0,
                 highest: 0,
                 lowest: 0,
-                aggregate: 0,
-                division: 'N/A'
+                totalPoints: 0,
+                result: 'N/A'
             };
         }
         
@@ -1210,32 +1365,34 @@ class ReportsController {
         const highest = Math.max(...marks.map(m => m.score));
         const lowest = Math.min(...marks.map(m => m.score));
         
-        let aggregate = 0;
-        let division;
+        let totalPoints = 0;
+        let result;
+        let aggregate = 0; // fallback aggregate value for compatibility
         
         if (this.currentLevel === 'alevel') {
-            // A-Level aggregate calculation
+            // A-Level UNEB Classification System
             const principalSubjects = marks.filter(m => m.type === 'principal');
             const generalPaper = marks.find(m => m.type === 'general');
             const subsidiary = marks.find(m => m.type === 'subsidiary');
             
-            // Take best 3 principals
-            const sortedPrincipals = principalSubjects.sort((a, b) => b.gradePoints - a.gradePoints);
-            const bestPrincipals = sortedPrincipals.slice(0, 3);
+            // Calculate total points from all subjects
+            totalPoints = marks.reduce((sum, subj) => sum + subj.gradePoints, 0);
             
-            aggregate = bestPrincipals.reduce((sum, subj) => sum + subj.gradePoints, 0);
-            
-            // Add General Paper
-            if (generalPaper && generalPaper.score >= 50) {
-                aggregate += 1;
-            }
-            
-            // Add Subsidiary
-            if (subsidiary && subsidiary.score >= 50) {
-                aggregate += 1;
+            // A-Level Result Logic (Simplified)
+            // Result 1: Has marks for 3 Principal Subjects, 1 Subsidiary, and 1 General Paper
+            // Result 2: Otherwise
+            const hasThreePrincipals = principalSubjects.length >= 3;
+            const hasGeneralPaper = !!generalPaper;
+            const hasSubsidiary = !!subsidiary;
+
+            if (hasThreePrincipals && hasGeneralPaper && hasSubsidiary) {
+                result = '1';
+            } else {
+                result = '2';
             }
         } else if (this.currentLevel === 'olevel') {
             // O-Level Result Calculation
+            let division;
             // Result 4: No marks (Handled by marks.length check above, but let's be safe)
             if (marks.length === 0) division = '4';
             // Result 2: Less than 9 subjects
@@ -1250,22 +1407,34 @@ class ReportsController {
                 else division = '3'; // Fallback if somehow neither (should be covered by allElementary)
             }
             
-            aggregate = totalMarks; // Replace Aggregate with Total Score for O-Level
+            totalPoints = totalMarks; // For O-Level, total points = total marks
+            result = division;
         } else {
-            // O-Level and Primary aggregate
-            aggregate = marks.reduce((sum, mark) => sum + mark.gradePoints, 0);
+            // Primary aggregate
+            totalPoints = marks.reduce((sum, mark) => sum + mark.gradePoints, 0);
+            result = 'N/A';
         }
         
-        if (!division) {
+        // Compute a displayable aggregate used elsewhere in the UI
+        // For O-Level we use totalMarks as aggregate (older behavior), for others use totalPoints
+        if (this.currentLevel === 'olevel') {
+            aggregate = totalMarks;
+        } else {
+            aggregate = totalPoints;
+        }
+
+        let division;
+        if (!result || result === 'N/A') {
             if (this.currentLevel === 'upper-primary') {
                 if (marks.length < 4) division = 'U';
-                else if (aggregate <= 12) division = 'Division 1';
-                else if (aggregate <= 23) division = 'Division 2';
-                else if (aggregate <= 28) division = 'Division 3';
-                else if (aggregate <= 34) division = 'Division 4';
+                else if (totalPoints <= 12) division = 'Division 1';
+                else if (totalPoints <= 23) division = 'Division 2';
+                else if (totalPoints <= 28) division = 'Division 3';
+                else if (totalPoints <= 34) division = 'Division 4';
                 else division = 'U';
-            } else {
-                division = GradingUtils.calculateDivision(average, aggregate, this.currentLevel);
+                result = division;
+            } else if (this.currentLevel === 'lower-primary') {
+                result = GradingUtils.calculateDivision(average, totalPoints, this.currentLevel);
             }
         }
         
@@ -1275,8 +1444,10 @@ class ReportsController {
             average: average,
             highest: highest,
             lowest: lowest,
-            aggregate: aggregate,
-            division: division
+            totalPoints: totalPoints,
+            result: result,
+            division: result, // Alias for compatibility with class reports
+            aggregate: aggregate // Ensure aggregate is returned for display
         };
     }
     
@@ -1374,15 +1545,35 @@ class ReportsController {
     generateALevelReportHTML(reportData) {
         const { student, marks, summary, school, term, termType } = reportData;
         
-        // Get A-Level combination
-        const principalSubjects = marks.filter(m => m.type === 'principal').sort((a, b) => a.subjectName.localeCompare(b.subjectName));
-        const combination = principalSubjects.map(m => m.subjectName.charAt(0)).join('');
+        // Get A-Level combination using the standard codes
+        const principalSubjects = marks.filter(m => m.type === 'principal');
+        const principalSubjectNames = principalSubjects.map(m => m.subjectName);
+        const combination = getALevelCombination(principalSubjectNames);
+        
+        // Get current date as "Issued" date
+        const issuedDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
         
         // Helper to format paper scores
         const formatPapers = (mark) => {
             if (!mark.paperDetails || mark.paperDetails.length === 0) return '';
             return `<div style="font-size: 9px; color: #666; margin-top: 2px;">${mark.paperDetails.join(', ')}</div>`;
         };
+
+        // Reorder marks: first 3 principals, then subsidiary, then general (compulsory), then any remaining principals
+        const principalsAll = marks.filter(m => m.type === 'principal');
+        const firstThreePrincipals = principalsAll.slice(0, 3);
+        const remainingPrincipals = principalsAll.slice(3);
+        const subsidiarySubjects = marks.filter(m => m.type === 'subsidiary');
+        const generalSubjects = marks.filter(m => m.type === 'general');
+        const otherSubjects = marks.filter(m => !['principal', 'subsidiary', 'general'].includes(m.type));
+
+        const orderedMarks = [
+            ...firstThreePrincipals,
+            ...remainingPrincipals,
+            ...otherSubjects,
+            ...subsidiarySubjects,
+            ...generalSubjects
+        ];
 
         return `
             <div class="report-card alevel-report premium-report" 
@@ -1514,28 +1705,64 @@ class ReportsController {
                                 ${term}
                             </div>
                         </div>
+                        <div>
+                            <span style="font-size: 9px; 
+                                          text-transform: uppercase; 
+                                          color: #6b7280; 
+                                          font-weight: 600;">
+                                Issued
+                            </span>
+                            <div style="font-size: 13px; 
+                                        font-weight: 600; 
+                                        color: #374151; 
+                                        margin-top: 4px;">
+                                ${issuedDate}
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
-                <!-- Subjects Table -->
+                <!-- Subjects Table with Paper Subdivisions -->
                 <table class="subject-table" 
                        style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
                     <thead>
                         <tr style="border-bottom: 2px solid #e2e8f0;">
-                            <th style="text-align: left; padding: 12px 15px; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 700; width: 40%;">Subject</th>
-                            <th style="text-align: center; padding: 12px 15px; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 700; width: 15%;">Grade</th>
-                            <th style="text-align: center; padding: 12px 15px; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 700; width: 15%;">Points</th>
-                            <th style="text-align: left; padding: 12px 15px; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 700; width: 30%;">Remarks</th>
+                            <th style="text-align: left; padding: 12px 15px; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 700; width: 28%;">Subject</th>
+                            <th style="text-align: center; padding: 8px 10px; color: #64748b; font-size: 9px; text-transform: uppercase; font-weight: 700; width: 12%; border-right: 1px solid #e2e8f0;">Paper 1</th>
+                            <th style="text-align: center; padding: 8px 10px; color: #64748b; font-size: 9px; text-transform: uppercase; font-weight: 700; width: 12%; border-right: 1px solid #e2e8f0;">Paper 2</th>
+                            <th style="text-align: center; padding: 12px 15px; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 700; width: 12%;">Grade</th>
+                            <th style="text-align: center; padding: 12px 15px; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 700; width: 10%;">Points</th>
+                            <th style="text-align: left; padding: 12px 15px; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 700; width: 26%;">Remarks</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${marks.map((mark, index) => {
+                        ${orderedMarks.map((mark, index) => {
                             const rowBg = index % 2 !== 0 ? 'background-color: #fafafa;' : '';
+                            
+                            // Extract paper scores if available (service provides "P1: 78", "P2: 82")
+                            let paper1Score = '';
+                            let paper2Score = '';
+                            if (mark.paperDetails && mark.paperDetails.length > 0) {
+                                mark.paperDetails.forEach(detail => {
+                                    const d = String(detail).trim();
+                                    // Match formats like "P1: 78", "P2: 82", "paper1: 78" or "paper2:82"
+                                    const p1 = d.match(/^\s*(?:P1|P\s*1|paper1|paper 1)\s*[:\-]?\s*(\d{1,3})/i);
+                                    const p2 = d.match(/^\s*(?:P2|P\s*2|paper2|paper 2)\s*[:\-]?\s*(\d{1,3})/i);
+                                    if (p1) paper1Score = p1[1];
+                                    if (p2) paper2Score = p2[1];
+                                });
+                            }
+                            
                             return `
                             <tr style="border-bottom: 1px solid #f1f5f9; ${rowBg}">
                                 <td style="padding: 12px 15px; color: #334155; font-size: 11px; font-weight: 500;">
                                     ${mark.subjectName}
-                                    ${formatPapers(mark)}
+                                </td>
+                                <td style="padding: 8px 10px; text-align: center; color: #475569; font-size: 11px; border-right: 1px solid #e2e8f0;">
+                                    ${paper1Score ? paper1Score : '-'}
+                                </td>
+                                <td style="padding: 8px 10px; text-align: center; color: #475569; font-size: 11px; border-right: 1px solid #e2e8f0;">
+                                    ${paper2Score ? paper2Score : '-'}
                                 </td>
                                 <td style="padding: 12px 15px; text-align: center; color: #0f172a; font-weight: 600; font-size: 11px;">
                                     ${mark.grade}
@@ -1558,8 +1785,8 @@ class ReportsController {
                             padding: 20px; 
                             margin-bottom: 30px; 
                             display: grid; 
-                            grid-template-columns: repeat(3, 1fr); 
-                            gap: 20px; 
+                            grid-template-columns: repeat(4, 1fr); 
+                            gap: 15px; 
                             color: white;">
                     <div style="text-align: center;">
                         <div style="font-size: 9px; 
@@ -1568,7 +1795,7 @@ class ReportsController {
                                     margin-bottom: 5px;">
                             Average Grade
                         </div>
-                        <div style="font-size: 20px; 
+                        <div style="font-size: 18px; 
                                     font-weight: 800;">
                             ${GradingUtils.calculateGrade(summary.average, 'alevel')}
                         </div>
@@ -1580,23 +1807,37 @@ class ReportsController {
                                     margin-bottom: 5px;">
                             Total Points
                         </div>
-                        <div style="font-size: 20px; 
+                        <div style="font-size: 18px; 
                                     font-weight: 800;">
-                            ${summary.aggregate}
+                            ${summary.totalPoints}
                         </div>
                     </div>
-                    <div style="text-align: center; 
-                                border-left: 1px solid rgba(255,255,255,0.3); 
-                                padding-left: 20px;">
+                    <div style="text-align: center;">
                         <div style="font-size: 9px; 
                                     text-transform: uppercase; 
                                     opacity: 0.9; 
                                     margin-bottom: 5px;">
-                            Aggregate
+                            Conduct
                         </div>
-                        <div style="font-size: 22px; 
-                                    font-weight: 900;">
-                            ${summary.aggregate}
+                        <div style="font-size: 18px; 
+                                    font-weight: 800; 
+                                    color: #86efac;">
+                            GOOD
+                        </div>
+                    </div>
+                    <div style="text-align: center; 
+                                border-left: 1px solid rgba(255,255,255,0.3); 
+                                padding-left: 15px;">
+                        <div style="font-size: 9px; 
+                                    text-transform: uppercase; 
+                                    opacity: 0.9; 
+                                    margin-bottom: 5px;">
+                            Result
+                        </div>
+                        <div style="font-size: 16px; 
+                                    font-weight: 900; 
+                                    ${summary.result === '1' || summary.result.includes('PASS') ? 'color: #86efac;' : 'color: #fca5a5;'}">
+                            ${summary.result}
                         </div>
                     </div>
                 </div>
@@ -2325,7 +2566,7 @@ class ReportsController {
     
     generateClassReportHTML(reportData) {
         const { class: classData, studentReports, statistics, term, school } = reportData;
-        const isALevel = this.currentLevel === 'alevel';
+        const isALevel = (this.currentLevel === 'alevel') || (reportData && reportData.level === 'alevel');
         
         // --- CALCULATIONS ---
         
@@ -2339,6 +2580,22 @@ class ReportsController {
         const bestAggregate = aggregates.length > 0 ? (isALevel ? Math.max(...aggregates) : Math.min(...aggregates)) : 0;
         const worstAggregate = aggregates.length > 0 ? (isALevel ? Math.min(...aggregates) : Math.max(...aggregates)) : 0;
         const avgAggregate = aggregates.length > 0 ? Math.round(aggregates.reduce((a,b)=>a+b,0) / aggregates.length) : 0;
+        // helper: get student display name
+        const getStudentDisplayName = (r) => {
+            if (!r) return '';
+            if (r.student) return r.student.name || (r.student.firstname && r.student.lastname ? `${r.student.firstname} ${r.student.lastname}` : r.student.firstname || r.student.lastname) || '';
+            return r.studentName || r.name || r.fullName || '';
+        }
+
+        // For A-Level also determine which students had the best/worst points (useful to show who achieved them)
+        let bestStudentName = '';
+        let worstStudentName = '';
+        if (isALevel && studentReports.length > 0) {
+            const best = studentReports.find(r => r.summary && r.summary.aggregate === bestAggregate);
+            const worst = studentReports.find(r => r.summary && r.summary.aggregate === worstAggregate);
+            bestStudentName = getStudentDisplayName(best) || '';
+            worstStudentName = getStudentDisplayName(worst) || '';
+        }
         
         // 3. Division Distribution
         const divisionDist = {};
@@ -2455,15 +2712,15 @@ class ReportsController {
                         <tr style="background: #f3f4f6;">
                             <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Total Candidates</th>
                             <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Pass Rate (>=45%)</th>
-                            <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Best Aggregate</th>
-                            <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Worst Aggregate</th>
-                            <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">Class Mean Agg.</th>
+                            <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">${isALevel ? 'Best Point' : 'Best Aggregate'}</th>
+                            <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">${isALevel ? 'Worst Point' : 'Worst Aggregate'}</th>
+                            <th style="padding: 10px; border: 1px solid #ddd; text-align: center;">${isALevel ? 'Average Point' : 'Class Mean Agg.'}</th>
                         </tr>
                         <tr>
                             <td style="padding: 10px; border: 1px solid #ddd; text-align: left; font-weight: bold;">${studentReports.length}</td>
                             <td style="padding: 10px; border: 1px solid #ddd; text-align: center; font-weight: bold; color: ${passRate >= 80 ? 'green' : passRate < 50 ? 'red' : 'black'}">${passRate}%</td>
-                            <td style="padding: 10px; border: 1px solid #ddd; text-align: center; font-weight: bold;">${bestAggregate}</td>
-                            <td style="padding: 10px; border: 1px solid #ddd; text-align: center; font-weight: bold;">${worstAggregate}</td>
+                            <td style="padding: 10px; border: 1px solid #ddd; text-align: center; font-weight: bold;">${isALevel ? `${bestAggregate}<div style="font-size:10px;color:#666; font-weight:500;">${bestStudentName}</div>` : bestAggregate}</td>
+                            <td style="padding: 10px; border: 1px solid #ddd; text-align: center; font-weight: bold;">${isALevel ? `${worstAggregate}<div style="font-size:10px;color:#666; font-weight:500;">${worstStudentName}</div>` : worstAggregate}</td>
                             <td style="padding: 10px; border: 1px solid #ddd; text-align: center; font-weight: bold;">${avgAggregate}</td>
                         </tr>
                     </table>
@@ -2524,7 +2781,7 @@ class ReportsController {
                     <div style="flex: 1;">
                         <h3 style="border-bottom: 2px solid #1a73e8; color: #1a73e8; padding-bottom: 5px; margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase;">Top 5 Students</h3>
                         <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                            <tr style="background: #f9fafb;"><th style="padding: 5px; text-align: left;">Name</th><th style="padding: 5px; text-align: right;">Agg</th><th style="padding: 5px; text-align: right;">Avg</th></tr>
+                            <tr style="background: #f9fafb;"><th style="padding: 5px; text-align: left;">Name</th><th style="padding: 5px; text-align: right;">${isALevel ? 'Points' : 'Agg'}</th><th style="padding: 5px; text-align: right;">Avg</th></tr>
                             ${studentReports.slice(0, 5).map(r => `
                                 <tr style="border-bottom: 1px solid #eee;">
                                     <td style="padding: 5px;">${r.student.name}</td>
@@ -2537,7 +2794,7 @@ class ReportsController {
                     <div style="flex: 1;">
                         <h3 style="border-bottom: 2px solid #dc2626; color: #dc2626; padding-bottom: 5px; margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase;">Bottom 5 Students</h3>
                         <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                            <tr style="background: #f9fafb;"><th style="padding: 5px; text-align: left;">Name</th><th style="padding: 5px; text-align: right;">Agg</th><th style="padding: 5px; text-align: right;">Avg</th></tr>
+                            <tr style="background: #f9fafb;"><th style="padding: 5px; text-align: left;">Name</th><th style="padding: 5px; text-align: right;">${isALevel ? 'Points' : 'Agg'}</th><th style="padding: 5px; text-align: right;">Avg</th></tr>
                             ${studentReports.slice(-5).reverse().map(r => `
                                 <tr style="border-bottom: 1px solid #eee;">
                                     <td style="padding: 5px;">${r.student.name}</td>
@@ -2986,7 +3243,7 @@ class ReportsController {
                     <tbody>
                         ${classReports.map((report, index) => `
                             <tr>
-                                <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #6b7280; font-size: 12px;">${index + 1}</td>
+                                <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #6b7280; font-size: 12px;">${report.rank || index + 1}</td>
                                 <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-weight: 500; font-size: 12px;">${report.className}</td>
                                 <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-size: 12px;">${report.totalStudents}</td>
                                 <td style="padding: 8px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; color: #1f2937; font-size: 12px;">${report.studentsWithMarks}</td>
@@ -3046,6 +3303,8 @@ class ReportsController {
         
         let statsHTML = '';
         
+        const isALevel = (reportData && reportData.level === 'alevel') || this.currentLevel === 'alevel';
+
         switch (reportData.type) {
             case 'student':
                 statsHTML = `
@@ -3059,7 +3318,7 @@ class ReportsController {
                     </div>
                     <div class="stat-card">
                         <div class="stat-value">${reportData.summary.aggregate}</div>
-                        <div class="stat-label">Aggregate</div>
+                        <div class="stat-label">${isALevel ? 'Points' : 'Aggregate'}</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-value">${reportData.summary.totalSubjects}</div>
@@ -3529,6 +3788,7 @@ class ReportsController {
     async exportClassReportToExcel(reportData) {
         const { class: classData, studentReports, term, level, school } = reportData;
         const isLowerPrimary = level === 'lower-primary';
+        const isALevel = level === 'alevel';
 
         // Prepare data for Excel
         const data = [];
@@ -3554,40 +3814,68 @@ class ReportsController {
         const reportSubjects = this.subjects || [];
         
         reportSubjects.forEach(s => {
-            headers.push(s.name);
-            if (!isLowerPrimary) {
-                headers.push('Grade');
+            if (isALevel && s.type === 'principal') {
+                headers.push(`${s.name} P1`);
+                headers.push(`${s.name} P2`);
+                headers.push(`${s.name} Grade`);
+            } else {
+                headers.push(s.name);
+                if (!isLowerPrimary) {
+                    headers.push('Grade');
+                }
             }
         });
         
-        headers.push('Total Marks');
-        headers.push('Average Score');
-        
-        if (!isLowerPrimary) {
-            headers.push('Aggregate');
-            headers.push('Division');
+        if (isALevel) {
+            headers.push('Total Points');
+            headers.push('Average Marks');
+        } else {
+            headers.push('Total Marks');
+            headers.push('Average Score');
+            
+            if (!isLowerPrimary) {
+                headers.push('Aggregate');
+                headers.push('Division');
+            }
         }
         
         data.push(headers);
         
         // Rows
         studentReports.forEach((report, index) => {
-            const row = [index + 1, report.student.name];
+            const row = [report.rank || index + 1, report.student.name];
             
             reportSubjects.forEach(subject => {
                 const markObj = report.marks.find(m => m.subjectId === subject.id);
-                row.push(markObj ? markObj.score : '');
-                if (!isLowerPrimary) {
+                
+                if (isALevel && subject.type === 'principal') {
+                    let p1 = '', p2 = '';
+                    if (markObj && markObj.papers) {
+                        p1 = markObj.papers.paper1 !== undefined ? markObj.papers.paper1 : '';
+                        p2 = markObj.papers.paper2 !== undefined ? markObj.papers.paper2 : '';
+                    }
+                    row.push(p1);
+                    row.push(p2);
                     row.push(markObj ? markObj.grade : '');
+                } else {
+                    row.push(markObj ? markObj.score : '');
+                    if (!isLowerPrimary) {
+                        row.push(markObj ? markObj.grade : '');
+                    }
                 }
             });
             
-            row.push(report.summary.totalMarks);
-            row.push(report.summary.average);
-            
-            if (!isLowerPrimary) {
-                row.push(report.summary.aggregate);
-                row.push(report.summary.division);
+            if (isALevel) {
+                row.push(report.summary.totalPoints);
+                row.push(report.summary.average);
+            } else {
+                row.push(report.summary.totalMarks);
+                row.push(report.summary.average);
+                
+                if (!isLowerPrimary) {
+                    row.push(report.summary.aggregate);
+                    row.push(report.summary.division);
+                }
             }
             
             data.push(row);
