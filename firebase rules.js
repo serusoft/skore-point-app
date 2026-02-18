@@ -116,6 +116,15 @@ service cloud.firestore {
     }
 
     /* =========================
+       PUSH SUBSCRIPTIONS
+    ========================= */
+
+    match /pushSubscriptions/{userId} {
+      allow read, create, update, delete: if isAuthenticated() 
+        && isOwnProfile(userId);
+    }
+
+    /* =========================
        CLASSES COLLECTION
     ========================= */
 
