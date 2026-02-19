@@ -197,17 +197,7 @@ function setupEventListeners() {
     // Enter Portal button
     document.getElementById('openSchoolPortalBtn')?.addEventListener('click', () => {
         if (AppState.currentSchool) {
-            const school = AppState.currentSchool;
-            if (school.level === 'primary' || school.level === 'secondary') {
-                showLevelSelection(school.level).then(academicLevel => {
-                    if (academicLevel) {
-                        setAcademicLevel(academicLevel);
-                        navigateTo('school');
-                    }
-                });
-            } else {
-                navigateTo('school');
-            }
+            navigateTo('school');
         } else {
             showToast('Please join or create a school first.', 'warning');
         }
@@ -634,10 +624,19 @@ function showRegisterSchoolModal() {
             modal.querySelector('#registerSchoolError').style.display = 'none';
             modal.querySelector('#registerSchoolSuccess').style.display = 'flex';
             
-            // Close modal and reload dashboard after 2 seconds
+            // Reload user schools and close modal
+            try {
+                await loadUserSchools();
+                console.log('School registration: User schools reloaded successfully');
+            } catch (error) {
+                console.error('School registration: Failed to reload user schools:', error);
+                // Continue anyway since local state is updated
+            }
+            
+            // Close modal after 2 seconds
             setTimeout(() => {
                 document.body.removeChild(modal);
-                loadUserSchools();
+                navigateTo('school');
             }, 2000);
             
         } catch (error) {
@@ -687,7 +686,7 @@ async function createDefaultStructure(schoolId, level) {
             'olevel': [
                 'Entrepreneurship', 'Biology', 'History', 'Agriculture', 'Chemistry', 'Physics', 
                 'Mathematics', 'French', 'Kiswahili', 'Geography', 'English Language', 'ICT', 
-                'Religious Education', 'Islamic Religious Education', 'Luganda', 'Fine art', 'Physical education'
+                'Religious Education', 'Islamic Religious Education', 'Luganda', 'Art', 'Physical education'
             ],
             'alevel': [
                 // Principal Pass Subjects
@@ -702,7 +701,7 @@ async function createDefaultStructure(schoolId, level) {
                 { name: 'Divinity', type: 'principal', paperCount: 2 },
                 { name: 'Islamic Religious Education', type: 'principal', paperCount: 2 },
                 { name: 'Literature in English', type: 'principal', paperCount: 2 },
-                { name: 'Fine Art', type: 'principal', paperCount: 2 },
+                { name: 'Art', type: 'principal', paperCount: 2 },
                 { name: 'Entrepreneurship Education', type: 'principal', paperCount: 2 },
                 { name: 'Luganda', type: 'principal', paperCount: 2 },
                 // Subsidiary Subjects

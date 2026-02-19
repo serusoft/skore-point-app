@@ -358,6 +358,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             } catch (err) {
                 console.error('School Page: Recovery failed', err);
+                // Force unlock UI even on error
+                document.documentElement.classList.remove('rbac-pending');
+                
+                // If recovery failed and we have a user but no school, redirect to dashboard
+                if (AppState.currentUser && (!AppState.userSchools || AppState.userSchools.length === 0)) {
+                    console.warn('School Page: No schools available, redirecting to dashboard');
+                    showToast('Please register or join a school first.', 'warning');
+                    setTimeout(() => {
+                        window.location.href = '../dashboard/dashboard.html';
+                    }, 2000);
+                }
             }
         }
     });
@@ -418,7 +429,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.error('School Page: Recovery failed', err);
                 // Force unlock UI even on error
                 document.documentElement.classList.remove('rbac-pending');
-
+                
+                // If recovery failed and we have a user but no school, redirect to dashboard
+                if (AppState.currentUser && (!AppState.userSchools || AppState.userSchools.length === 0)) {
+                    console.warn('School Page: No schools available, redirecting to dashboard');
+                    showToast('Please register or join a school first.', 'warning');
+                    setTimeout(() => {
+                        window.location.href = '../dashboard/dashboard.html';
+                    }, 2000);
+                }
             }
         }
     } else {

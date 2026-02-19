@@ -73,7 +73,9 @@ const ALEVEL_COMBINATIONS = {
     'Music,History,Geography': 'MGH',
     'Agriculture,Chemistry,Biology': 'BAC',
     'Agriculture,Economics,Geography': 'GEA',
-    'Agriculture,Biology,Geography': 'BAG'
+    'Agriculture,Biology,Geography': 'BAG',
+    'Art,Economics,Mathematics': 'MEA',
+    'Art,Entrepreneurship,Mathematics': 'MEA'
 };
 
 // A-Level Subject Codes - For generating combinations not in the standard list
@@ -1051,6 +1053,8 @@ class ReportsController {
             let totalMarks = 0;
             let markCount = 0;
             
+            // IMPORTANT: For A-Level, only students who actually sat for this subject are included in the analysis
+            // This is different from O-Level where all students should have marks for all subjects
             for (const student of students) {
                 const marks = await ReportService.getStudentMarks(student.id, term);
                 if (marks && marks[subjectId] !== undefined) {
@@ -1213,6 +1217,8 @@ class ReportsController {
                     let studentSubjCount = 0;
 
                     // Iterate over marks to calculate average and populate subject stats
+                    // IMPORTANT: For A-Level, subject stats only include students who have marks for each subject
+                    // This correctly handles the fact that A-Level students only take their chosen subject combinations
                     for (const [key, val] of Object.entries(marks)) {
                         // Skip metadata keys
                         if (['studentId', 'schoolId', 'classId', 'term', 'level', 'enteredBy', 'enteredByInitials', 'updatedAt'].includes(key)) continue;
@@ -2606,6 +2612,8 @@ class ReportsController {
         const divisionKeys = Object.keys(divisionDist).sort();
         
         // 4. Subject Analysis
+        // IMPORTANT: For A-Level, subject analysis is based ONLY on students who actually sat for each subject
+        // This is different from O-Level where all students are expected to take all subjects
         const subjectStats = {};
         studentReports.forEach(report => {
             report.marks.forEach(mark => {
@@ -3048,8 +3056,8 @@ class ReportsController {
                         <div style="font-size: 16px; font-weight: 700; color: #111827;">${classData?.name || 'All Classes'}</div>
                     </div>
                     <div>
-                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Total Students</div>
-                        <div style="font-size: 16px; font-weight: 700; color: #111827;">${statistics.totalStudents}</div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">${this.currentLevel === 'alevel' ? 'Students Who Sat' : 'Total Students'}</div>
+                        <div style="font-size: 16px; font-weight: 700; color: #111827;">${this.currentLevel === 'alevel' ? statistics.studentsWithMarks : statistics.totalStudents}</div>
                     </div>
                 </div>
                 

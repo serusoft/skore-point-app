@@ -764,6 +764,12 @@ function navigateTo(page, params = {}) {
     
     if (pages[page]) {
         let url = pages[page];
+        
+        // Add cache-busting parameter for school page to prevent caching issues
+        if (page === 'school') {
+            params._t = Date.now();
+        }
+        
         if (Object.keys(params).length > 0) {
             const queryParams = new URLSearchParams(params).toString();
             url += '?' + queryParams;
