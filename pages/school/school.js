@@ -1,7 +1,7 @@
 // pages/school/school.js
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('School Page: DOMContentLoaded - Starting initialization process (v1.4.2 - Paper Structure).');
+    console.log('School Page: DOMContentLoaded - Starting initialization process.');
 
     // Track initialization state
     let pageInitialized = false;
@@ -517,12 +517,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else {
                     tab.style.display = '';
                     
-                    if (!isAdmin && section === 'teachers') {
+                    // Special handling for the 'teachers' tab based on role
+                    if (section === 'teachers') {
                         const icon = tab.querySelector('i');
-                        if (icon) icon.className = 'fas fa-crown';
                         const span = tab.querySelector('span');
-                        if (span) {
-                            span.textContent = 'My Admin';
+
+                        if (!isAdmin) {
+                            // For TEACHERS, rename to "My Admin"
+                            if (icon) icon.className = 'fas fa-crown';
+                            if (span) span.textContent = 'My Admin';
+                        } else {
+                            // For ADMINS, ensure it says "Teachers" to prevent stale state
+                            if (icon) icon.className = 'fas fa-chalkboard-teacher'; // Reset to default icon
+                            if (span) span.textContent = 'Teachers';
                         }
                     }
                 }
@@ -537,13 +544,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     tab.style.display = 'none';
                 } else {
                     tab.style.display = '';
-                    
-                    if (!isAdmin && section === 'teachers') {
+
+                    // Special handling for the 'teachers' tab based on role
+                    if (section === 'teachers') {
                         const icon = tab.querySelector('i');
-                        if (icon) icon.className = 'fas fa-crown';
                         const span = tab.querySelector('span');
-                        if (span) {
-                            span.textContent = 'My Admin';
+
+                        if (!isAdmin) {
+                            // For TEACHERS, rename to "My Admin"
+                            if (icon) icon.className = 'fas fa-crown';
+                            if (span) span.textContent = 'My Admin';
+                        } else {
+                            // For ADMINS, ensure it says "Teachers" to prevent stale state
+                            if (icon) icon.className = 'fas fa-chalkboard-teacher'; // Reset to default icon
+                            if (span) span.textContent = 'Teachers';
                         }
                     }
                 }
@@ -1163,15 +1177,39 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Convert sheet to JSON
             const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
             
-            if (rows.length <= 1) {
+            if (rows.length === 0) {
                 return [];
             }
             
-            // Find the name column (assume first column is names)
+            // Rule 2: Header Words to IGNORE (Case-insensitive)
+            const ignoredHeaders = [
+                'names', 'name', 
+                'student', 'student name', 'student names',
+                'learner', 'learner name', 'learner names',
+                'pupil', 'pupil name', 'pupil names',
+                'candidates', 'candidate name',
+                'index', 'index number',
+                'no', 's/n', 'number'
+            ];
+
             const students = [];
-            for (let i = 1; i < rows.length; i++) {
+            let startIndex = 0;
+
+            // Check if first row is a header
+            if (rows.length > 0) {
+                const firstCell = String(rows[0][0] || '').trim().toLowerCase();
+                // If matches known header, skip first row
+                if (ignoredHeaders.includes(firstCell)) {
+                    startIndex = 1;
+                }
+            }
+
+            // Rule 1: Always read from FIRST COLUMN (Column A)
+            for (let i = startIndex; i < rows.length; i++) {
                 const row = rows[i];
                 const name = String(row[0] || '').trim();
+                
+                // Basic validation
                 if (name && name.length > 0) {
                     students.push({ name });
                 }

@@ -12,6 +12,64 @@ function getUgandanTerm() {
     return 'III';                                  // Term III: Sep - Dec (and Jan holidays)
 }
 
+// A-Level Combination Mapping - Maps subject sets to their exact codes
+const ALEVEL_COMBINATIONS = {
+    'Physics,Mathematics,Chemistry': 'PCM',
+    'Physics,Mathematics,Biology': 'PMB',
+    'Physics,Chemistry,Biology': 'PCB',
+    'Physics,Mathematics,Economics': 'PEM',
+    'Physics,Mathematics,Geography': 'PMG',
+    'Physics,Mathematics,Entrepreneurship': 'PEM',
+    'Biology,Chemistry,Mathematics': 'BCM',
+    'Biology,Chemistry,Geography': 'BCG',
+    'Biology,Chemistry,Economics': 'BCE',
+    'Biology,Chemistry,Agriculture': 'BCA',
+    'Mathematics,Economics,Geography': 'MEG',
+    'Mathematics,Economics,Entrepreneurship': 'MEE',
+    'Economics,Geography,History': 'HEG',
+    'Economics,Geography,Divinity': 'EGD',
+    'Economics,Geography,Entrepreneurship': 'GEE',
+    'Economics,Geography,Literature': 'LEG',
+    'History,Economics,Geography': 'HEG',
+    'History,Economics,Divinity': 'HED',
+    'History,Economics,Literature': 'HEL',
+    'History,Geography,Divinity': 'HDG',
+    'History,Geography,Literature': 'HGL',
+    'Literature,Economics,Geography': 'LEG',
+    'Literature,Economics,Divinity': 'LED',
+    'Literature,History,Geography': 'LHG',
+    'Divinity,Economics,Geography': 'DEG',
+    'Divinity,History,Geography': 'DHG',
+    'Divinity,Literature,Geography': 'DLG',
+    'Art,Economics,Geography': 'GEA',
+    'Art,History,Geography': 'HAG',
+    'Music,Economics,Geography': 'MEG',
+    'Music,History,Geography': 'MGH',
+    'Agriculture,Chemistry,Biology': 'BAC',
+    'Agriculture,Economics,Geography': 'GEA',
+    'Agriculture,Biology,Geography': 'BAG',
+    'Art,Economics,Mathematics': 'MEA',
+    'Art,Entrepreneurship,Mathematics': 'MEA'
+};
+
+// A-Level Subject Codes - For generating combinations not in the standard list
+const ALEVEL_SUBJECT_CODES = {
+    'Physics': 'P', 'Mathematics': 'M', 'Chemistry': 'C', 'Biology': 'B',
+    'Economics': 'E', 'Geography': 'G', 'History': 'H', 'Entrepreneurship': 'E',
+    'Agriculture': 'A', 'Art': 'A', 'Music': 'M', 'Literature': 'L', 'Divinity': 'D'
+};
+
+// Helper function to get A-Level combination code
+function getALevelCombination(subjectNames) {
+    if (!subjectNames || subjectNames.length === 0) return 'N/A';
+    if (subjectNames.length === 3) {
+        const sorted = subjectNames.sort().join(',');
+        if (ALEVEL_COMBINATIONS[sorted]) return ALEVEL_COMBINATIONS[sorted];
+    }
+    const codes = subjectNames.map(name => ALEVEL_SUBJECT_CODES[name] || name.charAt(0).toUpperCase()).sort();
+    return codes.join('');
+}
+
 // Helper to use global Firebase instance
 const db = {
     get: async (collection, id) => {
@@ -529,6 +587,7 @@ const ReportService = {
         
         // Build Header Row
         const headerRow = ['Position', 'Student Name'];
+        if (isALevel) headerRow.push('Combination');
         sortedSubjects.forEach(subject => {
             headerRow.push(subject);
             headerRow.push('Grade');
@@ -549,6 +608,12 @@ const ReportService = {
                 index + 1, // Position
                 report.student.name
             ];
+
+            if (isALevel) {
+                const principalSubjects = report.marks.filter(m => m.type === 'principal');
+                const principalSubjectNames = principalSubjects.map(m => m.subjectName);
+                row.push(getALevelCombination(principalSubjectNames));
+            }
 
             // Map marks to sorted subjects
             const marksMap = new Map();
@@ -579,6 +644,7 @@ const ReportService = {
         const colWidths = [];
         colWidths.push({ wch: 11 });  // Position
         colWidths.push({ wch: 33 }); // Student Name
+        if (isALevel) colWidths.push({ wch: 12 }); // Combination
         
         // Subjects (Score & Grade)
         sortedSubjects.forEach(() => {
@@ -629,6 +695,15 @@ const ReportService = {
                     if (!ws[name_cell_ref].s) ws[name_cell_ref].s = {};
                     if (!ws[name_cell_ref].s.font) ws[name_cell_ref].s.font = {};
                     ws[name_cell_ref].s.font.bold = true;
+                }
+                
+                // Center Combination (Column C / Index 2) if A-Level
+                if (isALevel) {
+                    const combo_cell_ref = XLSX.utils.encode_cell({c: 2, r: R});
+                    if (ws[combo_cell_ref]) {
+                        if (!ws[combo_cell_ref].s) ws[combo_cell_ref].s = {};
+                        ws[combo_cell_ref].s.alignment = { horizontal: "center" };
+                    }
                 }
 
                 // Zebra Striping (Odd rows relative to data start)

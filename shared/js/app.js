@@ -36,11 +36,12 @@ const DOM = {
 async function initializeApp() {
     const startTime = performance.now();
     console.log('App: initializeApp() - Start');
-    console.log('App: Version 1.4.2');
+    console.log('App: Dynamic versioning enabled. Users receive updates automatically.');
     
     try {
-        // Initialize PWA
-        initializePWA();
+        // Initialize PWA - moved to the top to capture beforeinstallprompt early
+        console.log('App: initializeApp() - Setting up PWA listeners...');
+        setupPWAEventListeners();
 
         // Initialize Firebase
         console.log('App: initializeApp() - Initializing Firebase...');
@@ -62,6 +63,9 @@ async function initializeApp() {
         // Cache DOM elements
         cacheDOMElements();
         
+        // Initialize PWA UI
+        initializePWA();
+        
         console.log('App: initializeApp() - Application initialized successfully.');
         
         // Dispatch app initialized event
@@ -79,6 +83,41 @@ async function initializeApp() {
         hideLoading();
         showError('Application failed to initialize. Please refresh the page.');
     }
+}
+
+// Setup PWA event listeners early to capture beforeinstallprompt
+function setupPWAEventListeners() {
+    // Listen for beforeinstallprompt event immediately
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        console.log('PWA: beforeinstallprompt event captured');
+        AppState.deferredPrompt = e;
+        AppState.isAppInstalled = false;
+        localStorage.removeItem('pwaInstalled');
+        
+        // Update UI if the update function exists
+        if (typeof window.updatePWAButtonUI === 'function') {
+            window.updatePWAButtonUI();
+        } else {
+            // If update function not yet available, store for later
+            document.addEventListener('app:initialized', () => {
+                window.updatePWAButtonUI();
+            });
+        }
+    });
+    
+    // Listen for app installed event
+    window.addEventListener('appinstalled', () => {
+        console.log('PWA was installed');
+        AppState.isAppInstalled = true;
+        AppState.installInProgress = false;
+        AppState.deferredPrompt = null;
+        localStorage.setItem('pwaInstalled', 'true');
+        if (typeof window.updatePWAButtonUI === 'function') {
+            window.updatePWAButtonUI();
+        }
+        showToast('App installed successfully!', 'success');
+    });
 }
 
 // Initialize Firebase
@@ -117,24 +156,17 @@ async function initializeFirebase() {
                 onAuthStateChanged: (callback) => authModule.onAuthStateChanged(firebaseAuth, callback)
             },
             db: {
-                collection: (name) => firestoreModule.collection(firestoreDB, name),
-                doc: (col, id) => firestoreModule.doc(firestoreDB, col, id),
-                getDoc: async (col, id) => {
-                    const snap = await firestoreModule.getDoc(firestoreModule.doc(firestoreDB, col, id));
-                    return { exists: () => snap.exists(), data: () => snap.data(), id: snap.id };
+                getDoc: async (collection, id) => {
+                    const docRef = firestoreModule.doc(firestoreDB, collection, id);
+                    return await firestoreModule.getDoc(docRef);
                 },
-                setDoc: (col, id, data) => firestoreModule.setDoc(firestoreModule.doc(firestoreDB, col, id), data),
-                addDoc: (col, data) => firestoreModule.addDoc(firestoreModule.collection(firestoreDB, col), data),
-                updateDoc: (col, id, data) => firestoreModule.updateDoc(firestoreModule.doc(firestoreDB, col, id), data),
-                deleteDoc: (col, id) => firestoreModule.deleteDoc(firestoreModule.doc(firestoreDB, col, id)),
-                query: async (col, constraints) => {
+                query: async (collection, constraints) => {
                     if (!constraints) constraints = [];
                     if (!Array.isArray(constraints)) constraints = [constraints];
                     
                     // Ensure schoolId is included for school collections if we have a current school
-                    // This fixes "Missing permissions" errors where security rules require schoolId
                     const schoolCollections = ['students', 'classes', 'subjects', 'marks'];
-                    if (schoolCollections.includes(col) && AppState.currentSchool && AppState.currentSchool.id) {
+                    if (schoolCollections.includes(collection) && AppState.currentSchool && AppState.currentSchool.id) {
                         const hasSchoolId = constraints.some(c => c.field === 'schoolId');
                         if (!hasSchoolId) {
                             constraints.push({ field: 'schoolId', op: '==', value: AppState.currentSchool.id });
@@ -142,21 +174,13 @@ async function initializeFirebase() {
                     }
 
                     // SMART QUERY: Handle composite index/permission issues for school data
-                    // If querying school-related collections and we have a current school
-                    // Enable for all school collections (including marks) to avoid missing index/permission errors
-                    if (schoolCollections.includes(col) && AppState.currentSchool && AppState.currentSchool.id) {
-                        
-                        // Check if we need to optimize:
-                        // 1. If we have filters other than schoolId (would require composite index)
-                        // 2. OR if we are missing schoolId (would cause permission error)
+                    if (schoolCollections.includes(collection) && AppState.currentSchool && AppState.currentSchool.id) {
                         const hasOtherFilters = constraints.some(c => c.field !== 'schoolId');
                         
                         if (hasOtherFilters) {
-                            // console.log(`[App] Optimizing query for ${col} to avoid composite index/permission issues.`);
-                            
-                            // 1. Query by schoolId only (indexed by default, satisfies security rules)
+                            // 1. Query by schoolId only (indexed by default)
                             const schoolQuery = firestoreModule.query(
-                                firestoreModule.collection(firestoreDB, col), 
+                                firestoreModule.collection(firestoreDB, collection), 
                                 firestoreModule.where('schoolId', '==', AppState.currentSchool.id)
                             );
                             
@@ -169,7 +193,7 @@ async function initializeFirebase() {
                                     const val = item[c.field];
                                     if (c.op === '==') return val === c.value;
                                     if (c.op === 'array-contains') return Array.isArray(val) && val.includes(c.value);
-                                    return true; // Fallback for other ops
+                                    return true;
                                 });
                             });
                             
@@ -178,10 +202,23 @@ async function initializeFirebase() {
                     }
 
                     const queryConstraints = constraints.map(c => firestoreModule.where(c.field, c.op, c.value));
-                    const q = firestoreModule.query(firestoreModule.collection(firestoreDB, col), ...queryConstraints);
-                    const snap = await firestoreModule.getDocs(q);
-                    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    const q = firestoreModule.query(firestoreModule.collection(firestoreDB, collection), ...queryConstraints);
+                    const snapshot = await firestoreModule.getDocs(q);
+                    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 },
+                addDoc: async (collection, data) => {
+                    return await firestoreModule.addDoc(firestoreModule.collection(firestoreDB, collection), data);
+                },
+                updateDoc: async (collection, id, data) => {
+                    return await firestoreModule.updateDoc(firestoreModule.doc(firestoreDB, collection, id), data);
+                },
+                deleteDoc: async (collection, id) => {
+                    return await firestoreModule.deleteDoc(firestoreModule.doc(firestoreDB, collection, id));
+                },
+                setDoc: async (collection, id, data) => {
+                    return await firestoreModule.setDoc(firestoreModule.doc(firestoreDB, collection, id), data);
+                },
+                doc: (collection, id) => firestoreModule.doc(firestoreDB, collection, id),
                 getAll: async (col) => {
                      const snap = await firestoreModule.getDocs(firestoreModule.collection(firestoreDB, col));
                      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -193,20 +230,16 @@ async function initializeFirebase() {
         };
 
         return true;
-        
     } catch (error) {
-        console.error('App: initializeFirebase() - Firebase initialization error:', error);
-        showError('Failed to load core application services (Firebase). Please check your internet connection and try again.', 'Connection Error');
+        console.error('Firebase initialization error:', error);
         return false;
     }
 }
 
-// Check authentication state
+// Check Auth State
 let initialAuthCheckDone = false;
-async function checkAuthState() {
-    console.log('App: checkAuthState() - Registering auth state listener.');
+function checkAuthState() {
     return new Promise((resolve) => {
-        // Only register auth listener once
         if (AppState.authListenerRegistered) {
             console.log('App: checkAuthState() - Auth listener already registered, resolving.');
             return resolve();
@@ -493,32 +526,12 @@ function setAcademicLevel(level) {
 }
 
 // Define a constant for the base URL of your application
-const BASE_URL = "/"; // Use root scope for the service worker
+const BASE_URL = "./"; // Use relative scope for the service worker
 
 // Initialize PWA
 function initializePWA() {
     // Check if app is installed
     checkIfAppInstalled();
-    
-    // Listen for app installed event
-    window.addEventListener('appinstalled', () => {
-        console.log('PWA was installed');
-        AppState.isAppInstalled = true;
-        localStorage.setItem('pwaInstalled', 'true');
-        AppState.deferredPrompt = null;
-        updatePWAButtonUI();
-        showToast('App installed successfully!', 'success');
-        
-        // Try to open the app after installation
-        if (window.matchMedia('(display-mode: standalone)').matches) {
-            console.log('App is now running in standalone mode');
-        } else {
-            // If available, attempt to launch the app
-            if (navigator.windowControlsOverlay && navigator.windowControlsOverlay.visible) {
-                console.log('Running in window controls overlay mode');
-            }
-        }
-    });
     
     // Check standalone mode
     if (window.matchMedia('(display-mode: standalone)').matches) {
@@ -527,18 +540,58 @@ function initializePWA() {
         updatePWAButtonUI();
     }
     
-    // Register service worker
+    // Register service worker with instant update logic
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js', { scope: BASE_URL })
+            navigator.serviceWorker.register('./sw.js', { scope: BASE_URL })
                 .then(registration => {
                     console.log('ServiceWorker registered:', registration.scope);
+                    
+                    // Check for updates
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        console.log('ServiceWorker update found');
+                        
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                console.log('New ServiceWorker installed, waiting to activate');
+                                // Notify the user that an update is available
+                                showUpdateNotification();
+                            }
+                        });
+                    });
                 })
                 .catch(error => {
                     console.log('ServiceWorker registration failed:', error);
                 });
+
+            // Reload page when new service worker activates
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+            });
+
+            // On update, force new SW to activate immediately
+            navigator.serviceWorker.ready.then(reg => {
+                if (reg.active) {
+                    reg.active.postMessage({ type: 'SKIP_WAITING' });
+                }
+            });
         });
     }
+}
+
+// Show update notification
+function showUpdateNotification() {
+    const updateBanner = document.createElement('div');
+    updateBanner.className = 'update-banner';
+    updateBanner.innerHTML = `
+        <div class="update-content">
+            <span>A new version is available!</span>
+            <button onclick="window.location.reload()" class="btn-update">Update Now</button>
+            <button onclick="this.parentElement.parentElement.remove()" class="btn-close">✕</button>
+        </div>
+    `;
+    document.body.appendChild(updateBanner);
 }
 
 // Check if app is installed
@@ -566,6 +619,11 @@ function updatePWAButtonUI() {
 
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
+    console.log('PWA UI Update - DeferredPrompt exists:', !!AppState.deferredPrompt);
+    console.log('PWA UI Update - isAppInstalled:', AppState.isAppInstalled);
+    console.log('PWA UI Update - isStandalone:', isStandalone);
+    console.log('PWA UI Update - installInProgress:', AppState.installInProgress);
+
         // Update the launch page install button
         if (installAppBtn) {
                 if (AppState.isAppInstalled || isStandalone) {
@@ -575,9 +633,15 @@ function updatePWAButtonUI() {
                 } else if (AppState.installInProgress) {
                         installAppBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Installing...';
                         installAppBtn.disabled = true;
-                } else {
+                } else if (AppState.deferredPrompt) {
                         installAppBtn.innerHTML = '<i class="fas fa-download"></i> Install App';
                         installAppBtn.disabled = false;
+                        installAppBtn.onclick = installPWA;
+                } else {
+                        // No deferred prompt available - show instructional message
+                        installAppBtn.innerHTML = '<i class="fas fa-info-circle"></i> Install Options';
+                        installAppBtn.disabled = false;
+                        installAppBtn.onclick = showInstallInstructions;
                 }
         }
 
@@ -590,57 +654,114 @@ function updatePWAButtonUI() {
                 } else if (AppState.installInProgress) {
                         installBtn.textContent = 'Installing...';
                         installBtn.disabled = true;
-                } else {
+                } else if (AppState.deferredPrompt) {
                         installBtn.textContent = 'Install App';
                         installBtn.disabled = false;
+                        installBtn.onclick = installPWA;
+                } else {
+                        installBtn.textContent = 'Install Options';
+                        installBtn.disabled = false;
+                        installBtn.onclick = showInstallInstructions;
                 }
         }
 }
+
+// Show installation instructions based on browser/device
+function showInstallInstructions() {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isAndroid = /Android/.test(navigator.userAgent);
+    
+    let message = '';
+    
+    if (isIOS) {
+        message = `To install on iOS:<br><br>
+                   1. Tap the Share button <i class="fas fa-share-square"></i> in the browser<br>
+                   2. Scroll down and tap "Add to Home Screen"<br>
+                   3. Tap "Add" in the top right corner`;
+    } else if (isAndroid) {
+        message = `To install on Android:<br><br>
+                   1. Tap the menu button (⋮) in the browser<br>
+                   2. Tap "Install app" or "Add to Home screen"<br>
+                   3. Follow the prompts to install`;
+    } else {
+        message = `To install on Desktop:<br><br>
+                   Look for the install icon <i class="fas fa-download"></i> in your browser's address bar<br>
+                   or check your browser menu for "Install Skore Point"`;
+    }
+    
+    // Show custom modal with instructions
+    const modal = document.createElement('div');
+    modal.className = 'install-modal';
+    modal.innerHTML = `
+        <div class="install-modal-content">
+            <div class="install-modal-header">
+                <h3>Install Skore Point</h3>
+                <button class="close-btn" onclick="this.closest('.install-modal').remove()">✕</button>
+            </div>
+            <div class="install-modal-body">
+                <p>${message}</p>
+                <div class="install-modal-icon">
+                    <i class="fas fa-arrow-down"></i>
+                </div>
+            </div>
+            <div class="install-modal-footer">
+                <button onclick="this.closest('.install-modal').remove()" class="btn btn-secondary">Got it</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
 // Install PWA
 async function installPWA() {
-    const installBtn = document.getElementById('installAppBtn');
+    const installBtn = document.getElementById('installAppBtn') || document.getElementById('installBtn');
     
     try {
+        // Check if we have a deferred prompt
+        if (!AppState.deferredPrompt) {
+            console.warn('installPWA() called, but no deferredPrompt is available.');
+            showInstallInstructions();
+            return;
+        }
+
         // Update button state to "Installing..."
+        AppState.installInProgress = true;
         if (installBtn) {
             installBtn.disabled = true;
             installBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Installing...';
         }
 
-        // If we have a deferred prompt, use it
-        if (AppState.deferredPrompt) {
-            AppState.deferredPrompt.prompt();
-            const { outcome } = await AppState.deferredPrompt.userChoice;
-            
-            // The prompt is single-use, so clear it.
-            AppState.deferredPrompt = null;
+        // Show the install prompt
+        AppState.deferredPrompt.prompt();
+        
+        // Wait for the user to respond to the prompt
+        const { outcome } = await AppState.deferredPrompt.userChoice;
+        console.log(`User response to install prompt: ${outcome}`);
+        
+        // The prompt is single-use, so clear it.
+        AppState.deferredPrompt = null;
 
-            if (outcome === 'accepted') {
-                console.log('User accepted the install prompt');
-                // Don't do anything here. The 'appinstalled' event will fire and update the UI.
-                // The button will remain in "Installing..." state until the app is fully installed.
-            } else {
-                console.log('User dismissed the install prompt');
-                // If dismissed, update the UI to show the instructional button again.
-                updatePWAButtonUI();
-            }
+        if (outcome === 'accepted') {
+            console.log('User accepted the install prompt');
+            // Don't change button state here - the 'appinstalled' event will handle it
+            // Keep installInProgress true until appinstalled event fires
         } else {
-            // No deferred prompt available
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-            if (isIOS) {
-                showToast('To install: tap Share <i class="fas fa-share-square"></i> and select "Add to Home Screen"', 'info', 5000);
-                updatePWAButtonUI();
-            } else {
-                showToast('To install: Look for the install icon in your browser address bar.', 'info');
-                updatePWAButtonUI();
-            }
+            console.log('User dismissed the install prompt');
+            // Reset UI
+            AppState.installInProgress = false;
+            updatePWAButtonUI();
+            
+            // Show a message encouraging installation
+            showToast('You can install the app anytime from the browser menu', 'info', 5000);
         }
         
     } catch (error) {
         console.error('Error installing PWA:', error);
-        showError('Error installing app. Please try again.');
+        showError('Error installing app. Please try again.', 'Installation Error');
         
-        // Restore button on error
+        // Reset UI on error
+        AppState.installInProgress = false;
+        AppState.deferredPrompt = null;
         updatePWAButtonUI();
     }
 }
@@ -1095,19 +1216,6 @@ window.validateEmail = validateEmail;
 window.validatePassword = validatePassword;
 window.updateNavbarUserInfo = updateNavbarUserInfo;
 window.loadUserSchools = loadUserSchools;
-
-// Listen for beforeinstallprompt event immediately to avoid missing it
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    AppState.deferredPrompt = e;
-    AppState.isAppInstalled = false;
-    localStorage.removeItem('pwaInstalled');
-    
-    if (typeof window.updatePWAButtonUI === 'function') {
-        window.updatePWAButtonUI();
-    }
-    console.log('PWA install prompt available');
-});
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', initializeApp);

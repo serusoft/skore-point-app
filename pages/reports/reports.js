@@ -97,17 +97,20 @@ const ALEVEL_SUBJECT_CODES = {
 
 // Helper function to get A-Level combination code
 function getALevelCombination(subjectNames) {
-    if (!subjectNames || subjectNames.length !== 3) return 'N/A';
+    if (!subjectNames || subjectNames.length === 0) return 'N/A';
     
-    // Normalize and sort subject names for lookup
-    const sorted = subjectNames.sort().join(',');
-    
-    // Check if combination exists in mapping
-    if (ALEVEL_COMBINATIONS[sorted]) {
-        return ALEVEL_COMBINATIONS[sorted];
+    // If exactly 3 subjects, try to find combination
+    if (subjectNames.length === 3) {
+        // Normalize and sort subject names for lookup
+        const sorted = subjectNames.sort().join(',');
+        
+        // Check if combination exists in mapping
+        if (ALEVEL_COMBINATIONS[sorted]) {
+            return ALEVEL_COMBINATIONS[sorted];
+        }
     }
     
-    // Generate combination from subject codes if not found
+    // Generate combination from subject codes if not found or not exactly 3 subjects
     const codes = subjectNames.map(name => ALEVEL_SUBJECT_CODES[name] || name.charAt(0).toUpperCase()).sort();
     return codes.join('');
 }
@@ -1362,7 +1365,9 @@ class ReportsController {
                 highest: 0,
                 lowest: 0,
                 totalPoints: 0,
-                result: 'N/A'
+                result: 'N/A',
+                aggregate: 0,
+                division: 'U'
             };
         }
         
@@ -2262,6 +2267,16 @@ class ReportsController {
                     </div>
                 </div>
                 
+                ${!isLowerPrimary ? `
+                <div style="margin-bottom: 15px; padding: 8px 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px;">
+                    <div style="font-size: 9px; font-weight: 700; color: #4b5563; margin-bottom: 3px; text-transform: uppercase;">Division Grading Note:</div>
+                    <div style="font-size: 9px; color: #6b7280; line-height: 1.4;">
+                        Upper Primary pupils must have marks in at least four (4) subjects to qualify for division grading. 
+                        Pupils with fewer than four subjects or no recorded marks are awarded Division U (Ungraded).
+                    </div>
+                </div>
+                ` : ''}
+                
                 ${termType === 'end' ? `
                     <div style="text-align: center; 
                                 margin-top: 20px; 
@@ -2573,6 +2588,7 @@ class ReportsController {
     generateClassReportHTML(reportData) {
         const { class: classData, studentReports, statistics, term, school } = reportData;
         const isALevel = (this.currentLevel === 'alevel') || (reportData && reportData.level === 'alevel');
+        const isPrimary = (this.currentLevel && this.currentLevel.includes('primary')) || (reportData && reportData.level && reportData.level.includes('primary'));
         
         // --- CALCULATIONS ---
         
@@ -2581,7 +2597,9 @@ class ReportsController {
         const passRate = studentReports.length > 0 ? Math.round((passCount / studentReports.length) * 100) : 0;
         
         // 2. Aggregates
-        const aggregates = studentReports.map(r => r.summary.aggregate);
+        // Filter out students with no marks to avoid NaN and skewing stats (e.g. agg 0 is not "best" in primary)
+        const validReports = studentReports.filter(r => r.marks && r.marks.length > 0);
+        const aggregates = validReports.map(r => r.summary.aggregate);
         // For A-Level, higher points are better. For O-Level/Primary, lower aggregates are better.
         const bestAggregate = aggregates.length > 0 ? (isALevel ? Math.max(...aggregates) : Math.min(...aggregates)) : 0;
         const worstAggregate = aggregates.length > 0 ? (isALevel ? Math.min(...aggregates) : Math.max(...aggregates)) : 0;
@@ -2753,10 +2771,12 @@ class ReportsController {
                         <div style="flex: 1; padding: 10px; background: #ecfdf5; border: 1px solid #10b981; border-radius: 4px;">
                             <div style="font-size: 10px; color: #047857; text-transform: uppercase; font-weight: 700;">Best Performing Subject</div>
                             <div style="font-size: 14px; font-weight: 700; color: #065f46;">${bestSubject ? bestSubject.name : 'N/A'} (${bestSubject ? bestSubject.average : 0}%)</div>
+                            ${!isPrimary && bestSubject ? `<div style="font-size: 10px; color: #065f46; margin-top: 2px;">${bestSubject.count} Students</div>` : ''}
                         </div>
                         <div style="flex: 1; padding: 10px; background: #fef2f2; border: 1px solid #ef4444; border-radius: 4px;">
                             <div style="font-size: 10px; color: #b91c1c; text-transform: uppercase; font-weight: 700;">Weakest Subject</div>
                             <div style="font-size: 14px; font-weight: 700; color: #991b1b;">${weakestSubject ? weakestSubject.name : 'N/A'} (${weakestSubject ? weakestSubject.average : 0}%)</div>
+                            ${!isPrimary && weakestSubject ? `<div style="font-size: 10px; color: #991b1b; margin-top: 2px;">${weakestSubject.count} Students</div>` : ''}
                         </div>
                     </div>
 
@@ -2764,6 +2784,7 @@ class ReportsController {
                         <thead>
                             <tr style="background: #f3f4f6;">
                                 <th style="padding: 8px; border: 1px solid #ddd; text-align: left;">Subject</th>
+                                ${!isPrimary ? '<th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Students</th>' : ''}
                                 <th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Avg Mark</th>
                                 <th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Best Score</th>
                                 <th style="padding: 8px; border: 1px solid #ddd; text-align: center;">Lowest Score</th>
@@ -2774,6 +2795,7 @@ class ReportsController {
                             ${subjectAnalysis.map(s => `
                                 <tr>
                                     <td style="padding: 8px; border: 1px solid #ddd; font-weight: 500;">${s.name}</td>
+                                    ${!isPrimary ? `<td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${s.count}</td>` : ''}
                                     <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${s.average}%</td>
                                     <td style="padding: 8px; border: 1px solid #ddd; text-align: center; color: green;">${s.highest}</td>
                                     <td style="padding: 8px; border: 1px solid #ddd; text-align: center; color: red;">${s.lowest}</td>
@@ -2789,27 +2811,43 @@ class ReportsController {
                     <div style="flex: 1;">
                         <h3 style="border-bottom: 2px solid #1a73e8; color: #1a73e8; padding-bottom: 5px; margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase;">Top 5 Students</h3>
                         <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                            <tr style="background: #f9fafb;"><th style="padding: 5px; text-align: left;">Name</th><th style="padding: 5px; text-align: right;">${isALevel ? 'Points' : 'Agg'}</th><th style="padding: 5px; text-align: right;">Avg</th></tr>
-                            ${studentReports.slice(0, 5).map(r => `
+                            <tr style="background: #f9fafb;">
+                                <th style="padding: 5px; text-align: left;">Name</th>
+                                ${isALevel ? '<th style="padding: 5px; text-align: left;">Comb.</th>' : ''}
+                                <th style="padding: 5px; text-align: right;">${isALevel ? 'Points' : 'Agg'}</th>
+                                <th style="padding: 5px; text-align: right;">Avg</th>
+                            </tr>
+                            ${studentReports.slice(0, 5).map(r => {
+                                const combo = isALevel ? getALevelCombination(r.marks.filter(m => m.type === 'principal').map(m => m.subjectName)) : '';
+                                return `
                                 <tr style="border-bottom: 1px solid #eee;">
                                     <td style="padding: 5px;">${r.student.name}</td>
+                                    ${isALevel ? `<td style="padding: 5px; font-size: 10px;">${combo}</td>` : ''}
                                     <td style="padding: 5px; text-align: right; font-weight: bold;">${r.summary.aggregate}</td>
                                     <td style="padding: 5px; text-align: right;">${r.summary.average}%</td>
                                 </tr>
-                            `).join('')}
+                            `}).join('')}
                         </table>
                     </div>
                     <div style="flex: 1;">
                         <h3 style="border-bottom: 2px solid #dc2626; color: #dc2626; padding-bottom: 5px; margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase;">Bottom 5 Students</h3>
                         <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                            <tr style="background: #f9fafb;"><th style="padding: 5px; text-align: left;">Name</th><th style="padding: 5px; text-align: right;">${isALevel ? 'Points' : 'Agg'}</th><th style="padding: 5px; text-align: right;">Avg</th></tr>
-                            ${studentReports.slice(-5).reverse().map(r => `
+                            <tr style="background: #f9fafb;">
+                                <th style="padding: 5px; text-align: left;">Name</th>
+                                ${isALevel ? '<th style="padding: 5px; text-align: left;">Comb.</th>' : ''}
+                                <th style="padding: 5px; text-align: right;">${isALevel ? 'Points' : 'Agg'}</th>
+                                <th style="padding: 5px; text-align: right;">Avg</th>
+                            </tr>
+                            ${studentReports.slice(-5).reverse().map(r => {
+                                const combo = isALevel ? getALevelCombination(r.marks.filter(m => m.type === 'principal').map(m => m.subjectName)) : '';
+                                return `
                                 <tr style="border-bottom: 1px solid #eee;">
                                     <td style="padding: 5px;">${r.student.name}</td>
+                                    ${isALevel ? `<td style="padding: 5px; font-size: 10px;">${combo}</td>` : ''}
                                     <td style="padding: 5px; text-align: right; font-weight: bold;">${r.summary.aggregate}</td>
                                     <td style="padding: 5px; text-align: right;">${r.summary.average}%</td>
                                 </tr>
-                            `).join('')}
+                            `}).join('')}
                         </table>
                     </div>
                 </div>
@@ -3796,7 +3834,7 @@ class ReportsController {
     async exportClassReportToExcel(reportData) {
         const { class: classData, studentReports, term, level, school } = reportData;
         const isLowerPrimary = level === 'lower-primary';
-        const isALevel = level === 'alevel';
+        const isALevel = level === 'alevel' || this.currentLevel === 'alevel';
 
         // Prepare data for Excel
         const data = [];
@@ -3817,6 +3855,11 @@ class ReportsController {
         
         // Headers
         const headers = ['Rank', 'Student Name'];
+        
+        // Add Combination column right after Student Name for A-level
+        if (isALevel) {
+            headers.push('Combination');
+        }
         
         // Use this.subjects which contains all subjects for the level
         const reportSubjects = this.subjects || [];
@@ -3852,6 +3895,14 @@ class ReportsController {
         // Rows
         studentReports.forEach((report, index) => {
             const row = [report.rank || index + 1, report.student.name];
+            
+            // Add Combination right after Student Name for A-level
+            if (isALevel) {
+                const principalSubjects = report.marks.filter(m => m.type === 'principal');
+                const principalSubjectNames = principalSubjects.map(m => m.subjectName);
+                const combination = getALevelCombination(principalSubjectNames);
+                row.push(combination);
+            }
             
             reportSubjects.forEach(subject => {
                 const markObj = report.marks.find(m => m.subjectId === subject.id);
