@@ -3,7 +3,7 @@
   "name": "Skore Point",
   "short_name": "SkorePoint",
   "description": "Professional School Report Card Generator by SERUSOFT",
-  "start_url": "./index.html",
+  "start_url": "./index.html?source=pwa",
   "scope": "./",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
@@ -11,18 +11,19 @@
   "theme_color": "#4361ee",
   "orientation": "any",
   "categories": ["education", "productivity"],
+  "lang": "en",
+  "dir": "ltr",
+
   "icons": [
     {
       "src": "assets/icons/skore-icon-96.png",
       "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     },
     {
       "src": "assets/icons/skore-icon-144.png",
       "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     },
     {
       "src": "assets/icons/skore-icon-192.png",
@@ -38,119 +39,42 @@
     },
     {
       "src": "assets/icons/skore-icon-512.jpg",
-      {
-        "id": "skore-point-app-v2",
-        "name": "Skore Point - School Management System",
-        "short_name": "SkorePoint",
-        "description": "Professional School Report Card Generator by SERUSOFT - Install as a native app for offline access and better performance",
-        "start_url": "./index.html?source=pwa",
-        "scope": "./",
-        "display": "standalone",
-        "display_override": ["window-controls-overlay", "standalone", "fullscreen"],
-        "background_color": "#0f172a",
-        "theme_color": "#4361ee",
-        "orientation": "portrait-primary",
-        "categories": ["education", "productivity"],
-        "lang": "en",
-        "dir": "ltr",
-        "icons": [
-          {
-            "src": "assets/icons/skore-icon-96.png",
-            "sizes": "96x96",
-            "type": "image/png",
-            "purpose": "any"
-          },
-          {
-            "src": "assets/icons/skore-icon-144.png",
-            "sizes": "144x144",
-            "type": "image/png",
-            "purpose": "any"
-          },
-          {
-            "src": "assets/icons/skore-icon-192.png",
-            "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "any maskable"
-          },
-          {
-            "src": "assets/icons/skore-icon-512-maskable.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "maskable"
-          },
-          {
-            "src": "assets/icons/skore-icon-512.jpg",
-            "sizes": "512x512",
-            "type": "image/jpeg",
-            "purpose": "any"
-          },
-          {
-            "src": "assets/icons/skore-icon.jpg",
-            "sizes": "any",
-            "type": "image/jpeg",
-            "purpose": "any"
-          }
-        ],
-        "screenshots": [
-          {
-            "src": "assets/screenshot/skore-dashboard-wide.png",
-            "sizes": "1280x720",
-            "type": "image/png",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ],
+
+  "screenshots": [
+    {
+      "src": "assets/screenshot/skore-dashboard-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
             "form_factor": "wide",
-            "label": "Desktop Dashboard"
-          },
-          {
-            "src": "assets/screenshot/skore-dashboard-mobile.png",
-            "sizes": "750x1334",
-            "type": "image/png",
-            "form_factor": "narrow",
-            "label": "Mobile Dashboard"
-          }
-        ],
-        "shortcuts": [
-          {
-            "name": "Enter Marks",
-            "short_name": "Marks",
-            "description": "Enter student marks quickly",
-            "url": "pages/marks/marks.html?source=shortcut",
-            "icons": [
-              {
-                "src": "assets/icons/shortcut-marks.png",
-                "sizes": "96x96"
-              }
-            ]
-          },
-          {
-            "name": "View Reports",
-            "short_name": "Reports",
-            "description": "View and generate reports",
-            "url": "pages/reports/reports.html?source=shortcut",
-            "icons": [
-              {
-                "src": "assets/icons/shortcut-reports.png",
-                "sizes": "96x96"
-              }
-            ]
-          },
-          {
-            "name": "Dashboard",
-            "short_name": "Home",
-            "description": "Go to dashboard",
-            "url": "pages/dashboard/dashboard.html?source=shortcut",
-            "icons": [
-              {
-                "src": "assets/icons/skore-icon-96.png",
-                "sizes": "96x96"
-              }
-            ]
-          }
-        ],
-        "prefer_related_applications": false,
-        "related_applications": [],
-        "launch_handler": {
-          "client_mode": ["focus-existing", "auto"]
-        },
-        "edge_side_panel": {
-          "preferred_width": 480
-        }
-      }
+            "label": "Dashboard view on desktop"
+    },
+    {
+      "src": "assets/screenshot/skore-dashboard-mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Dashboard view on mobile"
+    }
+  ],
+
+  "shortcuts": [
+    {
+      "name": "Enter Marks",
+      "short_name": "Marks",
+      "description": "Quickly enter student marks",
+      "url": "pages/marks/marks.html",
+      "icons": [{ "src": "assets/icons/skore-icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "View Reports",
+      "short_name": "Reports",
+      "description": "Generate and view reports",
+      "url": "pages/reports/reports.html",
+      "icons": [{ "src": "assets/icons/skore-icon-96.png", "sizes": "96x96" }]
+    }
+  ]
+}

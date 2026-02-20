@@ -2,26 +2,26 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <!-- SEO and PWA General Meta -->
     <meta name="theme-color" content="#4361ee">
     <meta name="description" content="Skore Point is a web-based application designed to help schools manage student marks and generate reports.">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
+    <meta name="format-detection" content="telephone=no">
     <title>Skore Point - School Management System</title>
     <base href="./">
     <meta name="app-version" content="1.4.2">
-
     <!-- Favicon and PWA Icons -->
     <link rel="icon" href="assets/icons/skore-icon.jpg" type="image/jpeg">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/skore-icon-144.png">
     <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/skore-icon-96.png">
     <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/skore-icon-96.png">
-
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- App CSS -->
     <link rel="stylesheet" href="shared/css/components.css">
     <style>
         body {
@@ -35,12 +35,11 @@
             height: 100vh;
             overflow: hidden;
         }
-        
         .loading-container {
             text-align: center;
             color: white;
+            transition: opacity 0.5s ease;
         }
-        
         .spinner {
             width: 60px;
             height: 60px;
@@ -50,21 +49,164 @@
             animation: spin 1s ease-in-out infinite;
             margin: 0 auto 20px;
         }
-        
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        
         h1 {
             font-size: 24px;
-
             margin-bottom: 10px;
-        
-
         }
-        
         p {
             opacity: 0.8;
+        }
+        /* Install Modal Styles */
+        .install-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s ease;
+        }
+        .install-modal-content {
+            background: white;
+            border-radius: 20px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            animation: slideUp 0.3s ease;
+        }
+        .install-modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .install-modal-header h3 {
+            margin: 0;
+            color: #333;
+            font-size: 1.2rem;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            padding: 0 5px;
+        }
+        .close-btn:hover {
+            color: #333;
+        }
+        .install-modal-body {
+            padding: 20px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .install-modal-body i {
+            color: #4361ee;
+            margin: 0 5px;
+        }
+        .install-modal-icon {
+            text-align: center;
+            font-size: 3rem;
+            margin: 20px 0;
+            color: #4361ee;
+            animation: bounce 2s infinite;
+        }
+        .install-modal-footer {
+            padding: 20px;
+            border-top: 1px solid #e0e0e0;
+            text-align: right;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+        .btn-update {
+            background: #4361ee;
+            color: white;
+            padding: 5px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s ease;
+        }
+        .btn-update:hover {
+            background: #3451c7;
+        }
+        .update-banner {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 15px 20px;
+            z-index: 9998;
+            animation: slideInRight 0.3s ease;
+        }
+        .update-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .update-content span {
+            color: #333;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-20px);
+            }
+            60% {
+                transform: translateY(-10px);
+            }
         }
     </style>
     <script src="services/cloudinary.service.js?v=20260218" defer></script>
