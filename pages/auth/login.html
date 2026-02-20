@@ -4,6 +4,9 @@ if (window.top === window.self) {
     ['../../shared/css/variables.css','../../shared/css/base.css','../../shared/css/components.css','./login.css'].forEach(function(h){
         var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = h; head.appendChild(l);
     });
+    // Inject Manifest
+    var m = document.createElement('link'); m.rel = 'manifest'; m.href = '../../manifest.json'; head.appendChild(m);
+    
     var fa = document.createElement('link'); fa.rel = 'stylesheet'; fa.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'; head.appendChild(fa);
     
     // Inject Viewport Meta Tag for Mobile Responsiveness

@@ -1596,9 +1596,10 @@ select option:checked {
 /* Offline Indicator */
 #offlineIndicator {
     position: fixed;
-    top: 80px;
+    top: var(--navbar-height, 60px); /* Position it right below the navbar */
     left: 0;
     right: 0;
+    width: 100%;
     background: var(--warning);
     color: var(--dark);
     text-align: center;
@@ -1606,7 +1607,12 @@ select option:checked {
     font-weight: 600;
     z-index: var(--z-fixed);
     display: none;
-    animation: slideDown 0.3s ease-out;
+    animation: slideDown 0.5s ease-out;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+#offlineIndicator i {
+    margin-right: 8px;
 }
 
 #offlineIndicator.active {
