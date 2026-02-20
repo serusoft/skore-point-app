@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline | Skore Point</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --accent: #7209b7;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            overflow: hidden;
+        }
+        
+        .offline-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 40px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+            animation: slideUp 0.5s ease-out;
+        }
+        
+        .icon-wrapper {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 32px;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+        
+        h1 {
+            margin: 0 0 10px;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        p {
+            margin: 0 0 30px;
+            font-size: 16px;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+        
+        .btn {
+            background: white;
+            color: var(--primary);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            background: #f8f9fa;
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 255, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
+
+        #game-container {
+            display: none;
+            margin-top: 25px;
+            position: relative;
+            animation: slideUp 0.3s ease;
+        }
+        canvas {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 320px;
+            display: block;
+            margin: 0 auto;
+            cursor: pointer;
+        }
+        .game-score {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            background: rgba(0,0,0,0.3);
+            padding: 2px 8px;
+            border-radius: 10px;
+            display: flex;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="icon-wrapper">
+            <i class="fas fa-wifi"></i>
+        </div>
+        <h1>No Internet Connection</h1>
+        <p>It seems you're offline. Check your connection and try again to access the full Skore Point experience.</p>
+        <button class="btn" onclick="window.location.reload()">
+            <i class="fas fa-sync-alt"></i> Try Again
+        </button>
+        
+        <button class="btn" id="playGameBtn" style="margin-top: 15px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);">
+            <i class="fas fa-gamepad"></i> Play While Waiting
+        </button>
+
+        <div id="game-container">
+            <div class="game-score"><span>Score: <span id="score">0</span></span> <span style="opacity: 0.8;">|</span> <span>High: <span id="highScore">0</span></span></div>
+            <canvas id="gameCanvas" width="320" height="150"></canvas>
+            <p style="font-size: 12px; margin-top: 8px; opacity: 0.7;">Tap or Space to Jump</p>
+        </div>
+    </div>
+    <script>
+        // Auto-reload when online
+        window.addEventListener('online', () => {
+            window.location.reload();
+        });
+
+        // Simple Runner Game
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const highScoreEl = document.getElementById('highScore');
+        const container = document.getElementById('game-container');
+        const playBtn = document.getElementById('playGameBtn');
+
+        let player = { x: 30, y: 130, w: 20, h: 20, dy: 0, jump: -6, grounded: false };
+        let obstacles = [];
+        let frame = 0;
+        let score = 0;
+        let gameSpeed = 3;
+        let isPlaying = false;
+        let animationId;
+
+        // Load High Score
+        let highScore = localStorage.getItem('offlineHighScore') || 0;
+        highScoreEl.textContent = highScore;
+
+        function drawPlayer() {
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+        }
+
+        function drawObstacles() {
+            ctx.fillStyle = '#ff9f43'; // Warning color for obstacles
+            obstacles.forEach(obs => ctx.fillRect(obs.x, obs.y, obs.w, obs.h));
+        }
+
+        function update() {
+            if (!isPlaying) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Player physics
+            player.dy += 0.3; // gravity
+            player.y += player.dy;
+            
+            if (player.y + player.h > canvas.height) {
+                player.y = canvas.height - player.h;
+                player.dy = 0;
+                player.grounded = true;
+            } else {
+                player.grounded = false;
+            }
+            
+            drawPlayer();
+            
+            // Obstacles
+            if (frame % 100 === 0) { // Spawn rate
+                obstacles.push({ x: canvas.width, y: canvas.height - 20, w: 20, h: 20 });
+            }
+            
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let obs = obstacles[i];
+                obs.x -= gameSpeed;
+                
+                // Collision Detection
+                if (player.x < obs.x + obs.w &&
+                    player.x + player.w > obs.x &&
+                    player.y < obs.y + obs.h &&
+                    player.y + player.h > obs.y) {
+                    gameOver();
+                }
+                
+                // Remove off-screen and score
+                if (obs.x + obs.w < 0) {
+                    obstacles.splice(i, 1);
+                    score++;
+                    scoreEl.textContent = score;
+                    if (score % 5 === 0) gameSpeed += 0.2; // Increase speed
+                }
+            }
+            
+            drawObstacles();
+            
+            frame++;
+            animationId = requestAnimationFrame(update);
+        }
+
+        function jump() {
+            if (player.grounded && isPlaying) {
+                player.dy = player.jump;
+                player.grounded = false;
+            } else if (!isPlaying && container.style.display !== 'none') {
+                resetGame();
+            }
+        }
+
+        function gameOver() {
+            isPlaying = false;
+            cancelAnimationFrame(animationId);
+
+            // Update High Score
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('offlineHighScore', highScore);
+                highScoreEl.textContent = highScore;
+            }
+            
+            // Draw Game Over overlay
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 20px "Segoe UI", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Game Over', canvas.width/2, canvas.height/2 - 10);
+            ctx.font = '14px "Segoe UI", sans-serif';
+            ctx.fillText('Tap to restart', canvas.width/2, canvas.height/2 + 15);
+        }
+
+        function resetGame() {
+            player.y = canvas.height - player.h;
+            player.dy = 0;
+            obstacles = [];
+            score = 0;
+            scoreEl.textContent = '0';
+            gameSpeed = 3;
+            frame = 0;
+            isPlaying = true;
+            update();
+        }
+
+        playBtn.addEventListener('click', () => {
+            playBtn.style.display = 'none';
+            container.style.display = 'block';
+            resetGame();
+        });
+
+        // Controls
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                if (container.style.display !== 'none') {
+                    e.preventDefault(); // Prevent scrolling
+                    jump();
+                }
+            }
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            jump();
+        }, {passive: false});
+        
+        canvas.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            jump();
+        });
+    </script>
+</body>
+</html>

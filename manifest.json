@@ -3,7 +3,7 @@
   "name": "Skore Point",
   "short_name": "SkorePoint",
   "description": "Professional School Report Card Generator by SERUSOFT",
-  "start_url": "./index.html?source=pwa",
+  "start_url": "./pages/launch/launch.html?source=pwa",
   "scope": "./",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],

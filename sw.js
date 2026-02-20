@@ -3,11 +3,12 @@
 // We use dynamic versioning so that users always get the latest working code automatically,
 // without refreshing tricks or technical knowledge. A new version is generated on each build,
 // forcing the browser to update the service worker and clear old caches.
-const VERSION = 'dynamic-' + new Date().getTime(); // Dynamic versioning
+const VERSION = 'v1.5.1-' + new Date().getTime(); // Dynamic versioning
 const CACHE_NAME = `skore-point-${VERSION}`;
 const urlsToCache = [
   './',
   './index.html',
+  './manifest.json',
 
   // Shared CSS/JS
   './shared/css/base.css',
@@ -50,7 +51,7 @@ const urlsToCache = [
   './utils/helpers.js',
 
   // Offline fallback
-  './pages/offline/offline.html',
+  './offline.html',
 
   // Icons & screenshots
   './assets/icons/skore-icon-96.png',
@@ -146,7 +147,7 @@ self.addEventListener('fetch', (event) => {
                     // If it's a navigation request and not in cache, show offline page
                     if (isNavigation && !cachedResponse) {
                         console.log('[sw] Navigation failed, showing offline page');
-                        return caches.match('/pages/offline/offline.html');
+                        return caches.match('./offline.html');
                     }
                     return cachedResponse;
                 });
