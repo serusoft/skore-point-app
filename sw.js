@@ -1,12 +1,13 @@
 // Service Worker for Skore Point PWA
 
-// We use dynamic versioning so that users always get the latest working code automatically,
-// without refreshing tricks or technical knowledge. A new version is generated on each build,
-// forcing the browser to update the service worker and clear old caches.
-const VERSION = 'v1.5.1-' + new Date().getTime(); // Dynamic versioning
+// IMPORTANT:
+// Update VERSION only when deploying a new release.
+// Do NOT use timestamps or Date.now() for PWA stability.
+const VERSION = 'v2.0.0';
 const CACHE_NAME = `skore-point-${VERSION}`;
 const urlsToCache = [
   './',
+  './?source=pwa',
   './index.html',
   './manifest.json',
 
