@@ -525,9 +525,6 @@ function setAcademicLevel(level) {
     return true;
 }
 
-// Define a constant for the base URL of your application
-const BASE_URL = "./"; // Use relative scope for the service worker
-
 // Initialize PWA
 function initializePWA() {
     // Check if app is installed
@@ -543,7 +540,13 @@ function initializePWA() {
     // Register service worker with instant update logic
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js', { scope: BASE_URL })
+            // DYNAMIC PATH FIX: Determine correct path to sw.js based on current page depth
+            // If we are in /pages/xyz/, we need to go up two levels to find sw.js at root
+            const isPagesDir = window.location.pathname.includes('/pages/');
+            const swPath = isPagesDir ? '../../sw.js' : './sw.js';
+            const swScope = isPagesDir ? '../../' : './';
+
+            navigator.serviceWorker.register(swPath, { scope: swScope })
                 .then(registration => {
                     console.log('ServiceWorker registered:', registration.scope);
                     
