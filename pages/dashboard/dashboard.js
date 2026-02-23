@@ -288,7 +288,7 @@ function showJoinSchoolModal() {
     });
     
     schoolNameInput.addEventListener('input', () => {
-        const searchTerm = schoolNameInput.value.toLowerCase();
+        const searchTerm = schoolNameInput.value.toLowerCase().trim();
         suggestions.innerHTML = '';
         
         if (searchTerm.length < 2) {
@@ -298,15 +298,31 @@ function showJoinSchoolModal() {
         
         const filtered = schoolsCache.filter(school => 
             school.name.toLowerCase().includes(searchTerm)
-        );
+        ).slice(0, 8); // Limit to 8 results
         
         if (filtered.length > 0) {
             filtered.forEach(school => {
                 const suggestion = document.createElement('div');
                 suggestion.className = 'school-suggestion';
+                
+                // Highlight matching text
+                const safeSearchTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp(`(${safeSearchTerm})`, 'gi');
+                const highlightedName = school.name.replace(regex, '<span class="highlight">$1</span>');
+                
+                const logoHtml = school.logoUrl 
+                    ? `<img src="${school.logoUrl}" alt="${school.name}">` 
+                    : `<i class="fas fa-school"></i>`;
+
                 suggestion.innerHTML = `
-                    <span>${school.name}</span>
-                    <small>${school.location || ''}</small>
+                    <div class="school-icon">${logoHtml}</div>
+                    <div class="school-info">
+                        <div class="school-name">${highlightedName}</div>
+                        <div class="school-meta">
+                            <span class="school-code-badge"><i class="fas fa-key"></i> ${school.code}</span>
+                            ${school.location ? `<span class="school-location"><i class="fas fa-map-marker-alt"></i> ${school.location}</span>` : ''}
+                        </div>
+                    </div>
                 `;
                 suggestion.addEventListener('click', () => {
                     schoolNameInput.value = school.name;
@@ -317,6 +333,13 @@ function showJoinSchoolModal() {
             });
             suggestions.style.display = 'block';
         } else {
+            suggestions.style.display = 'none';
+        }
+    });
+    
+    // Close suggestions when clicking outside
+    document.addEventListener('click', (e) => {
+        if (suggestions && !suggestions.contains(e.target) && e.target !== schoolNameInput) {
             suggestions.style.display = 'none';
         }
     });

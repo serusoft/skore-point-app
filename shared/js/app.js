@@ -793,6 +793,13 @@ async function subscribeUserToPush() {
     }
 
     try {
+        // Safety check: Prevent crash if VAPID key is still the placeholder
+        if (VAPID_PUBLIC_KEY === 'YOUR_VAPID_PUBLIC_KEY') {
+            console.warn('Push notifications skipped: VAPID_PUBLIC_KEY not configured in shared/js/app.js');
+            showToast('Push notifications are not configured yet.', 'info');
+            return;
+        }
+
         const swRegistration = await navigator.serviceWorker.ready;
         const permission = await Notification.requestPermission();
 
