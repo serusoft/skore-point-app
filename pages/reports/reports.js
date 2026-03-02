@@ -124,6 +124,7 @@ class ReportsController {
         this.currentUser = null;
         this.currentReportData = null;
         this.gradeChart = null;
+        this.schoolChart = null;
         
         this.initialize();
     }
@@ -280,10 +281,10 @@ class ReportsController {
                 return;
             }
             
-            // Apply role-based tab visibility
-            this.applyRoleBasedReportVisibility();
-            
             this.setupEventListeners();
+            
+            // Apply role-based tab visibility after listeners are set up
+            this.applyRoleBasedReportVisibility();
             this.showLevelSelection();
             this.addBackToSchoolButton();
         } catch (error) {
@@ -824,6 +825,10 @@ class ReportsController {
                 // Render chart for class reports
                 if (reportData.type === 'class') {
                     this.renderClassGradeChart(reportData);
+                } else if (reportData.type === 'subject') {
+                    this.renderSubjectGradeChart(reportData);
+                } else if (reportData.type === 'school') {
+                    this.renderSchoolPerformanceChart(reportData);
                 }
                 
                 // Enable export buttons
@@ -3126,6 +3131,11 @@ class ReportsController {
                     </div>
                 </div>
                 
+                <!-- Grade Distribution Chart -->
+                <div style="width: 100%; height: 300px; margin-bottom: 20px;">
+                    <canvas id="subjectGradeChart"></canvas>
+                </div>
+                
                 <!-- Grade Distribution -->
                 <h3 style="font-size: 14px; font-weight: 600; text-transform: uppercase; color: #4b5563; margin-bottom: 20px;">Grade Distribution</h3>
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px;">
@@ -3185,6 +3195,100 @@ class ReportsController {
         `;
     }
     
+    renderSubjectGradeChart(reportData) {
+        const ctx = document.getElementById('subjectGradeChart');
+        if (!ctx || typeof Chart === 'undefined') return;
+
+        if (this.gradeChart) {
+            this.gradeChart.destroy();
+        }
+
+        const gradeDist = reportData.statistics.gradeDistribution;
+        const grades = Object.keys(gradeDist).sort();
+        const counts = grades.map(g => gradeDist[g]);
+
+        const colors = {
+            'D1': '#15803d', 'D2': '#16a34a', 'C3': '#2563eb', 'C4': '#3b82f6', 'C5': '#60a5fa', 'C6': '#93c5fd', 'P7': '#f59e0b', 'P8': '#fbbf24', 'F9': '#ef4444',
+            'A': '#15803d', 'B': '#16a34a', 'C': '#2563eb', 'D': '#f59e0b', 'E': '#f97316', 'O': '#a855f7', 'F': '#ef4444'
+        };
+        
+        const backgroundColors = grades.map(g => colors[g] || '#4361ee');
+
+        this.gradeChart = new Chart(ctx, {
+            type: 'bar',
+            data: { 
+                labels: grades, 
+                datasets: [{
+                    label: 'Number of Students',
+                    data: counts,
+                    backgroundColor: backgroundColors,
+                    borderWidth: 1,
+                    borderRadius: 4
+                }] 
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: { 
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: `Performance Distribution - ${reportData.subject.name}`,
+                        font: { size: 14, family: "'Times New Roman', serif" }
+                    }
+                },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    }
+
+    renderSchoolPerformanceChart(reportData) {
+        const ctx = document.getElementById('schoolPerformanceChart');
+        if (!ctx || typeof Chart === 'undefined') return;
+
+        if (this.schoolChart) {
+            this.schoolChart.destroy();
+        }
+
+        const labels = reportData.classReports.map(r => r.className);
+        const data = reportData.classReports.map(r => r.average);
+
+        this.schoolChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Average Score',
+                    data: data,
+                    backgroundColor: '#4361ee',
+                    borderRadius: 4,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: 'Average Class Performance',
+                        font: { size: 14, family: "'Times New Roman', serif" }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: { display: true, text: 'Average Score (%)' }
+                    }
+                }
+            }
+        });
+    }
+
     generateSchoolReportHTML(reportData) {
         const { classReports, statistics, term, subjectRankings } = reportData;
         
@@ -3272,6 +3376,11 @@ class ReportsController {
                             </div>
                         ` : ''}
                     </div>
+                </div>
+                
+                <!-- School Performance Chart -->
+                <div style="width: 100%; height: 300px; margin-bottom: 40px;">
+                    <canvas id="schoolPerformanceChart"></canvas>
                 </div>
                 
                 <!-- Class Performance Table -->

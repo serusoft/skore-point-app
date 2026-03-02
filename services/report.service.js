@@ -384,6 +384,11 @@ const ReportService = {
                     fileName = `Subject_Analysis_${reportData.subject.name.replace(/\s+/g, '_')}.xlsx`;
                     break;
                     
+                case 'school':
+                    ws = this.createSchoolWorksheet(reportData);
+                    fileName = `School_Summary_${reportData.term.replace(/\s+/g, '_')}.xlsx`;
+                    break;
+                    
                 default:
                     throw new Error('Unsupported report type');
             }
@@ -720,6 +725,53 @@ const ReportService = {
         }
         
         return ws;
+    },
+
+    createSchoolWorksheet(reportData) {
+        const schoolName = reportData.school ? reportData.school.name.toUpperCase() : 'SCHOOL REPORT';
+        const termName = reportData.term.toUpperCase();
+        const year = new Date().getFullYear();
+        const termNum = getUgandanTerm();
+        const title = `SCHOOL PERFORMANCE SUMMARY - ${termName} TERM ${termNum} ${year}`;
+        
+        const data = [
+            [schoolName],
+            [title],
+            [`Generated: ${new Date().toLocaleDateString()}`],
+            [''],
+            ['SCHOOL STATISTICS'],
+            ['Statistic', 'Value'],
+            ['School Average', `${reportData.statistics.schoolAverage}%`],
+            ['Total Classes', reportData.statistics.totalClasses],
+            ['Classes with Data', reportData.statistics.classesWithData],
+            ['Best Performing Class', reportData.statistics.bestPerformingClass ? `${reportData.statistics.bestPerformingClass.className} (${reportData.statistics.bestPerformingClass.average}%)` : 'N/A'],
+            ['Lowest Performing Class', reportData.statistics.lowestPerformingClass ? `${reportData.statistics.lowestPerformingClass.className} (${reportData.statistics.lowestPerformingClass.average}%)` : 'N/A'],
+            [''],
+            ['CLASS PERFORMANCE RANKING'],
+            ['Rank', 'Class', 'Total Students', 'With Marks', 'Average']
+        ];
+        
+        reportData.classReports.forEach((report, index) => {
+            data.push([
+                index + 1,
+                report.className,
+                report.totalStudents,
+                report.studentsWithMarks,
+                `${report.average}%`
+            ]);
+        });
+        
+        data.push(['']);
+        data.push(['SUBJECT PERFORMANCE RANKING']);
+        data.push(['Rank', 'Subject', 'Average Score']);
+        
+        if (reportData.subjectRankings) {
+            reportData.subjectRankings.forEach((subj, index) => {
+                data.push([index + 1, subj.name, `${subj.average}%`]);
+            });
+        }
+        
+        return XLSX.utils.aoa_to_sheet(data);
     },
 
     createSubjectWorksheet(reportData) {
