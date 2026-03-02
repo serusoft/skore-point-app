@@ -11,7 +11,7 @@
     <meta name="format-detection" content="telephone=no">
     <title>Skore Point - School Management System</title>
     <base href="./">
-    <meta name="app-version" content="2.0.0">
+    <meta name="app-version" content="2.1.5">
     <!-- Favicon and PWA Icons -->
     <link rel="icon" href="assets/icons/skore-icon.jpg" type="image/jpeg">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/skore-icon-144.png">
@@ -19,6 +19,17 @@
     <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/skore-icon-96.png">
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
+
+    <!-- Social Media Meta Tags (Open Graph & Twitter) -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Skore Point - School Management System">
+    <meta property="og:description" content="Skore Point is a web-based application designed to help schools manage student marks and generate reports.">
+    <meta property="og:image" content="assets/icons/skore-icon-512.jpg">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Skore Point - School Management System">
+    <meta name="twitter:description" content="Skore Point is a web-based application designed to help schools manage student marks and generate reports.">
+    <meta name="twitter:image" content="assets/icons/skore-icon-512.jpg">
+
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- App CSS -->
@@ -218,5 +229,41 @@
         <h1>Skore Point</h1>
         <p>Loading application...</p>
     </div>
+    <script>
+        // Diagnostic script to help users running locally without a server
+        window.addEventListener('DOMContentLoaded', () => {
+            // Check if running from file system
+            if (window.location.protocol === 'file:') {
+                const container = document.querySelector('.loading-container');
+                if (container) {
+                    container.innerHTML = `
+                        <div style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 10px; margin-top: 20px;">
+                            <h2 style="margin-top: 0;">⚠️ Setup Required</h2>
+                            <p>The application is running via <code>file://</code> protocol which blocks JavaScript modules.</p>
+                            <p>To run this app locally, you must use a local web server:</p>
+                            <ul style="text-align: left; display: inline-block; margin: 10px 0;">
+                                <li><strong>Python:</strong> <code>python -m http.server</code></li>
+                                <li><strong>Node.js:</strong> <code>npx serve .</code></li>
+                                <li><strong>VS Code:</strong> Use "Live Server" extension</li>
+                            </ul>
+                            <p>Then open <code>http://localhost:8000</code> (or port provided)</p>
+                        </div>
+                    `;
+                }
+                console.error('Skore Point: Cannot run ES Modules over file:// protocol. Please use a local server.');
+            }
+        });
+
+        // Fallback: If app.js fails to initialize within 3 seconds, try redirecting to login
+        setTimeout(() => {
+            if (document.querySelector('.loading-container') && window.location.protocol !== 'file:') {
+                console.warn('App initialization timed out. Attempting fallback redirect...');
+                // Check if we are at root and app.js hasn't redirected us
+                if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/')) {
+                     window.location.href = 'pages/auth/login.html';
+                }
+            }
+        }, 3000);
+    </script>
 </body>
 </html>
