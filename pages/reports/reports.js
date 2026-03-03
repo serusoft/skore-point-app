@@ -484,6 +484,59 @@ class ReportsController {
         });
     }
     
+    showWhatsAppInviteModal() {
+        // Check if the invite has already been shown in this session
+        if (sessionStorage.getItem('whatsappInviteShown')) {
+            console.log('WhatsApp invite already shown this session. Skipping.');
+            return;
+        }
+
+        const existing = document.getElementById('whatsappInviteModal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'whatsappInviteModal';
+        modal.className = 'modal active';
+        modal.style.cssText = 'display: flex; align-items: center; justify-content: center; z-index: 10000; background: rgba(0,0,0,0.8); position: fixed; top: 0; left: 0; width: 100%; height: 100%;';
+
+        modal.innerHTML = `
+            <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; max-width: 400px; width: 90%; text-align: center; position: relative; animation: slideUp 0.3s ease;">
+                <div style="position: relative; width: 100px; height: 100px; margin: 0 auto 20px;">
+                    <style>
+                        @keyframes orbit-spin {
+                            from { transform: rotate(0deg); }
+                            to { transform: rotate(360deg); }
+                        }
+                    </style>
+                    <!-- Central WhatsApp Icon -->
+                    <i class="fab fa-whatsapp" style="font-size: 56px; color: #25D366; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1;"></i>
+                    
+                    <!-- Orbiting Icons Container -->
+                    <div class="orbit" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; animation: orbit-spin 12s linear infinite;">
+                        <i class="fas fa-user-circle" style="position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); font-size: 20px; color: #93c5fd;"></i>
+                        <i class="fas fa-user-circle" style="position: absolute; right: 0; top: 50%; transform: translate(50%, -50%); font-size: 20px; color: #6ee7b7;"></i>
+                        <i class="fas fa-user-circle" style="position: absolute; bottom: 0; left: 50%; transform: translate(-50%, 50%); font-size: 20px; color: #fcd34d;"></i>
+                        <i class="fas fa-user-circle" style="position: absolute; left: 0; top: 50%; transform: translate(-50%, -50%); font-size: 20px; color: #fca5a5;"></i>
+                        <i class="fas fa-user-circle" style="position: absolute; top: 15%; right: 15%; transform: translate(50%, -50%); font-size: 18px; color: #a5b4fc; opacity: 0.8;"></i>
+                        <i class="fas fa-user-circle" style="position: absolute; bottom: 15%; left: 15%; transform: translate(-50%, 50%); font-size: 18px; color: #f9a8d4; opacity: 0.8;"></i>
+                    </div>
+                </div>
+                <h3 style="color: #1f2937; margin-bottom: 8px; font-size: 20px; font-weight: 800;">Stay Updated!</h3>
+                <p style="color: #4b5563; margin-bottom: 20px; font-size: 15px; line-height: 1.5;">
+                    Join our WhatsApp User Community to get tips, updates, and support.
+                </p>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button class="btn btn-secondary" onclick="document.getElementById('whatsappInviteModal').remove()">Maybe Later</button>
+                    <a href="https://chat.whatsapp.com/HIQNtgOYEOV7L1SHWO7FkR" target="_blank" class="btn btn-primary" style="text-decoration: none;" onclick="document.getElementById('whatsappInviteModal').remove()">👉 Join Now</a>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // Mark that the invite has been shown for this session
+        sessionStorage.setItem('whatsappInviteShown', 'true');
+    }
+
     showLevelSelection() {
         const prompt = document.getElementById('levelSelectionPrompt');
         const interfaceEl = document.getElementById('reportsInterface');
@@ -3772,6 +3825,7 @@ class ReportsController {
 
                 doc.save(fileName);
                 this.showSuccess(`Successfully exported report!`);
+                this.showWhatsAppInviteModal();
 
             } else {
                 // --- SINGLE EXPORT LOGIC (Existing) ---
@@ -3924,6 +3978,7 @@ class ReportsController {
                 .save();
             
             this.showSuccess('Premium PDF exported successfully!');
+            this.showWhatsAppInviteModal();
             
             if (document.body.contains(container)) {
                 document.body.removeChild(container);
@@ -4071,6 +4126,7 @@ class ReportsController {
         XLSX.writeFile(wb, fileName);
         
         this.showSuccess('Class analysis exported successfully');
+        this.showWhatsAppInviteModal();
     }
 
     async exportSubjectReportToExcel(reportData) {
@@ -4082,6 +4138,7 @@ class ReportsController {
         XLSX.writeFile(wb, fileName);
         
         this.showSuccess('Subject analysis exported successfully');
+        this.showWhatsAppInviteModal();
     }
 
     async exportToExcel() {
@@ -4106,6 +4163,7 @@ class ReportsController {
             const fileName = `Report_${this.currentReportData.type}_${new Date().toISOString().split('T')[0]}.xlsx`;
             XLSX.writeFile(wb, fileName);
             this.showSuccess('Excel exported successfully');
+            this.showWhatsAppInviteModal();
         } else {
             throw new Error('No table data found to export to Excel.');
         }
