@@ -3,7 +3,7 @@
 // IMPORTANT:
 // Update VERSION only when deploying a new release.
 // Do NOT use timestamps or Date.now() for PWA stability.
-const VERSION = 'v2.1.5';
+const VERSION = 'v2.1.9';
 const CACHE_NAME = `skore-point-${VERSION}`;
 const urlsToCache = [
   './',
