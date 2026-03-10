@@ -525,9 +525,9 @@ class ReportsController {
                 <p style="color: #4b5563; margin-bottom: 20px; font-size: 15px; line-height: 1.5;">
                     Join our WhatsApp User Community to get tips, updates, and support.
                 </p>
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button class="btn btn-secondary" onclick="document.getElementById('whatsappInviteModal').remove()">Maybe Later</button>
-                    <a href="https://chat.whatsapp.com/HIQNtgOYEOV7L1SHWO7FkR" target="_blank" class="btn btn-primary" style="text-decoration: none;" onclick="document.getElementById('whatsappInviteModal').remove()">👉 Join Now</a>
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button class="btn btn-secondary" style="flex: 1; min-width: 180px;" onclick="document.getElementById('whatsappInviteModal').remove()">Am already a member</button>
+                    <a href="https://chat.whatsapp.com/HIQNtgOYEOV7L1SHWO7FkR" target="_blank" class="btn btn-primary" style="text-decoration: none; flex: 1; min-width: 180px;" onclick="document.getElementById('whatsappInviteModal').remove()">👉 Join Now</a>
                 </div>
             </div>
         `;
@@ -1392,6 +1392,16 @@ class ReportsController {
                             grade = score >= 50 ? 'Pass' : 'Fail';
                             gradePoints = score >= 50 ? 1 : 0;
                         }
+                    } else if (this.currentLevel === 'upper-primary') {
+                        if (score >= 90) { grade = 'D1'; gradePoints = 1; }
+                        else if (score >= 80) { grade = 'D2'; gradePoints = 2; }
+                        else if (score >= 70) { grade = 'C3'; gradePoints = 3; }
+                        else if (score >= 60) { grade = 'C4'; gradePoints = 4; }
+                        else if (score >= 50) { grade = 'C5'; gradePoints = 5; }
+                        else if (score >= 40) { grade = 'C6'; gradePoints = 6; }
+                        else if (score >= 35) { grade = 'P7'; gradePoints = 7; }
+                        else if (score >= 30) { grade = 'P8'; gradePoints = 8; }
+                        else { grade = 'F9'; gradePoints = 9; }
                     } else {
                         grade = GradingUtils.calculateGrade(score, this.currentLevel);
                         gradePoints = GradingUtils.getGradePoints(grade, this.currentLevel);
