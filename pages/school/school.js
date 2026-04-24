@@ -2719,7 +2719,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                      style="width: 210mm; 
                             min-height: 297mm; 
                             max-height: 297mm;
-                            padding: 15mm 20mm; 
+                            padding: 10mm 20mm; 
                             box-sizing: border-box;
                             margin: 0 auto; 
                             position: relative; 
@@ -2753,20 +2753,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div style="position: relative; z-index: 1; height: 100%;">
                 
                 <!-- Header Section with Proper Spacing -->
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid #1a73e8;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #1a73e8;">
                     <!-- School Logo -->
                     ${AppState.currentSchool.logoUrl 
                         ? `<img src="${AppState.currentSchool.logoUrl}" 
                                 alt="${AppState.currentSchool.name}" 
-                                style="height: 110px; width: 110px; object-fit: contain;">` 
+                                style="height: 85px; width: 85px; object-fit: contain;">` 
                         : `<img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" 
-                                style="height: 110px; width: 110px; opacity: 0.7; object-fit: contain;">`}
+                                style="height: 85px; width: 85px; opacity: 1; object-fit: contain;">`}
                     
                     <!-- School Info -->
                     <div style="text-align: center; flex: 1; padding: 0 20px;">
                         <h1 style="margin:0 0 10px 0; 
                                    color:#1a1a1a; 
-                                   font-size: 30px; 
+                                   font-size: 24px; 
                                    font-weight: 700; 
                                    letter-spacing: -0.5px; 
                                    line-height: 1.1;">
@@ -2790,8 +2790,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div style="display:grid; 
                             grid-template-columns:repeat(2, 1fr); 
                             gap: 25px; 
-                            margin-bottom: 25px; 
-                            padding: 20px; 
+                            margin-bottom: 15px; 
+                            padding: 15px; 
                             background: #f8fafc; 
                             border-radius: 8px; 
                             border: 1px solid #e5e7eb;">
@@ -2872,8 +2872,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <!-- Performance Summary -->
                 <div style="display: flex; 
                             justify-content: space-between; 
-                            margin-bottom: 25px; 
-                            padding: 15px 20px; 
+                            margin-bottom: 15px; 
+                            padding: 10px 15px; 
                             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                             border-radius: 8px; 
                             color: white;">
@@ -2892,7 +2892,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
 
                 <!-- Marks Table with Clean Borders -->
-                <table style="width:100%; border-collapse: collapse; margin-bottom: 30px;">
+                <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin-bottom: 20px;">
+                <table style="width:100%; border-collapse: collapse; margin-bottom: 0;">
                     <thead>
                         <tr style="border-bottom: 2px solid #e2e8f0;">
                             <th style="padding:12px 15px; text-align:left; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #64748b; width: 40%;">Subject</th>
@@ -2905,14 +2906,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                         ${marksHtml}
                     </tbody>
                 </table>
+                </div>
 
                 <!-- Remarks Section -->
-                <div style="margin-top: 25px; margin-bottom: 30px;">
-                    <div style="margin-bottom: 30px;">
+                <div style="margin-top: 15px; margin-bottom: 20px;">
+                    <div style="margin-bottom: 20px;">
                         <div style="font-size: 12px; 
                                     text-transform: uppercase; 
                                     color: #4b5563; 
-                                    margin-bottom: 25px; 
+                                    margin-bottom: 15px; 
                                     font-weight: 700; 
                                     letter-spacing: 1px;">
                             Class Teacher's Remarks
@@ -3028,7 +3030,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 margin: 0 auto 8px; 
                                 height: 30px; 
                                 width: auto; 
-                                opacity: 0.8;">
+                                opacity: 1;">
                     <div style="font-size: 11px; 
                                 color: #6b7280; 
                                 letter-spacing: 1px; 

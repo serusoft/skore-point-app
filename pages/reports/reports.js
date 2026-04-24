@@ -1478,8 +1478,8 @@ class ReportsController {
             else if (marks.length < 9) division = '2';
             else {
                 // Check grades
-                const hasPassingGrade = marks.some(m => m.score >= 55); // D or better
-                const allElementary = marks.every(m => m.score < 55); // All E
+                const hasPassingGrade = marks.some(m => m.score >= 50); // D or better
+                const allElementary = marks.every(m => m.score < 50); // All E
                 
                 if (allElementary) division = '3';
                 else if (hasPassingGrade) division = '1';
@@ -1657,8 +1657,8 @@ class ReportsController {
         return `
             <div class="report-card alevel-report premium-report" 
                  style="width: 210mm; 
-                        min-height: 297mm; 
-                        padding: 15mm 20mm; 
+                        min-height: 297mm;
+                        padding: 10mm 20mm; 
                         box-sizing: border-box; 
                         margin: 0 auto; 
                         ${PREMIUM_BORDER_STYLE} 
@@ -1687,8 +1687,8 @@ class ReportsController {
                 <div style="display: flex; 
                             align-items: center; 
                             justify-content: space-between; 
-                            margin-bottom: 25px; 
-                            padding-bottom: 20px; 
+                            margin-bottom: 15px; 
+                            padding-bottom: 10px; 
                             border-bottom: 2px solid #1a73e8;">
                     <!-- School Logo -->
                     ${school.logoUrl 
@@ -1702,7 +1702,7 @@ class ReportsController {
                     <div style="text-align: center; flex: 1; padding: 0 20px;">
                         <h1 style="margin:0 0 10px 0; 
                                    color:#1a1a1a; 
-                                   font-size: 24px; 
+                                   font-size: 22px; 
                                    font-weight: 700; 
                                    letter-spacing: -0.5px; 
                                    line-height: 1.1;">
@@ -1723,7 +1723,7 @@ class ReportsController {
                 </div>
                 
                 <!-- Student Information -->
-                <div class="student-info" style="margin-bottom: 30px;">
+                <div class="student-info" style="margin-bottom: 15px;">
                     <div style="margin-bottom: 15px;">
                         <div style="font-size: 9px; 
                                     text-transform: uppercase; 
@@ -1802,16 +1802,17 @@ class ReportsController {
                 </div>
                 
                 <!-- Subjects Table with Paper Subdivisions -->
+                <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin-bottom: 20px;">
                 <table class="subject-table" 
-                       style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                       style="width: 100%; border-collapse: collapse; margin-bottom: 0;">
                     <thead>
                         <tr style="border-bottom: 2px solid #e2e8f0;">
-                            <th style="text-align: left; padding: 12px 15px; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 700; width: 28%;">Subject</th>
+                            <th style="text-align: left; padding: 8px 12px; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 700; width: 28%;">Subject</th>
                             <th style="text-align: center; padding: 8px 10px; color: #64748b; font-size: 9px; text-transform: uppercase; font-weight: 700; width: 12%; border-right: 1px solid #e2e8f0;">Paper 1</th>
                             <th style="text-align: center; padding: 8px 10px; color: #64748b; font-size: 9px; text-transform: uppercase; font-weight: 700; width: 12%; border-right: 1px solid #e2e8f0;">Paper 2</th>
-                            <th style="text-align: center; padding: 12px 15px; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 700; width: 12%;">Grade</th>
-                            <th style="text-align: center; padding: 12px 15px; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 700; width: 10%;">Points</th>
-                            <th style="text-align: left; padding: 12px 15px; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 700; width: 26%;">Remarks</th>
+                            <th style="text-align: center; padding: 8px 12px; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 700; width: 12%;">Grade</th>
+                            <th style="text-align: center; padding: 8px 12px; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 700; width: 10%;">Points</th>
+                            <th style="text-align: left; padding: 8px 12px; color: #64748b; font-size: 10px; text-transform: uppercase; font-weight: 700; width: 26%;">Remarks</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1834,7 +1835,7 @@ class ReportsController {
                             
                             return `
                             <tr style="border-bottom: 1px solid #f1f5f9; ${rowBg}">
-                                <td style="padding: 12px 15px; color: #334155; font-size: 11px; font-weight: 500;">
+                                <td style="padding: 8px 12px; color: #334155; font-size: 11px; font-weight: 500;">
                                     ${mark.subjectName}
                                 </td>
                                 <td style="padding: 8px 10px; text-align: center; color: #475569; font-size: 11px; border-right: 1px solid #e2e8f0;">
@@ -1843,26 +1844,27 @@ class ReportsController {
                                 <td style="padding: 8px 10px; text-align: center; color: #475569; font-size: 11px; border-right: 1px solid #e2e8f0;">
                                     ${paper2Score ? paper2Score : '-'}
                                 </td>
-                                <td style="padding: 12px 15px; text-align: center; color: #0f172a; font-weight: 600; font-size: 11px;">
+                                <td style="padding: 8px 12px; text-align: center; color: #0f172a; font-weight: 600; font-size: 11px;">
                                     ${mark.grade}
                                 </td>
-                                <td style="padding: 12px 15px; text-align: center; color: #475569; font-size: 11px;">
+                                <td style="padding: 8px 12px; text-align: center; color: #475569; font-size: 11px;">
                                     ${mark.gradePoints}
                                 </td>
-                                <td style="padding: 12px 15px; color: #64748b; font-size: 10px;">
+                                <td style="padding: 8px 12px; color: #64748b; font-size: 10px;">
                                     ${GradingUtils.getGradeRemark(mark.grade)}
                                 </td>
                             </tr>
                         `;}).join('')}
                     </tbody>
                 </table>
+                </div>
                 
                 <!-- Summary Section -->
                 <div class="summary-section" 
-                     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                             border-radius: 8px; 
-                            padding: 20px; 
-                            margin-bottom: 30px; 
+                            padding: 15px; 
+                            margin-bottom: 20px; 
                             display: grid; 
                             grid-template-columns: repeat(4, 1fr); 
                             gap: 15px; 
@@ -1922,12 +1924,12 @@ class ReportsController {
                 </div>
                 
                 <!-- Remarks Section -->
-                <div class="remarks-section" style="margin-bottom: 30px;">
-                    <div style="margin-bottom: 30px;">
+                <div class="remarks-section" style="margin-bottom: 20px;">
+                    <div style="margin-bottom: 15px;">
                         <div style="font-size: 10px; 
                                     text-transform: uppercase; 
                                     color: #4b5563; 
-                                    margin-bottom: 25px; 
+                                    margin-bottom: 15px; 
                                     font-weight: 700; 
                                     letter-spacing: 1px;">
                             Class Teacher's Remarks
@@ -1994,7 +1996,7 @@ class ReportsController {
                                 margin: 0 auto 8px; 
                                 height: 30px; 
                                 width: auto; 
-                                opacity: 0.8;">
+                                opacity: 1;">
                     <div style="font-size: 9px; 
                                 color: #6b7280; 
                                 letter-spacing: 1px; 
@@ -2026,8 +2028,8 @@ class ReportsController {
         return `
             <div class="report-card primary-report premium-report" 
                  style="width: 210mm; 
-                        min-height: 297mm; 
-                        padding: 15mm 20mm; 
+                        min-height: 297mm;
+                        padding: 10mm 20mm; 
                         box-sizing: border-box; 
                         margin: 0 auto; 
                         ${PREMIUM_BORDER_STYLE} 
@@ -2056,8 +2058,8 @@ class ReportsController {
                 <div style="display: flex; 
                             align-items: center; 
                             justify-content: space-between; 
-                            margin-bottom: 25px; 
-                            padding-bottom: 20px; 
+                            margin-bottom: 15px; 
+                            padding-bottom: 10px; 
                             border-bottom: 2px solid #1a73e8;">
                     <!-- School Logo -->
                     ${school.logoUrl 
@@ -2071,7 +2073,7 @@ class ReportsController {
                     <div style="text-align: center; flex: 1; padding: 0 20px;">
                         <h1 style="margin:0 0 10px 0; 
                                    color:#1a1a1a; 
-                                   font-size: 24px; 
+                                   font-size: 22px; 
                                    font-weight: 700; 
                                    letter-spacing: -0.5px; 
                                    line-height: 1.1;">
@@ -2092,7 +2094,7 @@ class ReportsController {
                 </div>
                 
                 <!-- Student Information -->
-                <div class="student-info" style="margin-bottom: 30px;">
+                <div class="student-info" style="margin-bottom: 15px;">
                     <div style="margin-bottom: 15px;">
                         <div style="font-size: 9px; 
                                     text-transform: uppercase; 
@@ -2157,16 +2159,17 @@ class ReportsController {
                 </div>
                 
                 <!-- Subjects Table -->
+                <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-bottom: 20px;">
                 <table class="subject-table" 
                        style="width: 100%; 
                               border-collapse: collapse; 
-                              margin-bottom: 30px; 
-                              border: 1px solid #e5e7eb;
+                              margin-bottom: 0; 
+                              border: none;
                               background-color: white;">
                     <thead>
                         <tr style="background-color: #f3f4f6;">
                             <th style="text-align: left; 
-                                        padding: 12px 15px; 
+                                        padding: 8px 12px; 
                                         border-bottom: 2px solid #d1d5db; 
                                         color: #4b5563; 
                                         font-size: 10px; 
@@ -2176,7 +2179,7 @@ class ReportsController {
                                 Subject
                             </th>
                             <th style="text-align: center; 
-                                        padding: 12px 15px; 
+                                        padding: 8px 12px; 
                                         border-bottom: 2px solid #d1d5db; 
                                         color: #4b5563; 
                                         font-size: 10px; 
@@ -2186,7 +2189,7 @@ class ReportsController {
                                 Score
                             </th>
                             <th style="text-align: center; 
-                                        padding: 12px 15px; 
+                                        padding: 8px 12px; 
                                         border-bottom: 2px solid #d1d5db; 
                                         color: #4b5563; 
                                         font-size: 10px; 
@@ -2200,14 +2203,14 @@ class ReportsController {
                     <tbody>
                         ${marks.map((mark, index) => `
                             <tr>
-                                <td style="padding: 10px 15px; 
+                                <td style="padding: 6px 12px; 
                                             border-bottom: 1px solid #f3f4f6; 
                                             color: #1f2937; 
                                             font-size: 11px; 
                                             font-weight: 500;">
                                     ${mark.subjectName}
                                 </td>
-                                <td style="padding: 10px 15px; 
+                                <td style="padding: 6px 12px; 
                                             text-align: center; 
                                             border-bottom: 1px solid #f3f4f6; 
                                             color: #1f2937; 
@@ -2215,7 +2218,7 @@ class ReportsController {
                                             font-size: 12px;">
                                     ${mark.score}
                                 </td>
-                                <td style="padding: 10px 15px; 
+                                <td style="padding: 6px 12px; 
                                             text-align: center; 
                                             border-bottom: 1px solid #f3f4f6; 
                                             color: #1f2937; 
@@ -2227,13 +2230,14 @@ class ReportsController {
                         `).join('')}
                     </tbody>
                 </table>
+                </div>
                 
                 <!-- Summary (Boxed) -->
                 <div class="summary-section" 
                      style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                             border-radius: 8px; 
-                            padding: 20px; 
-                            margin-bottom: 30px; 
+                            padding: 15px; 
+                            margin-bottom: 20px; 
                             display: grid; 
                             grid-template-columns: repeat(4, 1fr); 
                             gap: 20px; 
@@ -2292,12 +2296,12 @@ class ReportsController {
                 </div>
                 
                 <!-- Remarks Section -->
-                <div class="remarks-section" style="margin-bottom: 30px;">
-                    <div style="margin-bottom: 30px;">
+                <div class="remarks-section" style="margin-bottom: 20px;">
+                    <div style="margin-bottom: 15px;">
                         <div style="font-size: 10px; 
                                     text-transform: uppercase; 
                                     color: #4b5563; 
-                                    margin-bottom: 25px; 
+                                    margin-bottom: 15px; 
                                     font-weight: 700; 
                                     letter-spacing: 1px;">
                             Class Teacher's Remarks
@@ -2374,7 +2378,7 @@ class ReportsController {
                                 margin: 0 auto 8px; 
                                 height: 30px; 
                                 width: auto; 
-                                opacity: 0.8;">
+                                opacity: 1;">
                     <div style="font-size: 9px; 
                                 color: #6b7280; 
                                 letter-spacing: 1px; 
@@ -2439,15 +2443,15 @@ class ReportsController {
             `;
 
             subjectsContent = `
-                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
-                    <div style="flex: 1;">
-                        <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb;">
+                <div style="display: flex; gap: 15px; margin-bottom: 10px;">
+                    <div style="flex: 1; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+                        <table style="width: 100%; border-collapse: collapse; border: none;">
                             ${tableHeader}
                             <tbody>${leftMarks.map(renderRow).join('')}</tbody>
                         </table>
                     </div>
-                    <div style="flex: 1;">
-                        <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb;">
+                    <div style="flex: 1; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+                        <table style="width: 100%; border-collapse: collapse; border: none;">
                             ${tableHeader}
                             <tbody>${rightMarks.map(renderRow).join('')}</tbody>
                         </table>
@@ -2457,7 +2461,8 @@ class ReportsController {
         } else {
             // Single table (compact)
             subjectsContent = `
-                <table class="subject-table" style="width: 100%; border-collapse: collapse; margin-bottom: 15px; border: 1px solid #e5e7eb;">
+                <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-bottom: 10px;">
+                <table class="subject-table" style="width: 100%; border-collapse: collapse; margin-bottom: 0;">
                     <thead>
                         <tr style="background-color: #f3f4f6;">
                             <th style="text-align: left; padding: 7px 10px; border-bottom: 1px solid #d1d5db; color: #4b5563; font-size: 11px; text-transform: uppercase; font-weight: 700; width: 40%;">Subject</th>
@@ -2477,6 +2482,7 @@ class ReportsController {
                         `).join('')}
                     </tbody>
                 </table>
+                </div>
             `;
         }
 
@@ -2485,7 +2491,7 @@ class ReportsController {
                  style="width: 210mm; 
                         min-height: 297mm;
                         height: auto; 
-                        padding: 10mm 15mm; 
+                        padding: 8mm 15mm; 
                         box-sizing: border-box; 
                         margin: 0 auto; 
                         ${PREMIUM_BORDER_STYLE} 
@@ -2512,16 +2518,16 @@ class ReportsController {
                 <div style="position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column;">
                 
                 <!-- Compact Header -->
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #1a73e8;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #1a73e8;">
                     ${school.logoUrl 
                         ? `<img src="${school.logoUrl}" 
                                 alt="${school.name}" 
                                 style="height: 85px; width: 85px; object-fit: contain;">` 
                         : `<img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" 
-                                style="height: 85px; width: 85px; opacity: 0.7; object-fit: contain;">`}
+                                style="height: 85px; width: 85px; opacity: 1; object-fit: contain;">`}
                     
                     <div style="text-align: center; flex: 1; padding: 0 15px;">
-                        <h1 style="margin:0 0 5px 0; color:#1a1a1a; font-size: 28px; font-weight: 700; line-height: 1.1;">${school.name}</h1>
+                        <h1 style="margin:0 0 5px 0; color:#1a1a1a; font-size: 24px; font-weight: 700; line-height: 1.1;">${school.name}</h1>
                         <p style="margin:0; color:#555; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">COMPETENT BASED TERM ${this.getUgandanTerm()} STUDENT ASSESSMENT PROGRESS REPORT</p>
                     </div>
                     
@@ -2529,7 +2535,7 @@ class ReportsController {
                 </div>
                 
                 <!-- Compact Student Info -->
-                <div class="student-info" style="margin-bottom: 15px; display: flex; justify-content: space-between; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px;">
+                <div class="student-info" style="margin-bottom: 10px; display: flex; justify-content: space-between; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px;">
                     <div>
                         <div style="font-size: 11px; text-transform: uppercase; color: #6b7280; margin-bottom: 2px;">Student Name</div>
                         <div style="font-size: 16px; font-weight: 700; color: #111827;">${student.name}</div>
@@ -2552,7 +2558,7 @@ class ReportsController {
                 ${subjectsContent}
                 
                 <!-- Compact Summary -->
-                <div class="summary-section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 6px; padding: 12px; margin-bottom: 20px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; color: white;">
+                <div class="summary-section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 6px; padding: 10px; margin-bottom: 10px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; color: white;">
                     <div style="text-align: center;">
                         <div style="font-size: 10px; text-transform: uppercase; opacity: 0.9; margin-bottom: 2px;">Average Score</div>
                         <div style="font-size: 16px; font-weight: 700;">${summary.average}%</div>
@@ -2572,14 +2578,14 @@ class ReportsController {
                 </div>
                 
                 <!-- Compact Remarks -->
-                <div class="remarks-section" style="margin-bottom: 15px; flex: 1;">
-                    <div style="margin-bottom: 15px;">
+                <div class="remarks-section" style="margin-bottom: 10px; flex: 1;">
+                    <div style="margin-bottom: 10px;">
                         <div style="font-size: 11px; text-transform: uppercase; color: #4b5563; margin-bottom: 15px; font-weight: 700;">Class Teacher's Remarks</div>
                         <div style="border-bottom: 1px dashed #9ca3af; margin-bottom: 5px; padding-bottom: 15px;"></div>
                         <div style="text-align: right; font-size: 11px; color: #9ca3af; font-style: italic;">Signature: ........................................</div>
                     </div>
                     <div>
-                        <div style="font-size: 11px; text-transform: uppercase; color: #4b5563; margin-bottom: 15px; font-weight: 700;">Head Teacher's Remarks</div>
+                        <div style="font-size: 11px; text-transform: uppercase; color: #4b5563; margin-bottom: 10px; font-weight: 700;">Head Teacher's Remarks</div>
                         <div style="border-bottom: 1px dashed #9ca3af; margin-bottom: 5px; padding-bottom: 15px;"></div>
                         <div style="text-align: right; font-size: 11px; color: #9ca3af; font-style: italic;">Signature: ........................................</div>
                     </div>
@@ -2627,11 +2633,11 @@ class ReportsController {
                 <!-- Grading Scale -->
                 <div style="margin-bottom: 15px; text-align: center; font-size: 11px; color: #555; border-top: 1px solid #e5e7eb; padding-top: 10px;">
                     <span style="font-weight: 700; color: #111; margin-right: 5px;">GRADING SCALE:</span>
-                    <span style="margin: 0 5px;">A: 90-100 (Exceptional)</span> |
-                    <span style="margin: 0 5px;">B: 80-89 (Outstanding)</span> |
-                    <span style="margin: 0 5px;">C: 70-79 (Satisfactory)</span> |
-                    <span style="margin: 0 5px;">D: 55-69 (Basic)</span> |
-                    <span style="margin: 0 5px;">E: 0-54 (Elementary)</span>
+                    <span style="margin: 0 5px;">A: 85-100 (Exceptional)</span> |
+                    <span style="margin: 0 5px;">B: 75-84 (Outstanding)</span> |
+                    <span style="margin: 0 5px;">C: 65-74 (Satisfactory)</span> |
+                    <span style="margin: 0 5px;">D: 50-64 (Basic)</span> |
+                    <span style="margin: 0 5px;">E: 0-49 (Elementary)</span>
                 </div>
                 
                 ${termType === 'end' ? `
@@ -2642,7 +2648,7 @@ class ReportsController {
                 
                 <!-- Premium Footer -->
                 <div style="text-align: center; border-top: 1px solid #f3f4f6; padding-top: 15px; padding-bottom: 20px; margin-top: auto;">
-                    <img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" style="display: block; margin: 0 auto 4px; height: 20px; width: auto; opacity: 0.7;">
+                    <img src="../../assets/icons/skore-icon.jpg" alt="Skore Point" style="display: block; margin: 0 auto 4px; height: 20px; width: auto; opacity: 1;">
                     <div style="font-size: 11px; color: #9ca3af; letter-spacing: 0.5px;">POWERED BY SKORE POINT</div>
                     <div style="font-size: 10px; color: #d1d5db; margin-top: 1px;">A SERUSOFT PRODUCT</div>
                     <div style="font-size: 11px; color: #4361ee; font-weight: 600; margin-top: 2px;">skorepoint.com</div>
@@ -2930,14 +2936,14 @@ class ReportsController {
                 </div>
 
                 <!-- Footer -->
-                <div style="text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px; padding-bottom: 15px;">
+                <div style="position: absolute; left: 0; bottom: 0; width: 100%; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 12px; padding-bottom: 10px; background: #fff; box-sizing: border-box;">
                     <img src="../../assets/icons/skore-icon.jpg" 
                          alt="Skore Point" 
-                         style="display: block; margin: 0 auto 5px; height: 30px; width: auto; opacity: 0.8;">
-                    <div style="font-size: 10px; color: #6b7280; letter-spacing: 1px; font-weight: 700; margin-bottom: 3px; text-transform: uppercase;">
+                         style="display: block; margin: 0 auto 5px; height: 28px; width: auto; opacity: 0.8;">
+                    <div style="font-size: 10px; color: #6b7280; letter-spacing: 1px; font-weight: 700; margin-bottom: 2px; text-transform: uppercase;">
                         POWERED BY SKORE POINT
                     </div>
-                    <div style="font-size: 9px; color: #9ca3af; margin-bottom: 2px;">
+                    <div style="font-size: 9px; color: #9ca3af; margin-bottom: 1px;">
                         A product of serusoft
                     </div>
                     <div style="font-size: 9px; color: #4361ee; font-weight: 600;">
@@ -2948,10 +2954,11 @@ class ReportsController {
         `;
 
         const page2 = `
-            <div class="report-card class-report premium-report" 
-                 style="padding: 15mm 20mm; 
+              <div class="report-card class-report premium-report" 
+                  style="padding: 15mm 20mm 55mm 20mm; 
                         width: 210mm; 
                         min-height: 297mm;
+                        max-height: 297mm;
                         box-sizing: border-box;
                         margin: 20px auto 0; 
                         ${PREMIUM_BORDER_STYLE} 
@@ -2959,7 +2966,8 @@ class ReportsController {
                         color: #111;
                         page-break-before: always;
                         display: flex;
-                        flex-direction: column;">
+                        flex-direction: column;
+                        position: relative;">
                 
                 <div style="border-bottom: 2px solid #1a73e8; padding-bottom: 20px; margin-bottom: 30px; text-align: center;">
                     <h2 style="margin: 0; font-size: 20px; font-weight: 700; text-transform: uppercase;">Subject Grade Distribution Analysis</h2>
@@ -3010,14 +3018,14 @@ class ReportsController {
                     </div>
                 </div>
                 
-                <div style="margin-top: 20px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px; padding-bottom: 15px;">
+                <div style="position: absolute; left: 0; bottom: 0; width: 100%; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 12px; padding-bottom: 10px; background: #fff; box-sizing: border-box;">
                     <img src="../../assets/icons/skore-icon.jpg" 
                          alt="Skore Point" 
-                         style="display: block; margin: 0 auto 5px; height: 30px; width: auto; opacity: 0.8;">
-                    <div style="font-size: 10px; color: #6b7280; letter-spacing: 1px; font-weight: 700; margin-bottom: 3px; text-transform: uppercase;">
+                         style="display: block; margin: 0 auto 5px; height: 28px; width: auto; opacity: 0.8;">
+                    <div style="font-size: 10px; color: #6b7280; letter-spacing: 1px; font-weight: 700; margin-bottom: 2px; text-transform: uppercase;">
                         POWERED BY SKORE POINT
                     </div>
-                    <div style="font-size: 9px; color: #9ca3af; margin-bottom: 2px;">
+                    <div style="font-size: 9px; color: #9ca3af; margin-bottom: 1px;">
                         A product of serusoft
                     </div>
                     <div style="font-size: 9px; color: #4361ee; font-weight: 600;">
