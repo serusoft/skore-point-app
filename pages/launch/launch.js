@@ -52,42 +52,20 @@ document.addEventListener('DOMContentLoaded', function() {
         window.updatePWAButtonUI();
     }
     
-    // Simulate loading progress
-    const loaderBar = document.querySelector('.loader-bar');
-    if (loaderBar) {
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += 10;
-            loaderBar.style.width = progress + '%';
-            
-            if (progress >= 100) {
-                clearInterval(interval);
-                
-                // Show buttons with animation
-                setTimeout(() => {
-                    // Update PWA button state right before showing to catch late events
-                    if (typeof window.updatePWAButtonUI === 'function') {
-                        window.updatePWAButtonUI();
-                    }
+    // The animation is now handled by CSS. We just need to show the buttons after a delay.
+    setTimeout(() => {
+        // Update PWA button state right before showing to catch late events
+        if (typeof window.updatePWAButtonUI === 'function') {
+            window.updatePWAButtonUI();
+        }
 
-                    const launchButtons = document.querySelector('.launch-buttons');
-                    if (launchButtons) {
-                        launchButtons.style.opacity = '1';
-                        launchButtons.style.transform = 'translateY(0)';
-                    }
-                }, 200);
-            }
-        }, 80);
-    }
-    
-    // Add animation to tagline
-    const tagline = document.querySelector('.tagline');
-    if (tagline) {
-        setTimeout(() => {
-            tagline.style.opacity = '1';
-            tagline.style.transform = 'translateY(0)';
-        }, 1000);
-    }
+        const launchButtons = document.querySelector('.launch-buttons');
+        if (launchButtons) {
+            launchButtons.style.opacity = '1';
+            launchButtons.style.transform = 'translateY(0)';
+            console.log('Launch buttons displayed.');
+        }
+    }, 1500); // Delay to allow animations to play
     
     // Add keyboard navigation
     document.addEventListener('keydown', function(e) {

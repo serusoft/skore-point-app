@@ -4088,3 +4088,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         sessionStorage.setItem('whatsappInviteShown', 'true');
     }
 });
+
+/**
+ * Securely updates a single subject mark for a student for a specific term.
+ * This function prevents race conditions by only updating one field at a time.
+ *
+ * @param {string} studentId - The ID of the student.
+ * @param {string} term - The academic term (e.g., 'I', 'II', 'III').
+ * @param {string} subjectId - The ID of the subject to update.
+ * @param {number | object} newMark - The new mark value. Can be a number or an object for paper-based marks.
+ * @returns {Promise<void>}
+ */
+async function updateStudentMark(studentId, term, subjectId, newMark) {
+    if (!studentId || !term || !subjectId || newMark === undefined) {
+        throw new Error("Missing required parameters for updating a mark.");
+    }
+
+    try {
+        const marksDocId = `${studentId}_${term}`;
+        const schoolId = AppState.currentSchool?.id;
+
+        if (!schoolId) {
+            throw new Error("Current school context is missing.");
+        }
+
+        // Use dot notation to update only the specific subject field.
+        // This prevents overwriting the entire document and avoids race conditions.
+        const updatePayload = {
+            [`${subjectId}`]: newMark,
+            // Also ensure schoolId and studentId are present for querying
+            schoolId: schoolId,
+            studentId: studentId
+        };
+
+        // Use set with merge:true to create the document if it doesn't exist or update it if it does.
+        await Firebase.db.setDoc('marks', marksDocId, updatePayload, { merge: true });
+
+        console.log(`Successfully updated mark for student ${studentId}, subject ${subjectId}.`);
+    } catch (error) {
+        console.error("Error in updateStudentMark:", error);
+        showToast(`Failed to save mark. Please try again.`, 'error');
+        // Re-throw the error so the calling function can handle it if needed.
+        throw error;
+    }
+}

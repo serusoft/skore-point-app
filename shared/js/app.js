@@ -303,14 +303,6 @@ function checkAuthState() {
                     }));
                     console.log('App: onAuthStateChanged() - Dispatched auth:state-changed (authenticated).');
 
-                    // Handle initial navigation now that data is loaded
-                    const path = window.location.pathname;
-                    const isNotInPages = !path.includes('/pages/');
-                    if (isNotInPages) {
-                        console.log('App: onAuthStateChanged() - Redirecting authenticated user from root to launch page.');
-                        window.location.href = 'pages/launch/launch.html';
-                    }
-                    
                 } catch (error) {
                     console.error('App: onAuthStateChanged() - Error during authenticated user setup:', error);
                     // --- FIX: Redirect on error to prevent getting stuck ---
@@ -334,15 +326,6 @@ function checkAuthState() {
             if (!initialAuthCheckDone) {
                 initialAuthCheckDone = true;
                 
-                // Handle initial navigation for unauthenticated user from the root page
-                const path = window.location.pathname;
-                const isNotInPages = !path.includes('/pages/');
-                if (!user && isNotInPages) {
-                    console.log('App: onAuthStateChanged() - Redirecting unauthenticated user from root to launch page.');
-                    window.location.href = 'pages/launch/launch.html';
-                    return; // Stop execution to prevent handlePostAuthNavigation from overriding
-                }
-                
                 resolve(); // Resolve the promise here, ensuring app initialization waits.
                 console.log('App: onAuthStateChanged() - checkAuthState promise resolved.');
             }
@@ -357,22 +340,21 @@ function checkAuthState() {
 // Handle navigation after auth state change
 function handlePostAuthNavigation(user) {
     const currentPage = window.location.pathname;
+    const isRootPage = !currentPage.includes('/pages/') || currentPage.endsWith('index.html');
     const isAuthPage = currentPage.includes('login.html') || currentPage.includes('register.html');
     const isLaunchPage = currentPage.includes('launch.html');
 
-    if (user && isAuthPage) {
-        window.location.href = '../dashboard/dashboard.html';
-    } else if (!user && !isAuthPage && !isLaunchPage) {
-        const path = window.location.pathname;
-        const isNotInPages = !path.includes('/pages/');
+    // ALWAYS go to launch page from the root (index.html)
+    if (isRootPage) {
+        console.log('App: handlePostAuthNavigation() - At root, redirecting to launch page.');
+        window.location.href = 'pages/launch/launch.html';
+        return;
+    }
 
-        if (isNotInPages) {
-            // If not in pages directory (e.g. root or index.html), go to launch page
-            window.location.href = 'pages/launch/launch.html';
-        } else {
-            // If inside pages directory but unauthorized, go to login
-            window.location.href = '../auth/login.html';
-        }
+    if (user && isAuthPage) { // If logged in and on login/register, go to dashboard
+        window.location.href = '../dashboard/dashboard.html';
+    } else if (!user && !isAuthPage && !isLaunchPage) { // If not logged in and not on a public page, go to login
+        window.location.href = '../auth/login.html';
     }
 }
 

@@ -12,6 +12,85 @@
     <link rel="stylesheet" href="../../shared/css/components.css">
     <link rel="stylesheet" href="launch.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Enhanced Launch Screen Animations */
+        @keyframes pulse-primary {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(67, 97, 238, 0.7);
+            }
+            70% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 15px rgba(67, 97, 238, 0);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(67, 97, 238, 0);
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%) skewX(-15deg);
+            }
+            100% {
+                transform: translateX(200%) skewX(-15deg);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo-wrapper {
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .tagline {
+            animation: fadeInUp 0.8s ease-out 0.5s both;
+        }
+
+        .loader {
+            width: 100%;
+            max-width: 300px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            animation: fadeIn 0.5s ease-out 0.8s both;
+        }
+
+        .loader::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50%;
+            height: 100%;
+            /* To change the shimmer color, modify the rgba() values below. */
+            /* For example, for a light blue shimmer, you could use: */
+            /* background: linear-gradient(90deg, rgba(147, 197, 253, 0) 0%, rgba(147, 197, 253, 0.5) 50%, rgba(147, 197, 253, 0) 100%); */
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0) 100%);
+            animation: shimmer 1.5s infinite;
+        }
+
+        #getStartedBtn {
+            animation: pulse-primary 2s infinite;
+        }
+    </style>
     <script type="module" src="../../shared/js/app.js?v=20260217" defer></script>
     <script src="launch.js" defer></script>
 </head>
@@ -22,9 +101,7 @@
                 <div class="logo">Skore Point</div>
             </div>
             <div class="tagline">Professional School Report Card Generator by SERUSOFT</div>
-            <div class="loader">
-                <div class="loader-bar"></div>
-            </div>
+            <div class="loader"></div>
             <div class="launch-buttons">
                 <button id="getStartedBtn" class="btn btn-primary">
                     <i class="fas fa-rocket"></i> Get Started
