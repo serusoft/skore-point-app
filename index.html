@@ -253,17 +253,6 @@
                 console.error('Skore Point: Cannot run ES Modules over file:// protocol. Please use a local server.');
             }
         });
-
-        // Fallback: If app.js fails to initialize within 3 seconds, try redirecting to login
-        setTimeout(() => {
-            if (document.querySelector('.loading-container') && window.location.protocol !== 'file:') {
-                console.warn('App initialization timed out. Attempting fallback redirect...');
-                // Check if we are at root and app.js hasn't redirected us
-                if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/')) {
-                     window.location.href = 'pages/auth/login.html';
-                }
-            }
-        }, 3000);
     </script>
 </body>
 </html>
